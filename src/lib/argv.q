@@ -55,7 +55,7 @@
     if[not all valid;
         names:exec name from .argv.priv.args where not null name;
         .log.fatal .fstr.fmt[
-            "Invalid command line argument(s): {}";
+            "(qlib.argv) Invalid command line argument(s): {}";
             names where not valid
         ];
         exit 1
@@ -65,7 +65,7 @@
 // @brief Log usage information.
 .argv.priv.usage:{[]
     .log.debug (
-        "Usage ";
+        "(qlib.argv) Usage ";
         select ("-",/:string name), ty, required, description 
             from .argv.priv.args where not null name
     );
@@ -75,7 +75,7 @@
 .argv.priv.haveReq:{[]
     if[count req:exec name from .argv.priv.args where required, not given;
         .log.fatal .fstr.fmt[
-            "Missing required command line argument(s): {}";
+            "(qlib.argv) Missing required command line argument(s): {}";
             req
         ];
         .argv.priv.usage[];

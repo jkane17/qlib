@@ -148,6 +148,17 @@
 // @return Symbols : All package names.
 .pkg.internal.allPkgs:{[] exec name from .pkg.priv.pkgs};
 
+// @brief Get the path to a config file.
+// @param cnf : Symbol : File name.
+// @return FileSymbol : Path to a config file.
+.pkg.internal.getCnfPath:{[cnf] .Q.dd[.pkg.internal.path.cnf;cnf]};
+
+// @brief Get a map from a config file.
+// @param cnf : Symbol : Config name (without file extension which is assumed to be .csv).
+// @param tys : String : Datatype characters for the key and values of the map respectively (must be length 2).
+// @return Dict : Map from config file.
+.pkg.internal.getCnfMap:{[cnf;tys] (!).(tys;csv) 0: .pkg.internal.getCnfPath ` sv cnf,`csv};
+
 // @brief Reload a package.
 // @param p : Symbol : Package name.
 // @return Symbols : Packages that were loaded (includes dependencies).
