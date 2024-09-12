@@ -5,7 +5,7 @@
 
 .pkg.load `escCode;
 
-.log.priv.color:(!).("ss";csv) 0: `$"cnf/logColors.csv";
+.log.priv.color:.pkg.internal.getCnfMap[`logColors;"ss"];
 .log.internal.lvls:key .log.priv.color;
 
 // Message to be logged if given level is invalid.
@@ -52,10 +52,15 @@
 // @param msg : String : Message to be logged.
 // @return String : Message that was logged.
 .log.priv.write:{[lvl;msg] 
-    if[not .log.priv.active lvl; :""];
     if[.log.priv.metaEnabled; msg:.log.priv.prependMeta[lvl;msg]];
     .log.priv.hdl[lvl] msg;
     msg
+ };
+
+// @brief Define the main logging functions based on the active level.
+// .log.trace, .log.debug, .log.info, .log.error, .log.fatal
+.log.priv.defineFuncs:{[]
+    {.log[lower x]:$[.log.priv.active x;.log.priv.write[x;];(::)]} each -1_.log.internal.lvls;
  };
 
 // @brief Is the given level valid.
@@ -93,7 +98,7 @@
 // @param lvl : Symbol : Log level.
 .log.setLvl:{[lvl] 
     $[.log.internal.valid lvl; 
-        .log.priv.lvl:.log.priv.val lvl; 
+        [.log.priv.lvl:.log.priv.val lvl; .log.priv.defineFuncs[]]; 
         '.log.priv.invalidMsg
     ]; 
  };
@@ -102,35 +107,39 @@
 // @return Symbol : Current log level.
 .log.getLvl:{[] .log.priv.name .log.priv.lvl};
 
+///// Main logging functions. Definition controlled by .log.priv.defineFuncs /////
+
 // @brief Log trace message.
 // @param msg : String : Message to be logged.
 // @return String : Logged message.
-.log.trace:.log.priv.write[`TRACE;];
+.log.trace:(::);
 
 // @brief Log deug message.
 // @param msg : String : Message to be logged.
 // @return String : Logged message.
-.log.debug:.log.priv.write[`DEBUG;];
+.log.debug:(::);
 
 // @brief Log info message.
 // @param msg : String : Message to be logged.
 // @return String : Logged message.
-.log.info:.log.priv.write[`INFO;];
+.log.info:(::);
 
 // @brief Log warning message.
 // @param msg : String : Message to be logged.
 // @return String : Logged message.
-.log.warn:.log.priv.write[`WARN;];
+.log.warn:(::);
 
 // @brief Log error message.
 // @param msg : String : Message to be logged.
 // @return String : Logged message.
-.log.error:.log.priv.write[`ERROR;];
+.log.error:(::);
 
 // @brief Log fatal message.
 // @param msg : String : Message to be logged.
 // @return String : Logged message.
-.log.fatal:.log.priv.write[`FATAL;];
+.log.fatal:(::);
+
+///// /////
 
 // Set defaults
 .log.setStdout 1i;

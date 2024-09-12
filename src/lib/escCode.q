@@ -6,7 +6,7 @@
 .pkg.load `flt;
 
 .escCode.priv.esc:"\033";
-.escCode.priv.codes:(!).("sh";csv) 0: `$"cnf/escCode.csv";
+.escCode.priv.codes:.pkg.internal.getCnfMap[`escCode;"sh"];
 
 // @brief Build a literal escape code from the given codes.
 // @param codes : Symbols : Escape codes.
