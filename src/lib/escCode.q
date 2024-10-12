@@ -1,6 +1,7 @@
 
 /
-    Apply terminal escape codes to text
+    File        : escCode.q
+    Description : Apply terminal escape codes to text.
 \
 
 .pkg.load `flt;

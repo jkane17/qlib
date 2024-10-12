@@ -1,6 +1,7 @@
 
-/ 
-    Format String
+/
+    File        : fstr.q
+    Description : Format strings.
 \
 
 // @brief Convert args into their string representation.
@@ -26,9 +27,13 @@
     i:ss[str;"{}"];
     ci:count i;
     ca:count args;
-    if[all (ci<>ca;1<>ca;not (1=ci) or type[args] within 1 19h); '`mismatch];
+    // Exit early no replacement to be performed
+    if[any 0=ci,ca; :str];
+    if[not any (ci=ca;1=ca;1=ci); '`mismatch];
     args,:();
-    // Handle a simple list into one position
+    // Handle a simple list into one replacement position
     args:$[(ci=1) and ca>1;enlist .fstr.strRep args;.fstr.strRep each args];
-    (raze/) .[;(::;1);:;args] 2 cut (0,i) cut str
+    // Handle an atom into multiple replacement positions
+    if[(ca=1) and ci>1; args:ci#args];
+    first[str],raze args,'2_/:1_str:(0,i) cut str
  };

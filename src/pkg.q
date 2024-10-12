@@ -1,6 +1,7 @@
 
 / 
-    Package Manager
+    File        : pkg.q
+    Description : Package manager.
 \
 
 .pkg.priv.pkgs:([name:"s"$()] 
@@ -12,12 +13,14 @@
 // Handle where error messages are to be written.
 .pkg.priv.stderr:-2i;
 
-.pkg.internal.path.qlib:.priv.qlib;
-.pkg.internal.path.src:.Q.dd[.pkg.internal.path.qlib;`src];
-.pkg.internal.path.cnf:.Q.dd[.pkg.internal.path.qlib;`cnf];
-.pkg.internal.path.test:.Q.dd[.pkg.internal.path.qlib;`test];
+.pkg.internal.path.root:.priv.qlib;
+.pkg.internal.path.qlib:.Q.dd[.pkg.internal.path.root;`build];
+if[()~key .pkg.internal.path.qlib; .pkg.internal.path.qlib:.pkg.internal.path.root];
+.pkg.internal.path.src:.Q.dd[.pkg.internal.path.root;`src];
+.pkg.internal.path.cnf:.Q.dd[.pkg.internal.path.root;`cnf];
+.pkg.internal.path.test:.Q.dd[.pkg.internal.path.root;`test];
 .pkg.internal.path.unit:.Q.dd[.pkg.internal.path.test;`unit];
-.pkg.priv.lib:.Q.dd[.pkg.internal.path.src;`lib];
+.pkg.priv.lib:.Q.dd[.pkg.internal.path.qlib;`src`lib];
 
 // @brief Get a list of all the files in the given directory.
 // @param dir : FileSymbol : Directory to get files from.
@@ -158,6 +161,12 @@
 // @param tys : String : Datatype characters for the key and values of the map respectively (must be length 2).
 // @return Dict : Map from config file.
 .pkg.internal.getCnfMap:{[cnf;tys] (!).(tys;csv) 0: .pkg.internal.getCnfPath ` sv cnf,`csv};
+
+// @brief Get a table from a config file.
+// @param cnf : Symbol : Config name (without file extension which is assumed to be .csv).
+// @param tys : String : Datatype characters for the columns of the table.
+// @return Table : Table from config file.
+.pkg.internal.getCnfTable:{[cnf;tys] (tys;enlist csv) 0: .pkg.internal.getCnfPath ` sv cnf,`csv};
 
 // @brief Reload a package.
 // @param p : Symbol : Package name.
