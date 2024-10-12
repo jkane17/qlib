@@ -1,0 +1,16 @@
+os,name,cmd
+win,cp,xcopy {} {} /E /H /C /I
+lnx,cp,cp -r {} {}
+mac,cp,cp -r {} {}
+sol,cp,cp -r {} {}
+sli,cp,cp -r {} {}
+win,mkdir,mkdir {}
+lnx,mkdir,mkdir -p {}
+mac,mkdir,mkdir -p {}
+sol,mkdir,mkdir -p {}
+sli,mkdir,mkdir -p {}
+win,mv,move {} {}
+lnx,mv,mv {} {}
+mac,mv,mv {} {}
+sol,mv,mv {} {}
+sli,mv,mv {} {}
