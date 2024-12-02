@@ -1,7 +1,10 @@
 
 /
-    File        : unit_fstr.q
-    Description : Test fstr.q
+    File:
+        unit_fstr.q
+    
+    Description:
+        Unit tests for fstr.q
 \
 
 .pkg.load `fstr`unit;

@@ -1,12 +1,15 @@
 
 /
-    File        : fstr.q
-    Description : Format strings.
+    File:
+        fstr.q
+    
+    Description:
+        Format strings.
 \
 
 // @brief Convert args into their string representation.
-// @param args : Any : Values to be converted.
-// @return String : String representation.
+// @param args Any Values to be converted.
+// @return String String representation.
 .fstr.strRep:{[args]
     ty:type args;
     $[
@@ -20,9 +23,9 @@
  };
 
 // @brief Replace "{}" with positional values (similar to Python fstring).
-// @param str  : String : Format string.
-// @param args : Any    : Arguments to insert.
-// @return String : Formated string.
+// @param str String Format string.
+// @param args Any Arguments to insert.
+// @return String Formated string.
 .fstr.fmt:{[str;args] 
     i:ss[str;"{}"];
     ci:count i;

@@ -1,6 +1,10 @@
 
-/ 
-    Command Line Parsing
+/
+    File:
+        argv.q
+    
+    Description:
+        Command line option parsing.
 \
 
 .pkg.load `fstr`log;
@@ -84,13 +88,13 @@
  };
 
 // @brief Add a command line argument to be parsed.
-// @param name : Symbol : Argument name.
-// @param ty   : Char   : Argument type.
-// @param def  : Any    : Argument default value.
-// @param req  : Bool   : Is argument required?
-// @param vf   : Lambda|Projection|Composition : (v)alidation (f)unction that 
-// is applied to the arg value and should return a bool (pass or fail).
-// @param des  : String : Description of argument.
+// @param name Symbol Argument name.
+// @param ty Char Argument type.
+// @param def Any Argument default value.
+// @param req Boolean Is the argument required?
+// @param vf Lambda|Projection|Composition Validation function that is applied to the arg value and 
+// should return a boolean (pass or fail).
+// @param des String Description of argument.
 .argv.add:{[name;ty;def;req;vf;des]
     `.argv.priv.args upsert `name`ty`default`required`vf`description!(
         name;ty;def;req;vf;des
@@ -98,13 +102,13 @@
  };
 
 // @brief Get value of argument.
-// @param name : Symbol : Argument name.
-// @return Any : Value of argument
+// @param name Symbol Argument name.
+// @return Any Value of argument.
 .argv.getValue:{[name] .argv.priv.args[name;`val]};
 
 // @brief Was the argument provided on the command line?
-// @param name : Symbol : Argument name.
-// @return Bool : 1b if argument was given, 0b otherwise.
+// @param name Symbol Argument name.
+// @return Bool 1b if argument was given, 0b otherwise.
 .argv.given:{[name] .argv.priv.args[name;`given]};
 
 // @brief Parse command line arguments.

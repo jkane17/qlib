@@ -1,7 +1,10 @@
 
 /
-    File        : unit_escCode.q
-    Description : Test escCode.q
+    File:
+        unit_escCode.q
+    
+    Description:
+        Unit tests for escCode.q
 \
 
 .pkg.load `escCode`unit;

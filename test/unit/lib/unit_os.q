@@ -1,7 +1,10 @@
 
 /
-    File        : unit_os.q
-    Description : Test os.q
+    File:
+        unit_os.q
+    
+    Description:
+        Unit tests for os.q
 \
 
 .pkg.load `os`unit;
