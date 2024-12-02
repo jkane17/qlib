@@ -7,7 +7,10 @@
         System commands.
 \
 
-.pkg.load `cast`fstr`log;
+.pkg.load `cast`flt`fstr`log`util;
+
+// Q Processes
+/ .os.priv.procs:([pid:"i"$()] port:);
 
 .os.priv.osMap:(`$"lmsvw" cross ("32";"64"))!raze 2#/:`lnx`mac`sol`sli`win;
 .os.priv.osMap[`l64arm]:`lnx;
@@ -117,3 +120,27 @@
 // @param cmd String Command to execute.
 // @return String Command output.
 .os.run:{[cmd] .os.priv.run[cmd;()]};
+
+// @brief Load a file into a Q session.
+// @param file : FileSymbol|Symbol|String : File to load.
+.os.load:{[file] .os.run 1_.cast.htostr file};
+
+/
+
+// @brief Run a raw system command in the background.
+// @param cmd : String : Command to execute.
+.os.runBg:{[cmd] 
+    pid:"I"$first .os.priv.run[`bg;cmd];
+
+ };
+
+// @brief Find the port given the process ID.
+.os.portByPID:{[pid]
+    r:.os.run .fstr.fmt["lsof -p {} | grep LISTEN | awk '{ print $9; }'";pid];
+    port:distinct .flt.notNull "I"$(last ":" vs) each r;
+    if[1<>count port; '"Could not find port"];
+    first port
+ };
+
+cmd:"/home/jkane/q/l64/q -p 5001 -w 2000 -arg1 123 -q";
+.os.portByPID pid

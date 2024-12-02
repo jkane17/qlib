@@ -22,7 +22,8 @@ setup:
 	@echo "Creating build directory..."
 	mkdir -p $(BUILD_DIR)
 
-build: $(BUILD_SRC_FILES) build-cnf
+build: prune $(BUILD_SRC_FILES) build-cnf
+	@echo "Building complete."
 
 $(BUILD_SRC)/%: $(SRC_DIR)/%
 	@echo "Copying $< to $@"
@@ -62,4 +63,17 @@ clean:
 	@echo "Cleaning build directory..."
 	rm -rf $(BUILD_DIR)
 
-.PHONY: all setup build build-cnf test-setup test clean
+# Prune obsolete files
+prune:
+	@echo "Removing obsolete files..."
+	@if [ -d $(BUILD_SRC) ]; then \
+		find $(BUILD_SRC) -type f -exec bash -c 'SRC="$${1#$(BUILD_SRC)/}"; [ ! -f "$(SRC_DIR)/$$SRC" ] && rm -f "$$1"' _ {} \;; \
+	fi
+	@if [ -d $(BUILD_TEST) ]; then \
+		find $(BUILD_TEST) -type f -exec bash -c 'SRC="$${1#$(BUILD_TEST)/}"; [ ! -f "$(TEST_DIR)/$$SRC" ] && rm -f "$$1"' _ {} \;; \
+	fi
+	@if [ -d $(BUILD_CNF) ]; then \
+		find $(BUILD_CNF) -type f -exec bash -c 'SRC="$${1#$(BUILD_CNF)/}"; [ ! -f "$(CNF_DIR)/$$SRC" ] && rm -f "$$1"' _ {} \;; \
+	fi
+
+.PHONY: all setup build build-cnf test-setup test clean prune

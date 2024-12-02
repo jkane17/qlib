@@ -7,6 +7,10 @@
         Utilities.
 \
 
+// @brief Generate a unique file name suffix.
+// @return String : File name suffix.
+.util.genFileSuffix:{[] string[.z.i],string[.z.p] except ".:D"};
+
 // @brief Get parse tree form.
 // @param x Any Object to convert to parse tree.
 // @return GeneralList Parse tree.

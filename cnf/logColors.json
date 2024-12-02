@@ -1,0 +1,9 @@
+{
+    "TRACE": "FG_MAGENTA",
+    "DEBUG": "FG_CYAN",
+    "INFO":  "FG_GREEN",
+    "WARN":  "FG_YELLOW",
+    "ERROR": "FG_RED",
+    "FATAL": "BG_RED",
+    "OFF":   ""
+}
