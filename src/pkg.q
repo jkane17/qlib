@@ -19,10 +19,7 @@
 .pkg.internal.path.root:.priv.qlib;
 .pkg.internal.path.qlib:.Q.dd[.pkg.internal.path.root;`build];
 if[()~key .pkg.internal.path.qlib; .pkg.internal.path.qlib:.pkg.internal.path.root];
-.pkg.internal.path.src:.Q.dd[.pkg.internal.path.root;`src];
-.pkg.internal.path.cnf:.Q.dd[.pkg.internal.path.root;`cnf];
-.pkg.internal.path.test:.Q.dd[.pkg.internal.path.root;`test];
-.pkg.internal.path.unit:.Q.dd[.pkg.internal.path.test;`unit];
+.pkg.internal.path.unit:.Q.dd[.pkg.internal.path.qlib;`test`unit];
 .pkg.priv.lib:.Q.dd[.pkg.internal.path.qlib;`src`lib];
 
 // @brief Get a list of all the files in the given directory.
@@ -123,17 +120,13 @@ if[()~key .pkg.internal.path.qlib; .pkg.internal.path.qlib:.pkg.internal.path.ro
     );
     .pkg.priv.updLoaded `pkg;
     .pkg.priv.validateDependencies[];
+    .pkg.internal.config:.pkg.internal.getCnfMap`config;
  };
 
 // @brief Get the path to a package file.
 // @param p Symbol Package name.
 // @return FileSymbol Path to package file.
 .pkg.priv.getFile:{[p] exec first file from .pkg.priv.pkgs where name=p};
-
-// @brief Has a package been loaded?
-// @param p Symbol Package name.
-// @return Boolean 1b if pacakge has been loaded, 0b otherwise.
-.pkg.priv.loaded:{[p] exec first loaded from .pkg.priv.pkgs where name=p};
 
 // @brief Is a package valid?
 // @param p Symbol Package name.
@@ -157,19 +150,23 @@ if[()~key .pkg.internal.path.qlib; .pkg.internal.path.qlib:.pkg.internal.path.ro
 // @brief Get the path to a config file.
 // @param cnf Symbol File name.
 // @return FileSymbol Path to a config file.
-.pkg.internal.getCnfPath:{[cnf] .Q.dd[.pkg.internal.path.cnf;cnf]};
+.pkg.internal.getCnfPath:{[cnf] .Q.dd[.pkg.internal.path.qlib;`cnf,cnf]};
 
 // @brief Get a map from a config file.
-// @param cnf Symbol Config name (without file extension which is assumed to be .csv).
-// @param tys String Datatype characters for the key and values of the map respectively (must be length 2).
+// @param cnf Symbol Config name (without file extension which is assumed to be .json).
 // @return Dict Map from config file.
-.pkg.internal.getCnfMap:{[cnf;tys] (!).(tys;csv) 0: .pkg.internal.getCnfPath ` sv cnf,`csv};
+.pkg.internal.getCnfMap:{[cnf] .j.k raze read0 .pkg.internal.getCnfPath ` sv cnf,`json};
 
 // @brief Get a table from a config file.
 // @param cnf Symbol Config name (without file extension which is assumed to be .csv).
 // @param tys String Datatype characters for the columns of the table.
 // @return Table Table from config file.
 .pkg.internal.getCnfTable:{[cnf;tys] (tys;enlist csv) 0: .pkg.internal.getCnfPath ` sv cnf,`csv};
+
+// @brief Has a package been loaded?
+// @param p Symbol Package name.
+// @return Bool 1b if pacakge has been loaded, 0b otherwise.
+.pkg.internal.loaded:{[p] exec first loaded from .pkg.priv.pkgs where name=p};
 
 // @brief Reload a package.
 // @param p Symbol Package name.
@@ -186,7 +183,7 @@ if[()~key .pkg.internal.path.qlib; .pkg.internal.path.qlib:.pkg.internal.path.ro
 // @param p Symbols Package names.
 // @return Symbols Packages that were loaded (includes dependencies).
 .pkg.load:{[p] 
-    $[all b:.pkg.priv.loaded each p,:();
+    $[all b:.pkg.internal.loaded each p,:();
         `$();
         raze .pkg.reload each p where not b
     ]

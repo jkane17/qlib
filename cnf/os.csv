@@ -1,4 +1,9 @@
 os,name,cmd
+win,bg,start /b {}
+lnx,bg,{} & echo $!
+mac,bg,{} & echo $!
+sol,bg,{} & echo $!
+sli,bg,{} & echo $!
 win,cp,xcopy {} {} /E /H /C /I
 lnx,cp,cp -r {} {}
 mac,cp,cp -r {} {}

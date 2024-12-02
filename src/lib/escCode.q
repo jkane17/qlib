@@ -10,7 +10,7 @@
 .pkg.load `flt;
 
 .escCode.priv.esc:"\033";
-.escCode.priv.codes:.pkg.internal.getCnfMap[`escCode;"sh"];
+.escCode.priv.codes:.pkg.internal.getCnfMap`escCode;
 
 // @brief Build a literal escape code from the given codes.
 // @param codes Symbols Escape codes.

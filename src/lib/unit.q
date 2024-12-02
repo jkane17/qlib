@@ -154,6 +154,16 @@
 // @param x Any Q object.
 .unit.assert.false:{if[x; '"ASSERT FALSE - Expected input to be false"]};
 
+// @brief Assert in (x in y).
+// @param x Any Q object to look for.
+// @param y List List to check.
+.unit.assert.in:{if[not x in y; '.fstr.fmt["ASSERT IN: Expected {} in {}";(x;y)]]};
+
+// @brief Assert like (x like y).
+// @param x String|Symbol String to check.
+// @param y String Pattern to match.
+.unit.assert.like:{if[not x like y; '.fstr.fmt["ASSERT LIKE - Expected {} like {}";(x;y)]]};
+
 // @brief Assert match (x ~ y).
 // @param x Any Q object.
 // @param y Any Q object.

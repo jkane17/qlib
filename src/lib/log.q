@@ -9,7 +9,7 @@
 
 .pkg.load `escCode;
 
-.log.priv.color:.pkg.internal.getCnfMap[`logColors;"ss"];
+.log.priv.color:`$.pkg.internal.getCnfMap`logColors;
 .log.internal.lvls:key .log.priv.color;
 
 // Message to be logged if given level is invalid.

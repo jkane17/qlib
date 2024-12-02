@@ -17,10 +17,11 @@
 // @brief Initialise argv.
 .argv.priv.init:{[]
     .argv.add[`b;   "b"; 0b;    0b; {1b};                "Blocked"];
-    .argv.add[`p;   "i"; 0i;    0b; {1b};                "Q Process Port"];
-    .argv.add[`q;   "b"; 0b;    0b; {1b};                "Quiet Mode"];
-    .argv.add[`s;   "i"; 0i;    0b; {1b};                "Secondary Processes"];
-    .argv.add[`w;   "j"; 0;     0b; {1b};                "Q Memory Limit"];
+    .argv.add[`p;   "i"; 0i;    0b; {1b};                "Listening port"];
+    .argv.add[`q;   "b"; 0b;    0b; {1b};                "Quiet mode"];
+    .argv.add[`s;   "i"; 0i;    0b; {1b};                "Secondary threads"];
+    .argv.add[`t;   "i"; 0i;    0b; {1b};                "Timer ticks"];
+    .argv.add[`w;   "j"; 0;     0b; {1b};                "Memory limit"];
     .argv.add[`T;   "j"; 0;     0b; {1b};                "Timeout"];
     .argv.add[`lvl; "s"; `INFO; 0b; .log.internal.valid; "Log Level"];
  };
@@ -50,14 +51,14 @@
 
 // @brief Set values within any packages whose depend on command line arguments.
 .argv.priv.setPkgVals:{[] 
-    if[.pkg.loaded `log; .log.setLvl .argv.getValue`lvl];
+    if[.pkg.internal.loaded `log; .log.setLvl .argv.get`lvl];
  };
 
 // @brief Validate command line arguments.
 .argv.priv.validate:{[]
-    valid:exec vf@'val from .argv.priv.args where not null name;
+    valid:exec vf@'val from .argv.priv.args where not null name, given;
     if[not all valid;
-        names:exec name from .argv.priv.args where not null name;
+        names:exec name from .argv.priv.args where not null name, given;
         .log.fatal .fstr.fmt[
             "(qlib.argv) Invalid command line argument(s): {}";
             names where not valid
@@ -101,10 +102,10 @@
     );
  };
 
-// @brief Get value of argument.
+// @brief Get the value of an argument.
 // @param name Symbol Argument name.
 // @return Any Value of argument.
-.argv.getValue:{[name] .argv.priv.args[name;`val]};
+.argv.get:{[name] .argv.priv.args[name;`val]};
 
 // @brief Was the argument provided on the command line?
 // @param name Symbol Argument name.
