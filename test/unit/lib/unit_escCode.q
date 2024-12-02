@@ -10,7 +10,7 @@
 .pkg.load `escCode`unit;
 
 apply:{[]
-    codes:.pkg.internal.getCnfMap[`escCode;"sh"];
+    codes:.pkg.internal.getCnfMap `escCode;
     esc:.escCode.priv.esc;
     text:"Hello World";
 
