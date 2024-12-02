@@ -1,7 +1,10 @@
 
 /
-    File        : unit.q
-    Description : Unit testing framework.
+    File:
+        unit.q
+    
+    Description:
+        Unit testing framework.
 \
 
 .pkg.load `fstr`log;
@@ -15,12 +18,21 @@
 
 .unit.priv.suitePattern:"unit_*.q";
 
+// @brief Execute a unit test.
+// @param x Symbol Unit test function name.
+// @return GeneralList 3 item list (pass;errMsg;errStmt) if test succeeds or error if tests fails.
 .unit.priv.exec:{x[];(1b;"";())};
 
+// @brief Find the end index of an error statement.
+// @param x String Function definition.
+// @return Long End index.
 .unit.priv.findStmtEnd:{
     first i where (i:where x=";") in where 0=sum each {x+:y="[({"; x-:y="])}"; x}\[0 0 0;x]
  };
 
+// @breif Extract an error statement from the given backtrace.
+// @param bt GeneralList Backtrace object.
+// @return String Error statement.
 .unit.priv.extractErrStmt:{[bt]
     bt@:-1+?[;1b] bt[;1;0]~\:".unit.priv.exec";
     s:bt 2;
@@ -29,10 +41,17 @@
     e#b
  };
 
+// @brief Execute a unit case.
+// @param cf Symbol Case function name.
+// @return Dict Test result plus error information if applicable.
 .unit.priv.execCase:{[cf] 
     `pass`errMsg`errStmt!.Q.trp[.unit.priv.exec;cf;{(0b;x;.unit.priv.extractErrStmt y)}]
  };
 
+// @brief Run a case.
+// @param suite Symbol Suite name.
+// @param case Symbol Case name.
+// @return Boolean Test result.
 .unit.priv.run:{[suite;case]
     r:.unit.priv.tests suite,case;
     r[`suite]:suite;
@@ -47,13 +66,15 @@
     r`pass
  };
 
-// Load a suite from the given file
+// @brief Load a suite from the given file.
+// @param FileSymbol Suite file.
 .unit.loadSuite:{[file]
     .log.debug .fstr.fmt["Loading suite: {}";file];
     system "l ",1_string file;
  };
 
-// Load all suite under the given directory
+// @brief Load all suites under the given directory.
+// @param FileSymbol Directory.
 .unit.loadSuites:{[dir]
     .log.debug .fstr.fmt["Loading all suite within: {}";dir];
     p:.os.rls dir;
@@ -62,32 +83,41 @@
     .unit.loadSuite each suites;
  };
 
-// Add a test to be run. Test should take no arguments
-.unit.add:{[suite;case] 
-    `.unit.priv.tests upsert enlist `suite`case`func!(suite;case;value case); 
- };
+// @brief Add a test to be run. Test function should take no arguments.
+// @param suite Symbol Suite name.
+// @param case Symbol Case name.
+.unit.add:{[suite;case] `.unit.priv.tests upsert enlist `suite`case`func!(suite;case;value case);};
 
-// Run a case
+// @brief Run a case.
+// @param suite Symbol Suite name.
+// @param case Symbol Case name.
+// @return Boolean Test result.
 .unit.runCase:{[suite;case]
     .log.debug .fstr.fmt["Running case: {}";case];
     .unit.priv.run[suite;case]
  };
 
-// Run all cases for the given suite
+// @brief Run all cases for the given suite.
+// @param suite Symbol Suite name.
+// @return Boolean Test result.
 .unit.runCases:{[suite]
     all .unit.runCase[suite;] each cases:exec case from .unit.priv.tests where suite=suite
  };
 
-// Run given suite
+// @brief Run the given suite.
+// @param suite Symbol Suite name.
+// @return Boolean Test result.
 .unit.runSuite:{[suite] 
     .log.debug .fstr.fmt["Running suite: {}";suite];
     .unit.runCases suite
  };
 
-// Run all suites
+// @brief Run all suites.
+// @return Boolean Test result.
 .unit.runSuites:{[] all .unit.runSuite each exec distinct suite from .unit.priv.tests};
 
-// Main driver function
+// @brief Main driver function
+// @return Dict Results.
 .unit.run:{[]
     pass:.unit.runSuites[];
 
@@ -106,29 +136,40 @@
     results
  };
 
-// Assert x is empty (0 = count)
+// @breif Assert empty (0 = count).
+// @param x Any Q object.
 .unit.assert.empty:{if[count x; '"ASSERT EMPTY - Expected input to be empty"]};
 
-// Apply f to args and assert that the given error is raised
+// @brief Assert that function application raises an error.
+// @param f Function Function to apply.
+// @param args List Function arguments.
+// @param err String Expected error.
 .unit.assert.fail:{[f;args;err]
     if[not .[f;args;~[err;]]; 
         '"ASSERT FAIL - Expected function application to fail with error: ",err
     ]
  };
 
-// Assert that x is false
+// @brief Assert false.
+// @param x Any Q object.
 .unit.assert.false:{if[x; '"ASSERT FALSE - Expected input to be false"]};
 
-// Assert that y matches the expected value x (x ~ y)
+// @brief Assert match (x ~ y).
+// @param x Any Q object.
+// @param y Any Q object.
 .unit.assert.match:{if[not x~y; '.fstr.fmt["ASSERT MATCH - Expected = {} : Actual = {}";(x;y)]]};
 
-// Assert x is not empty (0 < count)
+// @breif Assert not empty (0 < count).
+// @param x Any Q object.
 .unit.assert.notEmpty:{if[0=count x; '"ASSERT NOT EMPTY - Expected that input is not empty"]};
 
-// Assert that x is true
+// @brief Assert true.
+// @param x Any Q object.
 .unit.assert.true:{if[not x; '"ASSERT TRUE - Expected input to be true"]};
 
-// Assert that the type of y is equal to the expected type x
+// @brief Assert type.
+// @param x Short Type.
+// @param y Any Q object.
 .unit.assert.type:{
     if[not x=type y; '.fstr.fmt["ASSERT TYPE - Expected = {} : Actual = {}";(x;type y)]]
  };

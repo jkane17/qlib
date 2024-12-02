@@ -15,10 +15,10 @@ Library for the Q programming language.
     ## Linux/macOS Terminal
 
     ```bash
-    # Set QLIB in a start-up script
+    # Set QLIB and QEXE in a start-up script
     # For example, in bash
-    $ echo "export QLIB=/home/USER/repos/qlib" >> /home/USER/.bashrc
-    $ echo "export QEXE="${QHOME}/PLATFORM/q" >> /home/USER/.bashrc
+    $ echo 'export QLIB=${HOME}/repos/qlib' >> ${HOME}/.bashrc
+    $ echo 'export QEXE=${QHOME}/PLATFORM/q' >> ${HOME}/.bashrc
 
     # Source the script to define the variables in your current session
     $ source ~/.bashrc
@@ -27,8 +27,8 @@ Library for the Q programming language.
     ## Windows Command Prompt
 
     ```powershell
-    setx QLIB "C:\Users\USER\repos\qlib"
-    setx QEXE "%QHOME%\PLATFORM\q
+    setx QLIB "$env:USERPROFILE\repos\qlib"
+    setx QEXE "$env:QHOME\PLATFORM\q"
     ```
 
 3) Automate loading the q package manager when a q session is started. 
