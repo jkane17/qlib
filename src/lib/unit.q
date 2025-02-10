@@ -7,7 +7,7 @@
         Unit testing framework.
 \
 
-.pkg.load `fstr`log;
+.pkg.load `fstr`log`os;
 
 .unit.internal.dataPath:.Q.dd[.pkg.internal.path.qlib;`test`data];
 
@@ -64,6 +64,17 @@
     r[`duration]:.z.p-r`start;
     `.unit.priv.tests upsert r; 
     r`pass
+ };
+
+// @brief Print the results of the unit test.
+// @param msg String Message to print above the results.
+// @param results Dict Results.
+.unit.priv.print:{[msg;results]
+    line:40#"-";
+    -1 "\n",line;
+    -1 msg,"\n";
+    -1 .Q.s2 results;
+    -1 "\n",line,"\n";
  };
 
 // @brief Load a suite from the given file.
@@ -134,6 +145,16 @@
     results[`pass]:pass;
 
     results
+ };
+
+// @brief Print the results of the unit test.
+// @param results Dict Results.
+.unit.printResults:{[results]
+    .unit.priv.print["PASSED";] select sum duration by suite from results[`passed] 
+        where not suite in exec distinct suite from results`failed;
+    if[count failed:2!select suite, case, errMsg, errStmt from results`failed;
+        .unit.priv.print["FAILED";failed]
+    ];
  };
 
 // @breif Assert empty (0 = count).

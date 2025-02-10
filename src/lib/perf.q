@@ -7,6 +7,8 @@
         Performance testing utilities.
 \
 
+.pkg.load `util;
+
 // @brief Time and space of a function application or string evaluation.
 // @param x String|GeneralList String to evaluate, or function application where the first item in 
 // the list is the function name (Symbol) and susequent items are its arguments.
@@ -39,4 +41,4 @@
 // @param expr String|GeneralList String to evaluate, or function application where the first item 
 // in the list is the function name (Symbol) and susequent items are its arguments.
 // @return Dict Time statistics and memory usage.
-.perf.test:{[n;expr] timeit[n;expr],(1#`mem)!1#memUse expr};
+.perf.test:{[n;expr] .perf.timeit[n;expr],(1#`mem)!1#.perf.memUse expr};
