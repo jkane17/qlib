@@ -72,6 +72,10 @@
 // @return Boolean 1b if path exists, 0b otherwise.
 .os.exists:{[path] not ()~key .cast.tohsym path};
 
+// @brief The absolute file path of the loaded Q script.
+// @return FileSymbol Absolute path or null if no loaded file.
+.os.file:{[] $[null .z.f; `; .Q.dd . hsym[`$system"cd"],.z.f]};
+
 // @brief Check if stderr output is hidden.
 // @param hide Boolean 1b to hide stderr output, false otherwise.
 .os.hideStderr:{[hide] 

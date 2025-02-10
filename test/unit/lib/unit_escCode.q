@@ -1,15 +1,15 @@
 
 /
-    File:
+    @file
         unit_escCode.q
     
-    Description:
+    @description
         Unit tests for escCode.q
 \
 
 .pkg.load `escCode`unit;
 
-apply:{[]
+test_apply:{[]
     codes:.pkg.internal.getCnfMap `escCode;
     esc:.escCode.priv.esc;
     text:"Hello World";
@@ -26,26 +26,27 @@ apply:{[]
     .unit.assert.match[expected;.escCode.apply[`FG_RED`BOLD;text]];
  };
 
-listAll:{[]
+test_listAll:{[]
     .unit.assert.type[11h;.escCode.listAll[]];
  };
 
-listFGColors:{[]
+test_listFGColors:{[]
     colors:.escCode.listFGColors[];
     .unit.assert.type[11h;colors];
     .unit.assert.true all colors like "FG_*";
  };
 
-listBGColors:{[]
+test_listBGColors:{[]
     colors:.escCode.listBGColors[];
     .unit.assert.type[11h;colors];
     .unit.assert.true all colors like "BG_*";
  };
 
-listColors:{[]
+test_listColors:{[]
     colors:.escCode.listColors[];
     .unit.assert.type[11h;colors];
     .unit.assert.true all any colors like/: ("FG_*";"BG_*");
  };
 
-.unit.add[`escCode;] each `apply`listAll`listFGColors`listBGColors`listColors;
+.unit.add[`escCode;] each `test_apply`test_listAll`test_listFGColors`test_listBGColors,
+    `test_listColors;

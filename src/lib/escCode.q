@@ -1,9 +1,9 @@
-
-/
-    File:
+   
+/ 
+    @file
         escCode.q
     
-    Description:
+    @description
         Terminal escape code handling.
 \
 
@@ -15,6 +15,7 @@
 // @brief Build a literal escape code from the given codes.
 // @param codes Symbols Escape codes.
 // @return String Literal escape code.
+// @example .escCode.priv.build `BOLD`FG_RED
 .escCode.priv.build:{[codes]
     codes:";" sv string .escCode.priv.codes (),codes;
     .escCode.priv.esc,"[",codes,"m"
@@ -24,6 +25,7 @@
 // @param codes Symbols Escape codes to apply.
 // @param text String Text to apply escape codes to.
 // @return String Text wrapped with escape codes.
+// @example .escCode.apply[`BOLD`FG_RED;"Hello World"]
 .escCode.apply:{[codes;text] .escCode.priv.build[codes],text,.escCode.priv.build`RESET};
 
 // @brief List all supported escape codes.

@@ -1,5 +1,5 @@
 
-# qlib
+# QLib
 
 Library for the Q programming language.
 
@@ -27,7 +27,7 @@ Library for the Q programming language.
     ## Windows Command Prompt
 
     ```powershell
-    setx QLIB "$env:USERPROFILE\repos\qlib"
+    setx QLIB "$env:USER\repos\qlib"
     setx QEXE "$env:QHOME\PLATFORM\q"
     ```
 
