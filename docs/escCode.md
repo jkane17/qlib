@@ -7,12 +7,12 @@ Apply escape codes to the given text.
 .escCode.apply[codes;text]
 ```
 ### Parameters
-|Parameter|Type(s)|Description|
+|Parameter|Type|Description|
 |-|-|-|
 |codes|Symbols|Escape codes to apply.|
 |text|String|Text to apply escape codes to.|
 ### Return
-* **Type(s)**: String
+* **Type**: String
 * **Description**: Text wrapped with escape codes.
 ### Examples
 ```q
@@ -25,7 +25,7 @@ List all supported escape codes.
 .escCode.listAll[]
 ```
 ### Return
-* **Type(s)**: Symbols
+* **Type**: Symbols
 * **Description**: Escape codes.
 ## .escCode.listFGColors
 List foreground colors.
@@ -34,7 +34,7 @@ List foreground colors.
 .escCode.listFGColors[]
 ```
 ### Return
-* **Type(s)**: Symbols
+* **Type**: Symbols
 * **Description**: Foreground colors.
 ## .escCode.listBGColors
 List background colors.
@@ -43,7 +43,7 @@ List background colors.
 .escCode.listBGColors[]
 ```
 ### Return
-* **Type(s)**: Symbols
+* **Type**: Symbols
 * **Description**: Background colors.
 ## .escCode.listColors
 List all colors.
@@ -52,5 +52,5 @@ List all colors.
 .escCode.listColors[]
 ```
 ### Return
-* **Type(s)**: Symbols
+* **Type**: Symbols
 * **Description**: All colors.

@@ -18,6 +18,16 @@
 
 .unit.priv.suitePattern:"unit_*.q";
 
+.unit.priv.randArg:"bgxhijefcspmdznuvt"!
+    (0b;0Ng;0x0;100h;100i;100j;100e;100f;.Q.a;`3),{x,"mdznuvt"$x}.z.p;
+
+// @brief Generate random sample data for each datatype.
+// @param n Short|Int|Long Number of values per list.
+// @return Dict Mapping of datatype character to random data. 
+.unit.randData:{[n]
+    (rand each .unit.priv.randArg),(upper key .unit.priv.randArg)!value n?/:.unit.priv.randArg
+ };
+
 // @brief Execute a unit test.
 // @param x Symbol Unit test function name.
 // @return GeneralList 3 item list (pass;errMsg;errStmt) if test succeeds or error if tests fails.

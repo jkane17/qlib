@@ -40,3 +40,8 @@
     if[(ca=1) and ci>1; args:ci#args];
     first[str],raze args,'2_/:1_str:(0,i) cut str
  };
+
+// @brief Format a symbol list into a single, space separated, string.
+// @param x Symbol|Symbols Symbol list.
+// @return String Space separated string.
+.fstr.sepSyms:{" " sv string (),x};
