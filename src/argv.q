@@ -1,13 +1,13 @@
 
 /
-    File:
+    @file
         argv.q
     
-    Description:
+    @description
         Command line option parsing.
 \
 
-.pkg.load `fstr`log;
+.qlib.module.load `fstr`log;
 
 .argv.priv.args:([name:1#`] 
     ty:1#""; val:1#(); default:1#(); given:1#0b; 
@@ -51,7 +51,7 @@
 
 // @brief Set values within any packages whose depend on command line arguments.
 .argv.priv.setPkgVals:{[] 
-    if[.pkg.internal.loaded `log; .log.setLvl .argv.get`lvl];
+    if[.qlib.module.isLoaded `log; .log.setLvl .argv.get`lvl];
  };
 
 // @brief Validate command line arguments.

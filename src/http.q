@@ -1,9 +1,9 @@
 
 /
-    File:
+    @file
         http.q
     
-    Description:
+    @description
         HTTP(S) requests.
 \
 

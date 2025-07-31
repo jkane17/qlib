@@ -7,7 +7,7 @@
         Unit tests for escCode.q
 \
 
-.pkg.load `escCode`unit;
+.qlib.module.load `escCode`unit;
 
 test_apply:{[]
     codes:.pkg.internal.getCnfMap `escCode;

@@ -1,6 +1,6 @@
 
 // Load the log package (and any of its dependencies)
-loaded:.pkg.load `log;
+loaded:.qlib.module.load `log;
 
 .log.info "Loaded packages: ",csv sv string loaded;
 

@@ -7,7 +7,7 @@
         Unit tests for cast.q
 \
 
-.pkg.load `cast`unit;
+.qlib.module.load `cast`unit;
 
 test_htostr:{[]
     expected:"hello/world";

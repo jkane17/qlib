@@ -7,7 +7,7 @@
         Terminal escape code handling.
 \
 
-.pkg.load `flt;
+.qlib.module.load `flt;
 
 .escCode.priv.esc:"\033";
 .escCode.priv.codes:.pkg.internal.getCnfMap`escCode;

@@ -1,9 +1,9 @@
 
 /
-    File:
+    @file
         util.q
     
-    Description:
+    @description
         Utilities.
 \
 

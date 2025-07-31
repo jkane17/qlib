@@ -1,13 +1,13 @@
 
 /
-    File:
+    @file
         os.q
     
-    Description:
+    @description
         System commands.
 \
 
-.pkg.load `cast`flt`fstr`log`util;
+.qlib.module.load `cast`flt`fstr`log`util;
 
 // Q Processes
 / .os.priv.procs:([pid:"i"$()] port:);

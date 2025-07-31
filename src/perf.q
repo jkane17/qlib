@@ -1,13 +1,13 @@
 
 /
-    File:
+    @file
         perf.q
     
-    Description:
+    @description
         Performance testing utilities.
 \
 
-.pkg.load `util;
+.qlib.module.load `util;
 
 // @brief Time and space of a function application or string evaluation.
 // @param x String|GeneralList String to evaluate, or function application where the first item in 

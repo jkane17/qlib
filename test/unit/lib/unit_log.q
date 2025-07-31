@@ -4,7 +4,7 @@
     Description : Test log.q
 \
 
-.pkg.load `fstr`log`unit;
+.qlib.module.load `fstr`log`unit;
 
 .unit_log.dir:.Q.dd[.unit.internal.dataPath;`log];
 .unit_log.outFile:.Q.dd[.unit_log.dir;`outFile];

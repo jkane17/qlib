@@ -1,5 +1,5 @@
 
-.pkg.load `log;
+.qlib.module.load `log;
 
 logAll:{[]
     .log.trace "I am a TRACE message";

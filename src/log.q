@@ -1,13 +1,13 @@
 
 /
-    File:
+    @file
         log.q
     
-    Description:
+    @description
         Logging utilities.
 \
 
-.pkg.load `escCode;
+.qlib.module.load `escCode;
 
 .log.priv.color:`$.pkg.internal.getCnfMap`logColors;
 .log.internal.lvls:key .log.priv.color;
