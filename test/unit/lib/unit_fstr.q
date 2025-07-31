@@ -1,13 +1,13 @@
 
 /
-    File:
+    @file
         unit_fstr.q
     
-    Description:
+    @description
         Unit tests for fstr.q
 \
 
-.pkg.load `fstr`unit;
+.qlib.module.load `fstr`unit;
 
 strRep:{[]
     // Atoms

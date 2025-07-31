@@ -1,9 +1,9 @@
 
 /
-    File:
+    @file
         fstr.q
     
-    Description:
+    @description
         Format strings.
 \
 

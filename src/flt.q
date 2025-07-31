@@ -1,9 +1,9 @@
 
 /
-    File:
+    @file
         flt.q
     
-    Description:
+    @description
         Filtering utilities.
 \
 

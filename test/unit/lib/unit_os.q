@@ -1,13 +1,13 @@
 
 /
-    File:
+    @file
         unit_os.q
     
-    Description:
+    @description
         Unit tests for os.q
 \
 
-.pkg.load `os`unit;
+.qlib.module.load `os`unit;
 
 cp:{[]
     // Copy a file

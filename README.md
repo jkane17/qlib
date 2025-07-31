@@ -1,56 +1,104 @@
 
 # QLib
 
-Library for the Q programming language.
+*QLib* is a modular standard library for the [Q programming language](https://code.kx.com/q/). It organises reusable functionality into logically grouped modules under a unified namespace.
 
-# Installing
+## Features
 
-1) Clone this repository 
+* Organised by modules with automatic dependency management.
+* Isolated namespace to prevent conflicts with user-defined symbols.
+* Simple installation and integration with the q environment.
+
+## Modules
+
+*QLib* organises functionality into modules. Each module:
+
+* Can depend on other modules.
+* Automatically loads its dependencies.
+* Exposes public values in a consistent namespace.
+
+## Namespace
+
+All *QLib* definitions live under the root namespace `.qlib.`:
+
+    .qlib.<module>.<value>
+
+For example, a logging function:
+
+    .qlib.log.info
+
+This design keeps user code clean and avoids symbol clashes. Users are expected not to define values inside `.qlib`.
+
+## Private/Internal Values
+
+QLib defines two categories of non-public values:
+
+| Prefix | Description |
+| - | - |
+| `qlibp` | Private values intended for use only inside the module’s implementation file. |
+| `qlibi` | Internal values that may be used across modules but not by external *QLib* users. |
+
+These identifiers help signal intended usage boundaries.
+
+## Installing
+
+1. Clone this repository 
+
     ```
-    git clone <link>
+    git clone <LINK>
     ```
 
-2) Create the *QLIB* and *QEXE* environment variables. Note that you should replace *USER* and *PLATFORM* (w64, l64, etc.) as appropriate.
+    Replace <LINK> with the actual repository URL.
 
-    ## Linux/macOS Terminal
+2. Set the `QLIB` Environment Variable
+
+    ### Linux/macOS
 
     ```bash
-    # Set QLIB and QEXE in a start-up script
-    # For example, in bash
-    $ echo 'export QLIB=${HOME}/repos/qlib' >> ${HOME}/.bashrc
-    $ echo 'export QEXE=${QHOME}/PLATFORM/q' >> ${HOME}/.bashrc
+    # Add to your shell configuration (e.g., .bashrc, .zshrc)
+    echo 'export QLIB=$HOME/repos/qlib' >> ~/.bashrc
 
-    # Source the script to define the variables in your current session
-    $ source ~/.bashrc
+    # Apply changes
+    source ~/.bashrc
     ``` 
 
-    ## Windows Command Prompt
+    ### Windows
 
     ```powershell
-    setx QLIB "$env:USER\repos\qlib"
-    setx QEXE "$env:QHOME\PLATFORM\q"
+    setx QLIB "$env:USERPROFILE\repos\qlib"
     ```
 
-3) Automate loading the q package manager when a q session is started. 
+3. Auto-load QLib on Q Startup
 
-    * Create a `q.q` file in `QHOME` (if not previously created).
+    a. Create a `q.q` file in `QHOME` directory (if it doesn't exist)
         
-        ## Linux/macOS Terminal
+    ## Linux/macOS
 
-        ```bash
-        # For example, in bash
-        touch $QHOME/q.q
-        ```
+    ```bash
+    touch $QHOME/q.q
+    ```
 
-        ## Windows Command Prompt
+    ## Windows
 
-        ```powershell
-        echo. > %QHOME%\q.q
-        ```
+    ```powershell
+    echo. > %QHOME%\q.q
+    ```
 
-    * Add the following lines to your `q.q` file:
+    b. Add the following to `q.q`
 
-        ```q
-        .priv.qlib:hsym `${$["~"=first x;getenv[`HOME],1_x;x]} getenv`QLIB;
-        {if[not ()~key f:` sv .priv.qlib,`$"src/pkg.q"; system "l ",1_string f]}[];
-        ```
+    ```q
+    // Load QLib on session start
+    {
+        e:"[ERROR] Failed to load QLib: ";
+        r:hsym `${$["~"=first x;getenv[`HOME],1_x;x]} getenv`QLIB;
+        if[()~key f:.Q.dd[r;`init.q]; -2 e,"Missing file ",1_string f; :()];
+        .qlibi.path.root:r;
+        @[system; "l ",1_string f; 
+            {[e;x] {delete from x} each `.qlib`.qlibi`.qlibp;  -2 .qlib.error:e,x}[e;]
+        ];
+     }[];
+    ```
+
+## Contributing
+
+If you'd like to contribute a module or fix an issue, please open a pull request or start a discussion in the issues tab.

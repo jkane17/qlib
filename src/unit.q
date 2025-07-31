@@ -1,13 +1,13 @@
 
 /
-    File:
+    @file
         unit.q
     
-    Description:
+    @description
         Unit testing framework.
 \
 
-.pkg.load `fstr`log`os;
+.qlib.module.load `fstr`log`os;
 
 .unit.internal.dataPath:.Q.dd[.pkg.internal.path.qlib;`test`data];
 

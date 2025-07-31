@@ -1,13 +1,13 @@
 
 /
-    File:
+    @file
         run.q
     
-    Description:
+    @description
         Run unit tests.
 \
 
-.pkg.load `unit;
+.qlib.module.load `unit;
 
 .unit.loadSuites .pkg.internal.path.unit;
 results:.unit.run[];
