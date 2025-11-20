@@ -42,7 +42,7 @@ These identifiers help signal intended usage boundaries.
 
 ## Installing
 
-1. Clone this repository 
+Clone this repository 
 
     ```
     git clone <LINK>
@@ -50,54 +50,22 @@ These identifiers help signal intended usage boundaries.
 
     Replace <LINK> with the actual repository URL.
 
-2. Set the `QLIB` Environment Variable
+## Building
 
-    ### Linux/macOS
+The code can be built using a bash script located in the root directory of *QLib*:
 
-    ```bash
-    # Add to your shell configuration (e.g., .bashrc, .zshrc)
-    echo 'export QLIB=$HOME/repos/qlib' >> ~/.bashrc
+```bash
+$ ./build.sh
+```
 
-    # Apply changes
-    source ~/.bashrc
-    ``` 
+## Initialising
 
-    ### Windows
+To initialise *QLib*, set the variable `.qlib.root` as the absolute path to the root of the `qlib` directory and load the `init.q` script:
 
-    ```powershell
-    setx QLIB "$env:USERPROFILE\repos\qlib"
-    ```
-
-3. Auto-load QLib on Q Startup
-
-    a. Create a `q.q` file in `QHOME` directory (if it doesn't exist)
-        
-    ## Linux/macOS
-
-    ```bash
-    touch $QHOME/q.q
-    ```
-
-    ## Windows
-
-    ```powershell
-    echo. > %QHOME%\q.q
-    ```
-
-    b. Add the following to `q.q`
-
-    ```q
-    // Load QLib on session start
-    {
-        e:"[ERROR] Failed to load QLib: ";
-        r:hsym `${$["~"=first x;getenv[`HOME],1_x;x]} getenv`QLIB;
-        if[()~key f:.Q.dd[r;`init.q]; -2 e,"Missing file ",1_string f; :()];
-        .qlibi.path.root:r;
-        @[system; "l ",1_string f; 
-            {[e;x] {delete from x} each `.qlib`.qlibi`.qlibp;  -2 .qlib.error:e,x}[e;]
-        ];
-     }[];
-    ```
+```q
+.qlib.root:`:/path/to/qlib;
+system "l ",1_string .Q.dd[.qlib.root;`init.q];
+```
 
 ## Contributing
 
