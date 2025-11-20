@@ -7,17 +7,24 @@
         Initialise QLib (main entry point). 
 \
 
-.qlibi.path.build:.Q.dd[.qlibi.path.root;`build];
-.qlibi.path.config:.Q.dd[.qlibi.path.root;`config];
-.qlibi.path.src:.Q.dd[.qlibi.path.root;`src];
-.qlibi.path.test:.Q.dd[.qlibi.path.root;`test];
+if[0=count key `.qlib.root;
+    -2 "QLib requires '.qlib.root' to be set as the absolute path to the qlib directory";
+    exit 1
+ ];
+
+.qlibi.path.build:.Q.dd[.qlib.root;`build];
+.qlibi.path.bin:.Q.dd[.qlibi.path.build;`bin`lib];
+.qlibi.path.config:.Q.dd[.qlib.root;`config];
+.qlibi.path.src:.Q.dd[.qlib.root;`src];
+.qlibi.path.test:.Q.dd[.qlib.root;`test];
 .qlibi.path.unit:.Q.dd[.qlibi.path.test;`unit];
 
-.qlibi.path.qlib:$[
-    not ()~key .qlibi.path.build; .Q.dd[.qlibi.path.build;`lib];
-    not ()~key .qlibi.path.src; .qlibi.path.src;
-    '"Missing build and src directories"
- ];
+if[()~key .qlibi.path.build; system 1_string .Q.dd[.qlib.root;`build.sh]];
+if[()~key .qlibi.path.build; '"Unable to create build"];
+.qlibi.path.qlib:.qlibi.path.build;
+
+.qlib.fstr.rep:.qlibi.path.bin 2: (`fstr_rep;1);
+/ .qlib.fstr.format:.qlibi.path.bin 2: (`fstr_format;2);
 
 /
 // @brief Get the path to a config file.
@@ -37,4 +44,4 @@
 .pkg.internal.getCnfTable:{[cnf;tys] (tys;enlist csv) 0: .pkg.internal.getCnfPath ` sv cnf,`csv};
 \
 
-system "l ",1_string .Q.dd[.qlibi.path.qlib;`module.q];
+/ system "l ",1_string .Q.dd[.qlibi.path.qlib;`module.q];
