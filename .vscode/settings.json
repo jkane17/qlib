@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "stdint.h": "c",
-        "stdio.h": "c",
-        "type_traits": "c",
-        "stdbool.h": "c",
-        "limits.h": "c"
-    }
-}
