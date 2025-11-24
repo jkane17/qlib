@@ -31,8 +31,7 @@ given:{[name] args[name;`given]};
 // boolean. Use (::) if no validation is needed.
 // @param description Human-readable description of the argument.
 register:{[name;default;required;validate;description]
-    args::args upsert 
-        `name`default`required`validate`description!(name;default;required;validate;description);
+    args::args upsert ([name;default;required;validate;description]);
  };
 
 // @brief Return raw command-line arguments before any parsing or type conversion.
