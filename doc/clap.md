@@ -1,5 +1,4 @@
-
-# clap — Command-Line Argument Parser
+# clap - Command-Line Argument Parser
 
 clap is a lightweight Q/KDB-X module for parsing command-line arguments in a structured and type-safe way.
 
