@@ -4,7 +4,7 @@
         clap.q
     
     @description
-        (C)ommand-(L)ine (A)rgument (P)arser.
+        Command-Line Argument Parser.
 \
 
 // Table to hold command line arguments.
