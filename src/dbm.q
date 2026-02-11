@@ -4,7 +4,7 @@
         dbm.q
     
     @description
-        (D)ata(b)ase (M)aintenance.
+        Database Maintenance.
 \
 
 // @brief Add a column to a database table.
