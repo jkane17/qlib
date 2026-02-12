@@ -143,13 +143,14 @@ assert.fail:{[f;args;err]
 // @param results table Results table (returned from the `run` function).
 print.summary:{[results]
     summary:`suite`case xasc select suite, case, duration, pass from results;
-    stdout (""; "Unit Test Summary"),(indentSize#" "),/:(    
+    stdout (""; "Unit Test Summary"),(indentSize#" "),/:.Q.s2[summary],(    
+        "";
         "Duration   | ",string sum summary`duration; 
         "Test Count | ",string count summary; 
         "Passed     | ",string sum summary`pass; 
         "Failed     | ",string sum not summary`pass;
         ""
-    ),.Q.s2 summary;
+    );
  };
 
 // @brief Print failed test cases to standard output.

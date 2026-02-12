@@ -15,12 +15,12 @@ args:([name:1#`]
 // @brief Retrieve the value of an argument..
 // @param name symbol Argument name.
 // @return any The parsed value of the argument, or () if it does not exist..
-.z.m.get:{[name] args[name;`val]};
+.z.m.get:{[name:`s] args[name;`val]};
 
 // @brief Check whether an argument was supplied on the command line..
 // @param name symbol Argument name.
 // @return bool 1b if the argument was supplied, 0b otherwise.
-given:{[name] args[name;`given]};
+given:{[name:`s] args[name;`given]};
 
 // @brief Register a command-line argument for parsing.
 // @param name symbol Argument name.
@@ -29,8 +29,8 @@ given:{[name] args[name;`given]};
 // @param required bool Whether the argument is mandatory.
 // @param validate function A validation function applied to the parsed value. It must return a 
 // boolean. Use (::) if no validation is needed.
-// @param description Human-readable description of the argument.
-register:{[name;default;required;validate;description]
+// @param description string Human-readable description of the argument.
+register:{[name:`s;default;required:`b;validate;description:`C]
     args::args upsert ([name;default;required;validate;description]);
  };
 
