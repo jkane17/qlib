@@ -19,6 +19,19 @@ addCol:{[db:`s;domain:`s;tname:`s;cname:`s;default]
     add1Col[;cname;default] peach allTablePaths[db;tname];
  };
 
+// @brief Add columns of matching types to a database table.
+// @param db fileSymbol Path to database root.
+// @param domain symbol Sym file (domain) name (only used if columns are symbol type).
+// @param tname symbol Table name.
+// @param cnames symbol[] Column names.
+// @param default any Default value of the columns.
+addCols:{[db:`s;domain:`s;tname:`s;cnames:`S;default]
+    validateName each cnames;
+    default:enum[db;domain;default];
+    addCol[db;domain;tname;srcCol:first cnames;default];
+    copyCol[db;tname;srcCol]each 1_cnames;
+ };
+
 // @brief Add missing columns across all partitions of a table.
 // @param db fileSymbol Path to database root.
 // @param tname symbol Table name.
@@ -125,7 +138,7 @@ rmAttr:{[db:`s;tname:`s;cname:`s] setAttr[db;tname;cname;`];};
 setAttr:{[db:`s;tname:`s;cname:`s;attrb:`s] fnCol[db;tname;cname;attrb#];};
 
 export:([
-    addCol; addMissingCols; castCol; copyCol; delCol; delTab;
+    addCol; addCols; addMissingCols; castCol; copyCol; delCol; delTab;
     fnCol; hasCol; listCols; renameCol; renameTab; reorderCols; 
     rmAttr; setAttr
  ]);
