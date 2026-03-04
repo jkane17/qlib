@@ -50,6 +50,38 @@ Add a new column (`newSymCol`) to the `trade` table, within all partitions under
 dbm.addCol[`:db;`mySym;`trade;`newSymCol;`abc]
 ```
 
+### `addCols`
+
+Add columns of matching types to a database table.
+
+```q
+dbm.addCols[db;domain;tname;cnames;default]
+```
+
+#### Parameters
+
+| Param | Type | Description |
+| - | - | - |
+| `db` | `fileSymbol` | Path to database root |
+| `domain` | `symbol` | Sym file (domain) name (only used if columns are symbol type) |
+| `tname` | `symbol` | Table name |
+| `cnames` | `symbols` | Column names |
+| `default` | `any` | Default value of the columns |
+
+#### Examples
+
+Add new columns (`newColA` & `newColB`) to the `trade` table with a default value of 10:
+
+```q
+dbm.addCol[`:db;`;`trade;`newColA`newColB;10]
+```
+
+Add new columns (`newSymColA` & `newSymColB`) to the `trade` table, within all partitions under `db`, with a default value of `` `abc``, enumerated against `mySym`:
+
+```q
+dbm.addCols[`:db;`mySym;`trade;`newSymColA`newSymColB;`abc]
+```
+
 ### `addMissingCols`
 
 Add missing columns across all partitions of a table.
