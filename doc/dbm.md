@@ -65,18 +65,18 @@ dbm.addCols[db;domain;tname;cnames;default]
 | `db` | `fileSymbol` | Path to database root |
 | `domain` | `symbol` | Sym file (domain) name (only used if columns are symbol type) |
 | `tname` | `symbol` | Table name |
-| `cnames` | `symbol[]` | Column names |
+| `cnames` | `symbols` | Column names |
 | `default` | `any` | Default value of the columns |
 
 #### Examples
 
-Add new columns (`newColA,newColB`) to the `trade` table with a default value of 10:
+Add new columns (`newColA` & `newColB`) to the `trade` table with a default value of 10:
 
 ```q
 dbm.addCol[`:db;`;`trade;`newColA`newColB;10]
 ```
 
-Add new columns (`newSymColA,newSymColB`) to the `trade` table, within all partitions under `db`, with a default value of `` `abc``, enumerated against `mySym`:
+Add new columns (`newSymColA` & `newSymColB`) to the `trade` table, within all partitions under `db`, with a default value of `` `abc``, enumerated against `mySym`:
 
 ```q
 dbm.addCols[`:db;`mySym;`trade;`newSymColA`newSymColB;`abc]

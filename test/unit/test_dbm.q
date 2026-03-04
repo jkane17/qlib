@@ -9,6 +9,7 @@ partDB:.Q.dd[tmp;`partDB];
 splayTdir:.Q.dd[splayDB;`trade];
 partDates:.z.d-1 0;
 partTdirs:{.Q.dd[partDB;x,`trade]} each partDates;
+colNames:`time`sym`venue`size`price`company`moves;
 
 init:{[]
     fs.rmrf splayDB;
@@ -44,7 +45,6 @@ init:{[]
 testListCols:{[]
     init[];
     
-    colNames:`time`sym`venue`size`price`company`moves;
     unit.assert.match[listCols[splayDB;`trade]; colNames];
     unit.assert.match[listCols[partDB;`trade]; colNames];
     unit.assert.match[listCols[`:nonExistingDB;`trade]; `$()];
@@ -55,7 +55,6 @@ testAddColSplay:{[]
     init[];
 
     // No affect since column already exists
-    colNames:`time`sym`venue`size`price`company`moves;
     unit.assert.match[listCols[splayDB;`trade]; colNames];
     addCol[splayDB;`sym;`trade;`size;0N];
     unit.assert.match[listCols[splayDB;`trade]; colNames];
@@ -70,26 +69,24 @@ testAddColSplay:{[]
 testAddColPart:{[]
     init[];
 
-    // No affect since columns already exist
-    colNames:`time`sym`venue`size`price`company`moves;
+    // No affect since column already exists
     unit.assert.match[listCols[partDB;`trade]; colNames];
-    addCols[partDB;`sym;`trade;`sym`venue;`];
+    addCol[partDB;`sym;`trade;`size;0N];
     unit.assert.match[listCols[partDB;`trade]; colNames];
 
-    addCols[partDB;`sym;`trade;`newColA`newColB;0N];
+    addCol[partDB;`sym;`trade;`newCol;0N];
     {
-        unit.assert.true all `newColA`newColB in key x;
-        unit.assert.true all `newColA`newColB in get x,`.d;
-        unit.assert.true all{all 0N=get x,y}[x]each `newColA`newColB;
+        unit.assert.true `newCol in key x;
+        unit.assert.true `newCol in get x,`.d;
+        unit.assert.true all 0N=get x,`newCol
     } each partTdirs;
-    unit.assert.match[listCols[partDB;`trade]; colNames,`newColA`newColB];
+    unit.assert.match[listCols[partDB;`trade]; colNames,`newCol];
  };
 
 testAddColsSplay:{[]
     init[];
 
     // No affect since columns already exist
-    colNames:`time`sym`venue`size`price`company`moves;
     unit.assert.match[listCols[splayDB;`trade]; colNames];
     addCols[splayDB;`sym;`trade;`size`venue;0N];
     unit.assert.match[listCols[splayDB;`trade]; colNames];
@@ -104,26 +101,24 @@ testAddColsSplay:{[]
 testAddColsPart:{[]
     init[];
 
-    // No affect since column already exists
-    colNames:`time`sym`venue`size`price`company`moves;
+    // No affect since columns already exist
     unit.assert.match[listCols[partDB;`trade]; colNames];
-    addCol[partDB;`sym;`trade;`size;0N];
+    addCols[partDB;`sym;`trade;`sym`venue;`];
     unit.assert.match[listCols[partDB;`trade]; colNames];
 
-    addCol[partDB;`sym;`trade;`newCol;0N];
+    addCols[partDB;`sym;`trade;`newColA`newColB;0N];
     {
-        unit.assert.true `newCol in key x;
-        unit.assert.true `newCol in get x,`.d;
-        unit.assert.true all 0N=get x,`newCol
+        unit.assert.true all `newColA`newColB in key x;
+        unit.assert.true all `newColA`newColB in get x,`.d;
+        unit.assert.true all{all 0N=get x,y}[x]each `newColA`newColB;
     } each partTdirs;
-    unit.assert.match[listCols[partDB;`trade]; colNames,`newCol];
+    unit.assert.match[listCols[partDB;`trade]; colNames,`newColA`newColB];
  };
 
 testDelColSplay:{[]
     init[];
 
     // No affect since column does not exist
-    colNames:`time`sym`venue`size`price`company`moves;
     unit.assert.match[listCols[splayDB;`trade]; colNames];
     delCol[splayDB;`trade;`nonExistingCol];
     unit.assert.match[listCols[splayDB;`trade]; colNames];
@@ -144,7 +139,6 @@ testDelColPart:{[]
     init[];
 
     // No affect since column does not exist
-    colNames:`time`sym`venue`size`price`company`moves;
     unit.assert.match[listCols[partDB;`trade]; colNames];
     delCol[partDB;`trade;`nonExistingCol];
     unit.assert.match[listCols[partDB;`trade]; colNames];
@@ -167,7 +161,6 @@ testCopyColSplay:{[]
     init[];
 
     // No affect since price already exists
-    colNames:`time`sym`venue`size`price`company`moves;
     unit.assert.match[listCols[splayDB;`trade]; colNames];
     copyCol[splayDB;`trade;`size;`price];
     unit.assert.match[listCols[splayDB;`trade]; colNames];
@@ -190,7 +183,6 @@ testCopyColPart:{[]
     init[];
 
     // No affect since price already exists
-    colNames:`time`sym`venue`size`price`company`moves;
     unit.assert.match[listCols[partDB;`trade]; colNames];
     copyCol[partDB;`trade;`size;`price];
     unit.assert.match[listCols[partDB;`trade]; colNames];
@@ -226,7 +218,6 @@ testRenameColSplay:{[]
     init[];
 
     // No affect since price already exists
-    colNames:`time`sym`venue`size`price`company`moves;
     unit.assert.match[listCols[splayDB;`trade]; colNames];
     renameCol[splayDB;`trade;`size;`price];
     unit.assert.match[listCols[splayDB;`trade]; colNames];
@@ -256,7 +247,6 @@ testRenameColPart:{[]
     init[];
 
     // No affect since price already exists
-    colNames:`time`sym`venue`size`price`company`moves;
     unit.assert.match[listCols[partDB;`trade]; colNames];
     renameCol[partDB;`trade;`size;`price];
     unit.assert.match[listCols[partDB;`trade]; colNames];
@@ -289,7 +279,6 @@ testRenameColPart:{[]
 testReorderColsSplay:{[]
     init[];
 
-    colNames:`time`sym`venue`size`price`company`moves;
     unit.assert.match[listCols[splayDB;`trade]; colNames];
 
     unit.assert.fail[
@@ -309,7 +298,6 @@ testReorderColsSplay:{[]
 testReorderColsPart:{[]
     init[];
 
-    colNames:`time`sym`venue`size`price`company`moves;
     unit.assert.match[listCols[partDB;`trade]; colNames];
 
     unit.assert.fail[
@@ -411,7 +399,6 @@ testAttrPart:{[]
 testAddMissingColsSplay:{[]
     init[];
 
-    colNames:`time`sym`venue`size`price`company`moves;
     goodTdir:`$string[splayTdir],"Copy";
     fs.rcopy[splayTdir;goodTdir];
     
@@ -433,7 +420,6 @@ testAddMissingColsSplay:{[]
 testAddMissingColsPart:{[]
     init[];
 
-    colNames:`time`sym`venue`size`price`company`moves;
     goodTdir:`$string[partTdirs 0],"Copy";
     fs.rcopy[partTdirs 0;goodTdir];
     
@@ -493,8 +479,6 @@ testDelTabPart:{[]
 testRenameTabSplay:{[]
     init[];
 
-    colNames:`time`sym`venue`size`price`company`moves;
-
     unit.assert.true `trade in key splayDB;
     renameTab[splayDB;`trade;`tradeRenamed];
     unit.assert.false `trade in key splayDB;
@@ -504,8 +488,6 @@ testRenameTabSplay:{[]
 
 testRenameTabPart:{[]
     init[];
-
-    colNames:`time`sym`venue`size`price`company`moves;
 
     {unit.assert.true `trade in key .Q.dd[x;y]}[partDB;] each partDates;
     renameTab[partDB;`trade;`tradeRenamed];

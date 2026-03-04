@@ -23,13 +23,13 @@ addCol:{[db:`s;domain:`s;tname:`s;cname:`s;default]
 // @param db fileSymbol Path to database root.
 // @param domain symbol Sym file (domain) name (only used if columns are symbol type).
 // @param tname symbol Table name.
-// @param cnames symbol[] Column names.
+// @param cnames symbols Column names.
 // @param default any Default value of the columns.
 addCols:{[db:`s;domain:`s;tname:`s;cnames:`S;default]
     validateName each cnames;
     default:enum[db;domain;default];
     addCol[db;domain;tname;srcCol:first cnames;default];
-    copyCol[db;tname;srcCol]each 1_cnames;
+    copyCol[db;tname;srcCol;]each 1_cnames;
  };
 
 // @brief Add missing columns across all partitions of a table.
