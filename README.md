@@ -9,7 +9,7 @@ It is recommended to copy all source files and place them under the `qlib` subdi
 | Module | Description                               | Documentation          | Dependencies |
 | ------ | ----------------------------------------- | ---------------------- | ------------ |
 | `clap` | Command-Line Argument Parser              | [clap.md](doc/clap.md) |              |
-| `dbm`  | Database Maintenance                      | [dbm.md](doc/dbm.md)   |              |
+| `dbm`  | Database Maintenance                      | [dbm.md](doc/dbm.md)   | `fs`         |
 | `fs`   | File System Operations (Work in Progress) | [fs.md](doc/fs.md)     |              |
 | `unit` | Unit Testing Framework (Work in Progress) | [unit.md](doc/unit.md) | `fs`         |
 

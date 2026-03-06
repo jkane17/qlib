@@ -132,11 +132,12 @@ assert.like:{
 // @param err string Expected error.
 assert.fail:{[f;args;err]
     if[(0h>type args) or args~(); args:enlist args];
-    .[
-        f;
-        args;   
-        {if[not x like y; '"ASSERT FAIL | Expected error ",.Q.s1[x],", but got ",.Q.s1 y]}[err;]
-    ]
+    r:.[
+        {x . y; 1b};
+        (f;args);
+        {$[x like y; 0b; '"ASSERT FAIL | Expected error like ",.Q.s1[y],", but got ",.Q.s1 x]}[;err]
+    ];
+    if[r; '"ASSERT FAIL | Did not fail"];
  };
 
 // @brief Print a summary of the results to standard output.
