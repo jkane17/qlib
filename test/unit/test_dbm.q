@@ -178,8 +178,6 @@ testListTabs:{[]
     unit.assert.match[listTabs partDB; `quote`quote2`trade];
  };
 
-
-
 testRenameCol:{[]
     init[];
 
@@ -872,5 +870,3 @@ export:([
     testRebuildDomains; testReenumerateCol; testReenumerateColFrom; testReenumerateTab; 
     testReenumerateTabFrom; testReenumerateAll; testReenumerateAllFrom; testRenameDomain
  ]);
-
-/ init[]; db:splayDB; tdirs:splayTdir; tdir:first tdirs; tname:`trade

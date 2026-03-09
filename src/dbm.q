@@ -39,7 +39,7 @@ addCols:{[db:`s;domain:`s;tname:`s;cnames:`S;default]
 // @param tname symbol Table name.
 // @param goodTdir fileSymbol Path of a table directory which has no missing columns.
 addMissingCols:{[db:`s;tname:`s;goodTdir:`s]
-    add1MissingCols[;.Q.V goodTdir] peach allTablePaths[db;tname] except goodTdir;
+    add1MissingCols[;0#get goodTdir] peach allTablePaths[db;tname] except goodTdir;
  };
 
 // @brief Add a new table to all partitions of a database.
@@ -278,7 +278,7 @@ strToSymCol:{[db:`s;tname:`s;cname:`s;dname:`s]
 // @param cname symbol Column name.
 symToStrCol:{[db:`s;tname:`s;cname:`s]
     if[not null domainName:colDomainName[db;tname;cname];
-        fnCol[db;tname;cname;(string get[db,domainName]@)]
+        fnCol[db;tname;cname;string get[db,domainName]@]
     ];
  };
 
@@ -286,7 +286,8 @@ symToStrCol:{[db:`s;tname:`s;cname:`s]
 export:([
     addCol; addCols; addMissingCols; castCol; copyCol; delCol; delTab; domainUnused; domainUsage; 
     domainUsed; fnCol; hasCol; listCols; persistDomainMap; rebuildDomains; reenumerateAll;
-    reenumerateAllFrom; reenumerateCol; reenumerateColFrom; reenumerateTab; reenumerateTabFrom; renameCol; renameDomain; renameTab; reorderCols; resolveDomainMap; rmAttr; setAttr;
+    reenumerateAllFrom; reenumerateCol; reenumerateColFrom; reenumerateTab; reenumerateTabFrom; 
+    renameCol; renameDomain; renameTab; reorderCols; resolveDomainMap; rmAttr; setAttr;
     strToSymCol; symToStrCol 
  ]);
 

@@ -433,7 +433,7 @@ q)dbm.listEnumCols[`:db;`trade]
 
 List all table names in a database.
 
-> ![NOTE]
+> [!NOTE]
 > Uses the most recent partition in a partitioned database.
 
 ```q
