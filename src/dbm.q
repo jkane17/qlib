@@ -31,7 +31,7 @@ addCols:{[db:`s;domain:`s;tname:`s;cnames:`S;default]
     validateName each cnames;
     default:enum[db;domain;default];
     addCol[db;domain;tname;srcCol:first cnames;default];
-    copyCol[db;tname;srcCol;]each 1_cnames;
+    copyCol[db;tname;srcCol;] peach 1_cnames;
  };
 
 // @brief Add missing columns across all partitions of a table.
@@ -133,7 +133,7 @@ listEnumCols:{[db:`s;tname:`s] where 20h=colTypes[db;tname]};
 // @return symbols Table names.
 listTabs:{[db:`s] 
     if[0=count files:key db; :`$()];
-    if[any files like "par.txt"; :distinct raze .z.s each hsym `$read0 .Q.dd[db;`par.txt]];
+    if[any files like "par.txt"; :distinct raze .z.s peach hsym `$read0 .Q.dd[db;`par.txt]];
     isPartition:files like "[0-9]*";
     tabs@:where (fs.isdir .Q.dd[db;]@) each tabs:files where not isPartition;
     if[count files@:where isPartition; tabs,:key .Q.dd[db;] max "D"$/:string files];
@@ -479,7 +479,7 @@ enum:{[db:`s;domain:`s;vals] $[11h=abs type vals; .Q.dd[db;domain]?vals; vals]};
 // @brief Get all column names from a splayed table.
 // @param tdir fileSymbol Table directory.
 // @return symbols Column names (empty if tdir does not exist).
-getColNames:{[tdir:`s] $[count key .Q.dd[tdir;`.d]; get tdir,`.d; `$()]};
+getColNames:{[tdir:`s] $[fs.isfile .Q.dd[tdir;`.d]; get tdir,`.d; `$()]};
 
 // @brief Check whether a given name is valid (adheres to proper naming rules).
 // @param name symbol Name to check.
