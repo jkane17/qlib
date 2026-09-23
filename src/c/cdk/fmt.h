@@ -157,7 +157,7 @@ int qLongToLiteral(char *buffer, QSize size, QLong long_);
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
  * @param real The real value to format.
- * @param precision Number of decimal places shown (only first 6 are guarenteed to be accurate).
+ * @param precision Number of decimal places shown (only first 6 are guaranteed to be accurate).
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -169,7 +169,7 @@ int qRealToStr(char *buffer, QSize size, QReal real, int precision);
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
  * @param real The real value to format.
- * @param precision Number of decimal places shown (only first 6 are guarenteed to be accurate).
+ * @param precision Number of decimal places shown (only first 6 are guaranteed to be accurate).
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -181,7 +181,7 @@ int qRealToLiteral(char *buffer, QSize size, QReal real, int precision);
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
  * @param float_ The float value to format.
- * @param precision Number of decimal places shown (only first 15 are guarenteed to be accurate).
+ * @param precision Number of decimal places shown (only first 15 are guaranteed to be accurate).
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -193,7 +193,7 @@ int qFloatToStr(char *buffer, QSize size, QFloat float_, int precision);
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
  * @param float_ The float value to format.
- * @param precision Number of decimal places shown (only first 15 are guarenteed to be accurate).
+ * @param precision Number of decimal places shown (only first 15 are guaranteed to be accurate).
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -621,7 +621,7 @@ int qLongListToLiteral(char *buffer, QSize size, const QLong *longs, QSize lengt
  * @param size Size of buffer (number of bytes).
  * @param reals The list of real values to format.
  * @param length Length of the real list.
- * @param precision Number of decimal places shown (only first 6 are guarenteed to be accurate).
+ * @param precision Number of decimal places shown (only first 6 are guaranteed to be accurate).
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -634,7 +634,7 @@ int qRealListToStr(char *buffer, QSize size, const QReal *reals, QSize length, i
  * @param size Size of buffer (number of bytes).
  * @param reals The list of real values to format.
  * @param length Length of the real list.
- * @param precision Number of decimal places shown (only first 6 are guarenteed to be accurate).
+ * @param precision Number of decimal places shown (only first 6 are guaranteed to be accurate).
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -647,7 +647,7 @@ int qRealListToLiteral(char *buffer, QSize size, const QReal *reals, QSize lengt
  * @param size Size of buffer (number of bytes).
  * @param floats The list of float values to format.
  * @param length Length of the float list.
- * @param precision Number of decimal places shown (only first 6 are guarenteed to be accurate).
+ * @param precision Number of decimal places shown (only first 6 are guaranteed to be accurate).
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -660,7 +660,7 @@ int qFloatListToStr(char *buffer, QSize size, const QFloat *floats, QSize length
  * @param size Size of buffer (number of bytes).
  * @param floats The list of float values to format.
  * @param length Length of the float list.
- * @param precision Number of decimal places shown (only first 6 are guarenteed to be accurate).
+ * @param precision Number of decimal places shown (only first 6 are guaranteed to be accurate).
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -925,6 +925,27 @@ int qTimeListToLiteral(char *buffer, QSize size, const QTime *time, QSize length
  * character), or a negative value if an error occurred (see QFmtError).
  */
 int qListToStr(
+    char *buffer,
+    QSize size,
+    const void *list,
+    QSize length,
+    QTypeCode type,
+    int precision
+);
+
+/**
+ * @brief Format any simple list into literal form.
+ * 
+ * @param buffer Buffer to write the formatted value into.
+ * @param size Size of buffer (number of bytes).
+ * @param list The list to format.
+ * @param length Length of the list.
+ * @param type List type code.
+ * @param precision Number of decimal places shown for real and float values.
+ * @return The number of characters written to the buffer (not including the terminating null 
+ * character), or a negative value if an error occurred (see QFmtError).
+ */
+int qListToLiteral(
     char *buffer,
     QSize size,
     const void *list,

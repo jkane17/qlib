@@ -31,8 +31,10 @@ Debug builds check the arguments of the accessor functions with `assert`. Define
 | [Type Checking](checking.md)        | `is.h`    | Checking what kind of value an object holds                     |
 | [Errors](errors.md)                 | `err.h`   | Signalling and retrieving errors                                |
 | [Memory](memory.md)                 | `mem.h`   | Reference counting and ownership                                |
+| [Formatting](formatting.md)         | `fmt.h`   | Writing Q values as strings and Q literals                      |
+| [Utilities](utilities.md)           | `util.h`  | General-purpose helpers                                         |
 
-`fmt.h` (formatting Q values as strings), `ipc.h`, and `util.h` are not yet documented.
+`ipc.h` (connecting to and querying other Q processes over IPC) does not yet provide any functions: its declarations of the kdb+ IPC functions (`khp`, `k`, `kclose`, and others) are commented out.
 
 ## Example
 

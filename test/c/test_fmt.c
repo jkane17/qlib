@@ -1430,6 +1430,40 @@ void testTimeListToLiteral() {
         qTimeListToLiteral, times, 3, "16:20:17.123 00:00:00.000 -16:20:17.123", "16:20:17.123");
 }
 
+void testListToLiteral() {
+    int result;
+
+    QBoolean booleans[] = {1, 0, 1};
+    result = qListToLiteral(buffer, SIZE, booleans, 3, Q_TYPE_BOOLEAN, 0);
+    TEST_ASSERT_EQUAL_INT(4, result);
+    TEST_ASSERT_EQUAL_STRING("101b", buffer);
+
+    QByte bytes[] = {1, 123, 255};
+    result = qListToLiteral(buffer, SIZE, bytes, 3, Q_TYPE_BYTE, 0);
+    TEST_ASSERT_EQUAL_INT(8, result);
+    TEST_ASSERT_EQUAL_STRING("0x017bff", buffer);
+
+    QInt ints[] = {1, -2, 3};
+    result = qListToLiteral(buffer, SIZE, ints, 3, Q_TYPE_INT, 0);
+    TEST_ASSERT_EQUAL_STRING("1 -2 3i", buffer);
+
+    QReal reals[] = {1.5f, 2.25f};
+    result = qListToLiteral(buffer, SIZE, reals, 2, Q_TYPE_REAL, 2);
+    TEST_ASSERT_EQUAL_STRING("1.50 2.25e", buffer);
+
+    QChar chars[] = {'a', 'b'};
+    result = qListToLiteral(buffer, SIZE, chars, 2, Q_TYPE_CHAR, 0);
+    TEST_ASSERT_EQUAL_STRING("\"ab\"", buffer);
+
+    QSymbol symbols[] = {"a", "b"};
+    result = qListToLiteral(buffer, SIZE, symbols, 2, Q_TYPE_SYMBOL, 0);
+    TEST_ASSERT_EQUAL_STRING("`a`b", buffer);
+
+    // Unsupported type
+    result = qListToLiteral(buffer, SIZE, ints, 3, Q_TYPE_MIXED, 0);
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_TYPE, result);
+}
+
 void testListToStr() {
     int result;
 
@@ -1622,6 +1656,7 @@ int main() {
     RUN_TEST(testTimeListToStr);
     RUN_TEST(testTimeListToLiteral);
     RUN_TEST(testListToStr);
+    RUN_TEST(testListToLiteral);
 
     return UNITY_END();
 }
