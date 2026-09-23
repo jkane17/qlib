@@ -129,6 +129,10 @@
   */
 /* #define UNITY_EXCLUDE_FLOAT  */
 #define UNITY_INCLUDE_DOUBLE
+
+/* Flush stdout after each test, so that the results of the tests that ran before a crash are not
+ * lost from the output (stdout is fully buffered when it is a pipe). */
+#define UNITY_USE_FLUSH_STDOUT
 /* #define UNITY_EXCLUDE_DOUBLE */
 
 /* For features that are enabled, the following floating point options also
