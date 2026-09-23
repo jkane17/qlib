@@ -544,7 +544,7 @@ void testNewShort() {
     checkAtomValue(shortObj2, Q_TYPE_SHORT, &expected);
 
     // Positive short overflow wraps
-    QObj *shortObj3 = qNewShort(Q_SHORT_INF + 1);
+    QObj *shortObj3 = qNewShort((QShort)(Q_SHORT_INF + 1));
     checkAtomType(shortObj3, Q_TYPE_SHORT);
     expected = Q_SHORT_NULL;
     checkAtomValue(shortObj3, Q_TYPE_SHORT, &expected);
@@ -691,7 +691,7 @@ void testNewChar() {
     checkAtomValue(charObj2, Q_TYPE_CHAR, &expected);
 
     // Positive char overflow wraps
-    QObj *charObj3 = qNewChar(CHAR_MAX + 1);
+    QObj *charObj3 = qNewChar((QChar)(CHAR_MAX + 1));
     checkAtomType(charObj3, Q_TYPE_CHAR);
     expected = CHAR_MIN;
     checkAtomValue(charObj3, Q_TYPE_CHAR, &expected);

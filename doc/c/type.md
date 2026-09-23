@@ -339,11 +339,11 @@ if (isnan(qGetFloat(obj))) {
 | --------------- | ------------------------------ | ------- |
 | `Q_CHAR_NULL`   | `(QChar)' '`                   | `" "`   |
 | `Q_SYMBOL_NULL` | `""`                           | `` ` `` |
-| `Q_GUID_NULL`   | `static constexpr QGuid` of all zero bytes | `0Ng`   |
+| `Q_GUID_NULL`   | `QGuid` constant of all zero bytes | `0Ng`   |
 
 Symbols are interned, so a null symbol should be detected by checking for an empty string (`sym[0] == '\0'`) rather than by comparing pointers.
 
-`Q_GUID_NULL` is a `constexpr` object rather than a macro, so it can be used anywhere a `QGuid` value is needed:
+`Q_GUID_NULL` is a constant object rather than a macro (`static const` in C, `static constexpr` in C++), so it can be used anywhere a `QGuid` value is needed:
 
 ```c
 QObj *nullGuid = qNewGuid(Q_GUID_NULL);

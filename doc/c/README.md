@@ -14,7 +14,7 @@ Include the single umbrella header:
 
 **Requirements:**
 
-- **C23** (`-std=c2x` with GCC), for enumerations with a fixed underlying type and `constexpr`. The headers can also be included from C++.
+- **C23** (`-std=c2x`), for enumerations with a fixed underlying type. Tested with GCC 13 and Clang 18. The headers can also be included from C++ (tested as C++20).
 - **GCC or Clang**, as `QObj` relies on a compiler extension (see [Layout Compatibility](/doc/c/object.md#layout-compatibility)).
 - Linking against the kdb+ C library (`c.o`), or loading into a kdb+ process as a shared library.
 

@@ -148,8 +148,13 @@ typedef uint64_t QSize;
 // by comparing pointers.
 #define Q_SYMBOL_NULL ""
 
-// QGuid null value (0Ng), all bytes zero.
+// QGuid null value (0Ng), all bytes zero. A constant expression in C++; in C it is a const object,
+// as C23 constexpr objects are not supported by all compilers (e.g. Clang before version 19).
+#ifdef __cplusplus
 static constexpr QGuid Q_GUID_NULL = {{0}};
+#else
+static const QGuid Q_GUID_NULL = {{0}};
+#endif
 
 ///// Attributes /////
 

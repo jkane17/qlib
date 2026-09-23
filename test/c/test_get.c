@@ -4,6 +4,8 @@
  * @brief Unit tests for get.h.
  */
 
+#include <stdlib.h>
+
 #include "q.h"
 #include "unity.h"
 
@@ -85,15 +87,20 @@ void testGetCountTableNoColumns() {
     // dictionary has an empty header and an empty mixed list of columns
     QObj header = {.type = Q_TYPE_SYMBOL, .length = 0};
     QObj columns = {.type = Q_TYPE_MIXED, .length = 0};
-    struct {
-        QObj obj;
-        QObj *items[2];
-    } dict = {.obj = {.type = Q_TYPE_DICTIONARY, .length = 2}, .items = {&header, &columns}};
-    QObj table = {.type = Q_TYPE_TABLE, .nested = &dict.obj};
+
+    // The dictionary's two items are stored in its flexible list member
+    QObj *dict = malloc(sizeof(QObj) + 2 * sizeof(QObj *));
+    TEST_ASSERT_NOT_NULL(dict);
+    *dict = (QObj){.type = Q_TYPE_DICTIONARY, .length = 2};
+    ((QObj **)dict->list)[0] = &header;
+    ((QObj **)dict->list)[1] = &columns;
+    QObj table = {.type = Q_TYPE_TABLE, .nested = dict};
 
     TEST_ASSERT_EQUAL_UINT64(0, qGetTableColumnCount(&table));
     TEST_ASSERT_EQUAL_UINT64(0, qGetTableRowCount(&table));
     TEST_ASSERT_EQUAL_UINT64(0, qGetCount(&table));
+
+    free(dict);
 }
 
 void testGetCountKeyedTable() {
