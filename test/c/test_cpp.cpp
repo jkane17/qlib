@@ -24,7 +24,7 @@ void tearDown() {
 // Type definitions and layout are usable in constant expressions
 static_assert(sizeof(QObj) == 16);
 static_assert(Q_TYPE_LONG == 7 && Q_TYPE_ERROR == -128);
-static_assert(Q_ATTR_GROUPED == 4);
+static_assert(Q_ATTR_GROUPED == 5);
 static_assert(Q_GUID_NULL.bytes[0] == 0);
 
 // QSymbol is a (non-const) char *, so C++ string literals must be cast when building symbol arrays.

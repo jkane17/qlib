@@ -242,7 +242,7 @@ typedef char QAttr;
 
 Represents attributes associated with a Q list.
 
-The attribute is one of the `QAttrCode` values:
+The attribute is one of the `QAttrCode` values, as stored in the `attr` field of a `QObj`:
 
 ```c
 typedef enum : QAttr {
@@ -250,7 +250,7 @@ typedef enum : QAttr {
     Q_ATTR_SORTED = 1,
     Q_ATTR_UNIQUE = 2,
     Q_ATTR_PARTED = 3,
-    Q_ATTR_GROUPED = 4,
+    Q_ATTR_GROUPED = 5,
 } QAttrCode;
 ```
 
@@ -260,7 +260,9 @@ typedef enum : QAttr {
 | `Q_ATTR_SORTED`  |   `1` | sorted (`` `s# ``)  |
 | `Q_ATTR_UNIQUE`  |   `2` | unique (`` `u# ``)  |
 | `Q_ATTR_PARTED`  |   `3` | parted (`` `p# ``)  |
-| `Q_ATTR_GROUPED` |   `4` | grouped (`` `g# ``) |
+| `Q_ATTR_GROUPED` |   `5` | grouped (`` `g# ``) |
+
+KX does not document these numeric values; they were verified against kdb+ 5.0 (2025.12.18). Note that grouped is `5` in memory, but IPC serialization (`-8!`) encodes it as `4`, so these constants must not be used to interpret serialized data.
 
 ### `QSize`
 
@@ -440,6 +442,7 @@ For a primitive type code `n`:
 | `Q_TYPE_ANYMAP`          |     `77`   | Mapped list of lists of any type                 |
 | `Q_TYPE_NESTED_FIRST`    |     `78`   | Mapped nested list (first type code)             |
 | `Q_TYPE_NESTED_LAST`     |     `96`   | Mapped nested list (last type code)              |
+| `Q_TYPE_NESTED_SYM_ENUM` |     `97`   | Mapped nested list of `` `sym$ `` enumerations   |
 | `Q_TYPE_TABLE`           |     `98`   | Table                                            |
 | `Q_TYPE_DICTIONARY`      |     `99`   | Dictionary                                       |
 | `Q_TYPE_LAMBDA`          |    `100`   | Lambda                                           |
@@ -470,7 +473,7 @@ Unlike the primitive types, these values do not follow the atom/list type-code c
 
 Enumerated lists use type codes `20` to `76` (`Q_TYPE_ENUM_FIRST` to `Q_TYPE_ENUM_LAST`); the corresponding atoms use the negated codes.
 
-`Q_TYPE_ANYMAP` (`77`) is a mapped list of lists of any type. Mapped nested lists of a primitive type `t` have type code `77 + t`, from `Q_TYPE_NESTED_FIRST` (`78`) to `Q_TYPE_NESTED_LAST` (`96`).
+`Q_TYPE_ANYMAP` (`77`) is a mapped list of lists of any type. Mapped nested lists of a primitive type `t` have type code `77 + t`, from `Q_TYPE_NESTED_FIRST` (`78`) to `Q_TYPE_NESTED_LAST` (`96`). Type `97` (`Q_TYPE_NESTED_SYM_ENUM`) is a mapped nested list of `` `sym$ `` enumerations.
 
 ### Functions
 

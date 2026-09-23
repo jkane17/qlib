@@ -426,7 +426,7 @@ void testIsListKinds() {
     QObj enumerated = {.type = 20};
     QObj lastEnumerated = {.type = 76};
     QObj anymap = {.type = 77};
-    QObj lastNested = {.type = 97};
+    QObj lastNested = {.type = Q_TYPE_NESTED_SYM_ENUM};
 
     TEST_ASSERT_FALSE(qIsList(nullptr));
     TEST_ASSERT_FALSE(qIsSimpleList(nullptr));

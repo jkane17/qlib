@@ -146,13 +146,16 @@ static const QGuid Q_GUID_NULL = {{0}};
 
 ///// Attributes /////
 
-// Q list attribute codes (requires C23).
+// Q list attribute codes, as stored in the attr field of a QObj (requires C23).
+//
+// Not documented by KX; verified against kdb+ 5.0 (2025.12.18). Note that grouped is 5 in memory,
+// but IPC serialization (-8!) encodes it as 4.
 typedef enum : QAttr {
     Q_ATTR_NONE = 0,    // no attribute
     Q_ATTR_SORTED = 1,  // `s#
     Q_ATTR_UNIQUE = 2,  // `u#
     Q_ATTR_PARTED = 3,  // `p#
-    Q_ATTR_GROUPED = 4, // `g#
+    Q_ATTR_GROUPED = 5, // `g# (4 in IPC serialization)
 } QAttrCode;
 
 ///// Type Codes /////
@@ -187,6 +190,7 @@ typedef enum : QType {
     Q_TYPE_ANYMAP = 77,       // mapped list of lists of any type
     Q_TYPE_NESTED_FIRST = 78, // mapped nested list, 77 + primitive type (first type code)
     Q_TYPE_NESTED_LAST = 96,  // mapped nested list, 77 + primitive type (last type code)
+    Q_TYPE_NESTED_SYM_ENUM = 97, // mapped nested list of `sym$ enumerations
 
     Q_TYPE_TABLE = 98,
     Q_TYPE_DICTIONARY = 99,
