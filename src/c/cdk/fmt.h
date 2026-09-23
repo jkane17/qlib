@@ -504,7 +504,7 @@ int qBooleanListToLiteral(char *buffer, QSize size, const QBoolean *booleans, QS
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
-int qGuidListToStr(char *buffer, QSize size, QGuid *const *guids, QSize length);
+int qGuidListToStr(char *buffer, QSize size, const QGuid *guids, QSize length);
 
 /**
  * @brief Format a list of guid values into literal form.
@@ -516,7 +516,7 @@ int qGuidListToStr(char *buffer, QSize size, QGuid *const *guids, QSize length);
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
-int qGuidListToLiteral(char *buffer, QSize size, QGuid *const *guids, QSize length);
+int qGuidListToLiteral(char *buffer, QSize size, const QGuid *guids, QSize length);
 
 /**
  * @brief Format a list of byte values into string form.

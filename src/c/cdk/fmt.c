@@ -50,11 +50,18 @@
         return Q_FMT_ERROR_PRINTF;                                                                 \
     WRITE_FIXED(buffer, size, (QSize)width, fmt, ##__VA_ARGS__)
 
+// Item accessors for WRITE_LIST_AT: pass each item by value, or by address (for guids)
+#define ITEM_VALUE(list, i) ((list)[i])
+#define ITEM_ADDRESS(list, i) (&(list)[i])
+
 #define WRITE_LIST(buffer, size, func, list, length, spaced, result)                               \
+    WRITE_LIST_AT(buffer, size, func, list, length, spaced, result, ITEM_VALUE)
+
+#define WRITE_LIST_AT(buffer, size, func, list, length, spaced, result, item)                      \
     char *bufferPosition = buffer;                                                                 \
                                                                                                    \
     for (QSize i = 0; i < length; i++) {                                                           \
-        int nbytes = func(bufferPosition, size, (list)[i]);                                        \
+        int nbytes = func(bufferPosition, size, item(list, i));                                    \
         if (nbytes < 0)                                                                            \
             return nbytes;                                                                         \
                                                                                                    \
@@ -590,21 +597,21 @@ int qBooleanListToLiteral(char *buffer, QSize size, const QBoolean *booleans, QS
     return result + tailResult;
 }
 
-int qGuidListToStr(char *buffer, QSize size, QGuid *const *guids, QSize length) {
+int qGuidListToStr(char *buffer, QSize size, const QGuid *guids, QSize length) {
     if (length == 0)
         return 0;
 
     int result = 0;
-    WRITE_LIST(buffer, size, qGuidToStr, guids, length, true, result);
+    WRITE_LIST_AT(buffer, size, qGuidToStr, guids, length, true, result, ITEM_ADDRESS);
     return result;
 }
 
-int qGuidListToLiteral(char *buffer, QSize size, QGuid *const *guids, QSize length) {
+int qGuidListToLiteral(char *buffer, QSize size, const QGuid *guids, QSize length) {
     if (length == 0)
         return 0;
 
     int result = 0;
-    WRITE_LIST(buffer, size, qGuidToLiteral, guids, length, true, result);
+    WRITE_LIST_AT(buffer, size, qGuidToLiteral, guids, length, true, result, ITEM_ADDRESS);
     return result;
 }
 
@@ -997,7 +1004,7 @@ int qListToStr(
         case Q_TYPE_BOOLEAN:
             return qBooleanListToStr(buffer, size, (const QBoolean *)list, length);
         case Q_TYPE_GUID:
-            return qGuidListToStr(buffer, size, (QGuid *const *)list, length);
+            return qGuidListToStr(buffer, size, (const QGuid *)list, length);
         case Q_TYPE_BYTE:
             return qByteListToStr(buffer, size, (const QByte *)list, length);
         case Q_TYPE_SHORT:
@@ -1042,7 +1049,7 @@ int qListToLiteral(
         case Q_TYPE_BOOLEAN:
             return qBooleanListToLiteral(buffer, size, (const QBoolean *)list, length);
         case Q_TYPE_GUID:
-            return qGuidListToLiteral(buffer, size, (QGuid *const *)list, length);
+            return qGuidListToLiteral(buffer, size, (const QGuid *)list, length);
         case Q_TYPE_BYTE:
             return qByteListToLiteral(buffer, size, (const QByte *)list, length);
         case Q_TYPE_SHORT:

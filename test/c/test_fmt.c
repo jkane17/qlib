@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "fmt.h"
+#include "q.h"
 #include "type.h"
 #include "unity.h"
 
@@ -1187,58 +1188,36 @@ void testBooleanListToLiteral() {
 }
 
 void testGuidListToStr() {
-    QGuid guid = {{0x12,
-                   0x34,
-                   0x56,
-                   0x78,
-                   0x9A,
-                   0xBC,
-                   0xDE,
-                   0xF0,
-                   0x11,
-                   0x22,
-                   0x33,
-                   0x44,
-                   0x55,
-                   0x66,
-                   0x77,
-                   0x88}};
+    // Three different guids, so that items read from the wrong position would be detected
+    QGuid guids[] = {
+        {{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}},
+        {{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}},
+        {{0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00}},
+    };
 
-    QGuid *guids[] = {&guid, &guid, &guid};
     ASSERT_LIST(qGuidListToStr,
                 guids,
                 3,
                 "12345678-9abc-def0-1122-334455667788 "
-                "12345678-9abc-def0-1122-334455667788 "
-                "12345678-9abc-def0-1122-334455667788",
+                "00112233-4455-6677-8899-aabbccddeeff "
+                "ffeeddcc-bbaa-9988-7766-554433221100",
                 "12345678-9abc-def0-1122-334455667788");
 }
 
 void testGuidListToLiteral() {
-    QGuid guid = {{0x12,
-                   0x34,
-                   0x56,
-                   0x78,
-                   0x9A,
-                   0xBC,
-                   0xDE,
-                   0xF0,
-                   0x11,
-                   0x22,
-                   0x33,
-                   0x44,
-                   0x55,
-                   0x66,
-                   0x77,
-                   0x88}};
+    // Three different guids, so that items read from the wrong position would be detected
+    QGuid guids[] = {
+        {{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}},
+        {{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}},
+        {{0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00}},
+    };
 
-    QGuid *guids[] = {&guid, &guid, &guid};
     ASSERT_LIST(qGuidListToLiteral,
                 guids,
                 3,
                 "12345678-9abc-def0-1122-334455667788 "
-                "12345678-9abc-def0-1122-334455667788 "
-                "12345678-9abc-def0-1122-334455667788",
+                "00112233-4455-6677-8899-aabbccddeeff "
+                "ffeeddcc-bbaa-9988-7766-554433221100",
                 "12345678-9abc-def0-1122-334455667788");
 }
 
@@ -1430,6 +1409,26 @@ void testTimeListToLiteral() {
         qTimeListToLiteral, times, 3, "16:20:17.123 00:00:00.000 -16:20:17.123", "16:20:17.123");
 }
 
+void testGuidListFromQObject() {
+    // The items of a Q guid list are stored contiguously and can be formatted directly
+    QGuid values[] = {
+        {{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}},
+        {{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}},
+    };
+    QObj *list = qNewGuidList(values, 2);
+
+    int result = qListToStr(buffer, SIZE, list->list, list->length, Q_TYPE_GUID, 0);
+    TEST_ASSERT_EQUAL_INT(73, result);
+    TEST_ASSERT_EQUAL_STRING("12345678-9abc-def0-1122-334455667788 "
+                             "00112233-4455-6677-8899-aabbccddeeff",
+                             buffer);
+
+    result = qGuidListToLiteral(buffer, SIZE, (const QGuid *)list->list, list->length);
+    TEST_ASSERT_EQUAL_INT(73, result);
+
+    decRef(list);
+}
+
 void testListToLiteral() {
     int result;
 
@@ -1472,28 +1471,17 @@ void testListToStr() {
     TEST_ASSERT_EQUAL_INT(5, result);
     TEST_ASSERT_EQUAL_STRING("1 0 1", buffer);
 
-    QGuid guid = {{0x12,
-                   0x34,
-                   0x56,
-                   0x78,
-                   0x9A,
-                   0xBC,
-                   0xDE,
-                   0xF0,
-                   0x11,
-                   0x22,
-                   0x33,
-                   0x44,
-                   0x55,
-                   0x66,
-                   0x77,
-                   0x88}};
-    QGuid *guids[] = {&guid, &guid, &guid};
+    // Three different guids, so that items read from the wrong position would be detected
+    QGuid guids[] = {
+        {{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}},
+        {{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}},
+        {{0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00}},
+    };
     result = qListToStr(buffer, SIZE, guids, 3, Q_TYPE_GUID, 0);
     TEST_ASSERT_EQUAL_INT(110, result);
     TEST_ASSERT_EQUAL_STRING("12345678-9abc-def0-1122-334455667788 "
-                             "12345678-9abc-def0-1122-334455667788 "
-                             "12345678-9abc-def0-1122-334455667788",
+                             "00112233-4455-6677-8899-aabbccddeeff "
+                             "ffeeddcc-bbaa-9988-7766-554433221100",
                              buffer);
 
     QByte bytes[] = {1, 123, 255};
@@ -1657,6 +1645,7 @@ int main() {
     RUN_TEST(testTimeListToLiteral);
     RUN_TEST(testListToStr);
     RUN_TEST(testListToLiteral);
+    RUN_TEST(testGuidListFromQObject);
 
     return UNITY_END();
 }

@@ -107,9 +107,7 @@ int qLongListToStr(char *buffer, QSize size, const QLong *longs, QSize length);
 int qLongListToLiteral(char *buffer, QSize size, const QLong *longs, QSize length);
 ```
 
-As with atoms, the real and float list functions take an additional `precision`. The items of a Q list can be passed directly, e.g. `qLongListToStr(buffer, size, (const QLong *)obj->list, obj->length)`.
-
-> Note: The guid list functions are the exception. They take an array of *pointers* to guids (`QGuid *const *`), not the guids themselves, so the items of a Q guid list cannot be passed to them directly. See [Limitations](#limitations).
+As with atoms, the real and float list functions take an additional `precision`. The items of a Q list can be passed directly, e.g. `qLongListToStr(buffer, size, (const QLong *)obj->list, obj->length)`, or `qGuidListToStr(buffer, size, (const QGuid *)obj->list, obj->length)` for a guid list.
 
 Items are separated by a single space in the string form. The literal form follows Q's syntax for each type:
 
@@ -152,7 +150,6 @@ The formatting functions write the raw value of each type. They do not currently
 - **Symbols are not quoted.** A symbol containing a space, such as `a b`, is written as `` `a b ``, which Q parses as two tokens.
 - **A float literal can lose its type.** With a precision of `0`, the float `1.0` is written as `1`, which Q parses as a long.
 - **One-item and empty list literals are not distinguished from atoms.** A one-item long list is written as `1` (Q would write `,1`), a one-item char list as `"a"` (Q: `,"a"`), and an empty list as nothing at all (Q: `` `long$() ``, or `""` for an empty char list).
-- **Guid lists use a different layout.** `qGuidListToStr`, `qGuidListToLiteral`, and `qListToStr`/`qListToLiteral` with `Q_TYPE_GUID` expect an array of pointers to guids. Passing the items of a Q guid list (`obj->list`) to them is undefined behaviour and typically crashes. Format the guids of a Q list individually with `qGuidToStr` instead, or build an array of pointers to them.
 
 ## Examples
 
