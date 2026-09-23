@@ -47,7 +47,6 @@ static inline void freePool() {
  * @brief Set whether interning symbols uses a lock (thread safety).
  *
  * @param mode 1 to enable the lock, 0 to disable.
- * @return Previous lock mode (1 = locked, 0 = unlocked).
  */
 static inline void toggleSymbolLock(QInt mode) {
     extern QInt setm(QInt);
