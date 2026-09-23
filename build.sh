@@ -240,7 +240,8 @@ compile_cpp_test() {
 }
 
 # Check that every cdk header compiles on its own (includes everything it needs) as both C and
-# C++. Results are added to the pass/fail results.
+# C++, with -Wcast-qual so that the headers work in projects that enable it. Results are added to
+# the pass/fail results.
 check_headers() {
     local header name error
 
@@ -248,7 +249,7 @@ check_headers() {
         name="$(basename "${header}")"
 
         error="$(printf '#include <%s>\n' "${name}" |
-            "${CC}" "${CFLAGS[@]}" -fsyntax-only -x c - 2>&1)"
+            "${CC}" "${CFLAGS[@]}" -Wcast-qual -fsyntax-only -x c - 2>&1)"
         if [ -z "${error}" ]; then
             pass_results+=("${name}:0:compiles standalone as ${STD}:PASS")
         else
@@ -256,7 +257,7 @@ check_headers() {
         fi
 
         error="$(printf '#include <%s>\n' "${name}" |
-            "${CXX}" "${CXXFLAGS[@]}" -fsyntax-only -x c++ - 2>&1)"
+            "${CXX}" "${CXXFLAGS[@]}" -Wcast-qual -fsyntax-only -x c++ - 2>&1)"
         if [ -z "${error}" ]; then
             pass_results+=("${name}:0:compiles standalone as ${CXXSTD}:PASS")
         else

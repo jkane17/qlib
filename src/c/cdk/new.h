@@ -131,8 +131,8 @@ static inline QObj *qNewChar(QChar value) {
  * @return A pointer to a Q object containing a symbol atom.
  */
 static inline QObj *qNewSymbol(const QChar *value) {
-    extern QObj *ks(QSymbol);
-    return ks((QSymbol)value);
+    extern QObj *ks(const QChar *);
+    return ks(value);
 }
 
 /**
