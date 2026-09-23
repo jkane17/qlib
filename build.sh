@@ -153,9 +153,10 @@ compile_test() {
         "-I${C_UNITY_DIR}" \
         "${C_UNITY_DIR}"/*.c \
         "${src_file}" \
-        "${CDK_SO}" \
+        "-L${BUILD_QLIB_DIR}" -lcdk \
+        "-Wl,-rpath,\$ORIGIN/../qlib" \
         "${C_OBJ_FILE}" \
-        "${LDFLAGS[@]}" \
+        "${LFLAGS[@]}" \
         "-DUNITY_INCLUDE_CONFIG_H" \
         -o "${exe_file}" || {
             echo "Compilation failed for ${src_file}" >&2
@@ -223,30 +224,30 @@ run_c_tests() {
 
     echo "Running C unit tests.."
 
-    export LD_LIBRARY_PATH="${build_test_dir}:${LD_LIBRARY_PATH}"
-
     pass_results=()
     fail_results=()
     
     for file in "${build_test_dir}"/test_*; do
-        [ -e "${file}" ] || continue
+        [ -f "${file}" ] && [ -x "${file}" ] || continue
 
         echo "Running ${file}"
         
         output="$("${file}" 2>&1)"
         status=$?
 
+        file_fails=0
         while IFS= read -r line; do
             case "$line" in
                 *:PASS) pass_results+=("$line") ;;
-                *:FAIL*) fail_results+=("$line") ;;
+                *:FAIL*) fail_results+=("$line"); file_fails=$((file_fails + 1)) ;;
             esac
         done <<< "$output"
 
-        # If the test crashed, add a generic failure line for visibility
-        if (( status > 1 )); then
-            fail_results+=("${file}:FAIL (exit code ${status})")
-            # Optionally also save full output to a log
+        # Unity exits with the number of failed tests, so a non-zero status is only unexpected if it
+        # was caused by a signal (>= 128, e.g. a segfault or failed assert) or no failures were
+        # reported. Add a generic failure line for visibility and save the full output to a log.
+        if (( status >= 128 || (status != 0 && file_fails == 0) )); then
+            fail_results+=("${file}:0:(crashed):FAIL:exit code ${status}, see test_fail_output.log")
             echo "$output" >> "${build_test_dir}/test_fail_output.log"
         fi
     done
@@ -283,10 +284,11 @@ run_c_tests() {
 
         echo
         echo -e "Tests ${total} | ${GREEN}Passed ${#pass_results[@]}${RESET} | ${RED}Failed ${#fail_results[@]}${RESET}"
-    else
-        echo
-        echo -e "${GREEN}Tests ${total} | Passed ${#pass_results[@]} | Failed 0${RESET}"
+        return 1
     fi
+
+    echo
+    echo -e "${GREEN}Tests ${total} | Passed ${#pass_results[@]} | Failed 0${RESET}"
 }
 
 if ${CLEAN}; then
@@ -336,12 +338,17 @@ if ${TEST} || ${ITEST} || ${QTEST}; then
     run_q_tests
 fi
 
+TEST_STATUS=0
+
 if ${TEST} || ${CTEST}; then
     echo
-    run_c_tests
+    run_c_tests || TEST_STATUS=1
 fi
 
-if ${INSTALL}; then
+if ${INSTALL} && (( TEST_STATUS != 0 )); then
+    echo
+    echo "Tests failed, skipping installation." >&2
+elif ${INSTALL}; then
     echo
     echo "Installing library to ${INSTALL_DIR}"
 
@@ -351,3 +358,5 @@ if ${INSTALL}; then
 
     echo "Installation complete."
 fi
+
+exit ${TEST_STATUS}
