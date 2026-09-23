@@ -5,6 +5,7 @@
  */
 
 #include <stdarg.h>
+#include <stdlib.h>
 
 #include "err.h"
 #include "mem.h"
@@ -102,52 +103,78 @@ QObj *qNewDict(QObj *keys, QObj *values) {
     return xD(keys, values);
 }
 
-QObj *qNewTable(QObj *header, ...) {
-    va_list args;
-    va_start(args, header);
-    QObj *table = qNewTableVar(header, args);
-    va_end(args);
-    return table;
+QObj *qNewTableFromArray(QObj *header, QObj *const *columns, QSize count) {
+    const QChar *error = NULL;
+    if (!header || (!columns && count > 0))
+        error = "domain";
+    else if (!qIsSymbolList(header))
+        error = "type";
+    else if (header->length != count)
+        error = "length";
+    else {
+        for (QSize i = 0; i < count; i++) {
+            if (!columns[i]) {
+                error = "domain";
+                break;
+            }
+        }
+    }
+
+    // The column count is always known, so every argument can be released on error
+    if (error) {
+        if (header)
+            decRef(header);
+        for (QSize i = 0; columns && i < count; i++) {
+            if (columns[i])
+                decRef(columns[i]);
+        }
+        return qNewError(error);
+    }
+
+    QObj *list = qNewList(Q_TYPE_MIXED, count);
+    if (!list) {
+        decRef(header);
+        for (QSize i = 0; i < count; i++)
+            decRef(columns[i]);
+        return list;
+    }
+    for (QSize i = 0; i < count; i++)
+        ((QObj **)list->list)[i] = columns[i];
+
+    QObj *dict = qNewDict(header, list);
+    if (!dict)
+        return dict;
+
+    return xT(dict);
 }
 
 QObj *qNewTableVar(QObj *header, va_list args) {
     if (!header)
         return qNewError("domain");
 
+    // The number of columns is only known from a valid header, so the columns cannot be released
+    // if it is not one
     if (!qIsSymbolList(header)) {
         decRef(header);
         return qNewError("type");
     }
 
-    // Scan a copy first so that a missing column can be reported before any objects are consumed
-    bool hasNullColumn = false;
-    va_list scan;
-    va_copy(scan, args);
-    for (QSize i = 0; i < header->length; i++) {
-        if (!va_arg(scan, QObj *))
-            hasNullColumn = true;
-    }
-    va_end(scan);
-
-    if (hasNullColumn) {
-        for (QSize i = 0; i < header->length; i++) {
+    QSize count = header->length;
+    QObj **columns = malloc((count ? count : 1) * sizeof(QObj *));
+    if (!columns) {
+        for (QSize i = 0; i < count; i++) {
             QObj *column = va_arg(args, QObj *);
             if (column)
                 decRef(column);
         }
         decRef(header);
-        return qNewError("domain");
+        return qNewError("wsfull");
     }
 
-    QObj *columns = qNewMixedListVar(header->length, args);
-    if (!columns) {
-        decRef(header);
-        return columns;
-    }
+    for (QSize i = 0; i < count; i++)
+        columns[i] = va_arg(args, QObj *);
 
-    QObj *dict = qNewDict(header, columns);
-    if (!dict)
-        return dict;
-
-    return xT(dict);
+    QObj *table = qNewTableFromArray(header, columns, count);
+    free(columns);
+    return table;
 }

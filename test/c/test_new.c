@@ -2033,14 +2033,23 @@ void testNewTableErrorsRelease() {
     QLong longs[] = {1, 2, 3};
     QChar chars[] = {'a', 'b', 'c'};
 
-    // Header is not a symbol list - Error, header released (column count unknown, so column is not)
+    // Header is not a symbol list - Error, header and column released
     QObj *longHeader = qNewLongList(longs, 1);
     QObj *column0 = qNewLongList(longs, 3);
     incRef(longHeader);
+    incRef(column0);
     checkError(qNewTable(longHeader, column0), "type");
     checkReleased(longHeader);
-    TEST_ASSERT_EQUAL_INT(0, column0->refs);
-    decRef(column0);
+    checkReleased(column0);
+
+    // Null header - Error, columns released (the column count is known from the arguments)
+    QObj *column1 = qNewLongList(longs, 3);
+    QObj *column2 = qNewCharList(chars, 3);
+    incRef(column1);
+    incRef(column2);
+    checkDomainError(qNewTable(nullptr, column1, column2));
+    checkReleased(column1);
+    checkReleased(column2);
 
     // Header is a symbol atom - Error, header released
     QObj *atomHeader = qNewSymbol("col");
@@ -2061,6 +2070,27 @@ void testNewTableErrorsRelease() {
     checkReleased(colA);
     checkReleased(colC);
 
+    // Fewer columns than column names - Error, all released
+    QObj *header3 = qNewSymbolList(symbols, 3);
+    QObj *colA3 = qNewLongList(longs, 3);
+    incRef(header3);
+    incRef(colA3);
+    checkError(qNewTable(header3, colA3), "length");
+    checkReleased(header3);
+    checkReleased(colA3);
+
+    // More columns than column names - Error, all released
+    QObj *header4 = qNewSymbolList(symbols, 1);
+    QObj *colA4 = qNewLongList(longs, 3);
+    QObj *colB4 = qNewCharList(chars, 3);
+    incRef(header4);
+    incRef(colA4);
+    incRef(colB4);
+    checkError(qNewTable(header4, colA4, colB4), "length");
+    checkReleased(header4);
+    checkReleased(colA4);
+    checkReleased(colB4);
+
     // Same checks through the va_list variant
     QObj *headerVar = qNewSymbolList(symbols, 2);
     QObj *colVar = qNewLongList(longs, 3);
@@ -2069,6 +2099,36 @@ void testNewTableErrorsRelease() {
     checkDomainError(newTableVar(headerVar, nullptr, colVar));
     checkReleased(headerVar);
     checkReleased(colVar);
+}
+
+void testNewTableFromArray() {
+    QSymbol symbols[] = {"colA", "colB"};
+    QLong longs[] = {1, 2, 3};
+    QChar chars[] = {'a', 'b', 'c'};
+
+    QObj *columns[] = {qNewLongList(longs, 3), qNewCharList(chars, 3)};
+    QObj *table = qNewTableFromArray(qNewSymbolList(symbols, 2), columns, 2);
+    checkIsTable(table);
+    TEST_ASSERT_EQUAL_UINT64(2, qGetTableColumnCount(table));
+    TEST_ASSERT_EQUAL_UINT64(3, qGetTableRowCount(table));
+    checkTableHeader(table, Q_TYPE_SYMBOL, symbols, 2);
+    checkTableColumn(table, Q_TYPE_LONG, longs, 3, 0);
+    checkTableColumn(table, Q_TYPE_CHAR, chars, 3, 1);
+
+    // Null array with a non-zero count - Error, header released
+    QObj *header = qNewSymbolList(symbols, 2);
+    incRef(header);
+    checkDomainError(qNewTableFromArray(header, nullptr, 2));
+    checkReleased(header);
+
+    // Count does not match the header - Error, all released
+    QObj *header1 = qNewSymbolList(symbols, 2);
+    QObj *columns1[] = {qNewLongList(longs, 3)};
+    incRef(header1);
+    incRef(columns1[0]);
+    checkError(qNewTableFromArray(header1, columns1, 1), "length");
+    checkReleased(header1);
+    checkReleased(columns1[0]);
 }
 
 void testNewKeyedTableErrorsRelease() {
@@ -2158,6 +2218,7 @@ int main() {
     RUN_TEST(testNewMixedListTooLong);
     RUN_TEST(testNewDictErrorsRelease);
     RUN_TEST(testNewTableErrorsRelease);
+    RUN_TEST(testNewTableFromArray);
     RUN_TEST(testNewKeyedTableErrorsRelease);
 
     return UNITY_END();

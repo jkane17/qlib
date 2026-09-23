@@ -128,6 +128,27 @@ void testTables() {
     decRef(table);
 }
 
+void testTableOverload() {
+    const QSymbol names[] = {sym("a"), sym("b")};
+    const QLong longs[] = {1, 2, 3};
+
+    // Too few columns - Error, header and column released
+    QObj *header = qNewSymbolList(names, 2);
+    QObj *column = qNewLongList(longs, 3);
+    incRef(header);
+    incRef(column);
+    TEST_ASSERT_NULL(qNewTable(header, column));
+    TEST_ASSERT_TRUE(std::string(qGetError(qCheckError(nullptr))) == "length");
+    TEST_ASSERT_EQUAL_INT(0, header->refs);
+    TEST_ASSERT_EQUAL_INT(0, column->refs);
+    decRef(header);
+    decRef(column);
+
+    // Null header with no columns - Error
+    TEST_ASSERT_NULL(qNewTable(nullptr));
+    TEST_ASSERT_TRUE(std::string(qGetError(qCheckError(nullptr))) == "domain");
+}
+
 void testErrors() {
     QObj *list = qNewLongList(nullptr, 1);
     TEST_ASSERT_NULL(list);
@@ -174,6 +195,7 @@ int main() {
     RUN_TEST(testLists);
     RUN_TEST(testMixedListAndDict);
     RUN_TEST(testTables);
+    RUN_TEST(testTableOverload);
     RUN_TEST(testErrors);
     RUN_TEST(testReferenceCounting);
     RUN_TEST(testTypeCodeSwitch);

@@ -51,6 +51,7 @@ This document provides comprehensive documentation for Q object creation functio
     - [`qNewMixedListVar`](#qnewmixedlistvar)
     - [`qNewDict`](#qnewdict)
     - [`qNewTable`](#qnewtable)
+    - [`qNewTableFromArray`](#qnewtablefromarray)
     - [`qNewTableVar`](#qnewtablevar)
     - [`qNewKeyedTable`](#qnewkeyedtable)
     - [`qKeyTable`](#qkeytable)
@@ -2082,15 +2083,23 @@ ghi | 30
 Create a Q object containing a table.
 
 ```c
-QObj *qNewTable(QObj *header, ...);
+#define qNewTable(header, ...) /* QObj * */
 ```
+
+`qNewTable` is a macro that counts its column arguments and calls [`qNewTableFromArray`](#qnewtablefromarray). Because the number of columns is always known:
+
+- on any error, `header` and every column are released, even if `header` is `NULL` or not a symbol list,
+- a number of columns that does not match the number of column names is reported as a `length` error, and
+- each column must be a `QObj *`, which is checked by the compiler.
+
+In C++, `qNewTable` is an inline function template with the same behaviour.
 
 **Parameters**
 
-| Parameter | Description                                                                                                                                                                                     |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `header`  | A pointer to a Q object containing a list of column names (takes ownership)                                                                                                                     |
-| `...`     | Q object pointers, each containing a single column (takes ownership). All underlying lists should have equal lengths. There should be as many objects as there are column names (see `header`). |
+| Parameter | Description                                                                                                                  |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `header`  | A pointer to a Q object containing a symbol list of column names (takes ownership)                                           |
+| `...`     | Q object pointers, each containing a single column (takes ownership). All columns should have equal lengths, and there must be one per column name. |
 
 **Returns**
 
@@ -2098,7 +2107,7 @@ A pointer to a Q object containing a table.
 
 > Note: `header` length determines the number of columns, while the column length determines the number of rows.
 
-> Note: Returns a `type` error if `header` is not a symbol list (`header` is released), or a `domain` error if `header` or any column is `NULL` (a non-`NULL` `header` and all non-`NULL` columns are released). Columns are not released when `header` is `NULL` or not a symbol list, as the number of columns is unknown.
+> Note: Returns a `domain` error if `header` or any column is `NULL`, a `type` error if `header` is not a symbol list, or a `length` error if the number of columns does not match the number of column names. On error, `header` and all non-`NULL` columns are released.
 
 **Example**
 
@@ -2164,9 +2173,69 @@ col0 col1
 3    c
 ```
 
+### `qNewTableFromArray`
+
+Create a Q object containing a table from an array of columns.
+
+```c
+QObj *qNewTableFromArray(QObj *header, QObj *const *columns, QSize count);
+```
+
+**Parameters**
+
+| Parameter | Description                                                                                                      |
+| --------- | ---------------------------------------------------------------------------------------------------------------- |
+| `header`  | A pointer to a Q object containing a symbol list of column names (takes ownership)                               |
+| `columns` | Array of `count` Q object pointers, each containing a single column (takes ownership of each column, not the array) |
+| `count`   | Number of columns, which must equal the number of column names                                                   |
+
+**Returns**
+
+A pointer to a Q object containing a table.
+
+> Note: Returns a `domain` error if `header`, `columns` (with a non-zero `count`) or any column is `NULL`, a `type` error if `header` is not a symbol list, or a `length` error if `count` is not the number of column names. On error, `header` and all non-`NULL` columns are released.
+
+**Example**
+
+Useful when the number of columns is only known at run time:
+
+```c
+#include <inttypes.h>
+#include <stdio.h>
+#include "q.h"
+
+int main() {
+    enum { COLUMNS = 3, ROWS = 2 };
+    QSymbol names[COLUMNS] = {"a", "b", "c"};
+
+    QObj *columns[COLUMNS];
+    for (QSize i = 0; i < COLUMNS; i++) {
+        QLong values[ROWS] = {(QLong)i, (QLong)i * 10};
+        columns[i] = qNewLongList(values, ROWS);
+    }
+
+    QObj *table = qNewTableFromArray(qNewSymbolList(names, COLUMNS), columns, COLUMNS);
+
+    printf("Column count = %" PRIu64 "\n", qGetTableColumnCount(table));
+    printf("Row count = %" PRIu64 "\n", qGetTableRowCount(table));
+
+    decRef(table);
+    return 0;
+}
+```
+
+Output:
+
+```
+Column count = 3
+Row count = 2
+```
+
 ### `qNewTableVar`
 
 Create a Q object containing a table from an existing `va_list`.
+
+Intended for writing variadic wrappers. Prefer [`qNewTable`](#qnewtable) or [`qNewTableFromArray`](#qnewtablefromarray), which always know the number of columns.
 
 ```c
 QObj *qNewTableVar(QObj *header, va_list args);
@@ -2176,8 +2245,8 @@ QObj *qNewTableVar(QObj *header, va_list args);
 
 | Parameter | Description                                                                                                                                                                                     |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `header`  | A pointer to a Q object containing a list of column names (takes ownership)                                                                                                                     |
-| `args`    | Q object pointers, each containing a single column (takes ownership). All underlying lists should have equal lengths. There should be as many objects as there are column names (see `header`). |
+| `header`  | A pointer to a Q object containing a symbol list of column names (takes ownership)                                                                                                              |
+| `args`    | Q object pointers, each containing a single column (takes ownership). All columns should have equal lengths. The number of columns read is the number of column names, so there must be exactly one per column name. |
 
 **Returns**
 
@@ -2185,7 +2254,7 @@ A pointer to a Q object containing a table.
 
 > Note: `header` length determines the number of columns, while the column length determines the number of rows.
 
-> Note: Returns a `type` error if `header` is not a symbol list (`header` is released), or a `domain` error if `header` or any column is `NULL` (a non-`NULL` `header` and all non-`NULL` columns are released). Columns are not released when `header` is `NULL` or not a symbol list, as the number of columns is unknown.
+> Note: Returns a `domain` error if `header` or any column is `NULL`, or a `type` error if `header` is not a symbol list. `header` is released on error. The columns are also released, except when `header` is `NULL` or not a symbol list, as the number of columns is then unknown. Passing a different number of columns than column names is undefined behaviour, since a `va_list` does not record its length.
 
 **Example**
 

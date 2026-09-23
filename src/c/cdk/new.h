@@ -490,38 +490,55 @@ static inline QObj *qNewMixedListVar(QSize length, va_list args) {
 QObj *qNewDict(QObj *keys, QObj *values);
 
 /**
- * @brief Create a Q object containing a table.
+ * @brief Create a Q object containing a table from an array of columns.
  *
- * @param header A pointer to a Q object containing a list of column names (takes ownership).
- * @param ... Q object pointers, each containing a single column (takes ownership). All underlying
- * lists should have equal lengths. There should be as many objects as there are column names (see
- * `header`).
+ * @param header A pointer to a Q object containing a symbol list of column names (takes ownership).
+ * @param columns Array of `count` Q object pointers, each containing a single column (takes
+ * ownership of each column, but not of the array itself). All columns should have equal lengths.
+ * @param count Number of columns, which must equal the number of column names.
  * @return A pointer to a Q object containing a table.
  *
- * @note header length determines the number of columns, while the column length determines the
- * number of rows.
- * @note Returns a type error if `header` is not a symbol list (`header` is released), or a domain
- * error if `header` is null or any column is null (a non-null `header` and all non-null columns
- * are released). Columns are not released when `header` is null or not a symbol list, as the
- * number of columns is unknown.
+ * @note Returns a domain error if `header`, `columns` (with a non-zero `count`) or any column is
+ * null, a type error if `header` is not a symbol list, or a length error if `count` is not the
+ * number of column names. On error, `header` and all non-null columns are released.
  */
-QObj *qNewTable(QObj *header, ...);
+QObj *qNewTableFromArray(QObj *header, QObj *const *columns, QSize count);
+
+#ifndef __cplusplus
+/**
+ * @brief Create a Q object containing a table.
+ *
+ * A macro that counts its column arguments and calls `qNewTableFromArray`, so the number of
+ * columns is always known: on error, `header` and all columns are released, and a column count
+ * that does not match the header is reported as a length error. Each column must be a `QObj *`.
+ *
+ * @param header A pointer to a Q object containing a symbol list of column names (takes ownership).
+ * @param ... Q object pointers, each containing a single column (takes ownership). All columns
+ * should have equal lengths, and there must be one per column name.
+ * @return A pointer to a Q object containing a table.
+ *
+ * @note See `qNewTableFromArray` for the errors returned.
+ */
+#define qNewTable(header, ...)                                                                     \
+    qNewTableFromArray((header), (QObj *[]){__VA_ARGS__ __VA_OPT__(, ) NULL},                      \
+                       sizeof((QObj *[]){__VA_ARGS__ __VA_OPT__(, ) NULL}) / sizeof(QObj *) - 1)
+#endif
 
 /**
  * @brief Create a Q object containing a table from an existing va_list.
  *
- * @param header A pointer to a Q object containing a list of column names (takes ownership).
- * @param args Q object pointers, each containing a single column (takes ownership). All underlying
- * lists should have equal lengths. There should be as many objects as there are column names (see
- * `header`).
+ * Intended for writing variadic wrappers. Prefer `qNewTable` or `qNewTableFromArray`, which always
+ * know the number of columns.
+ *
+ * @param header A pointer to a Q object containing a symbol list of column names (takes ownership).
+ * @param args Q object pointers, each containing a single column (takes ownership). All columns
+ * should have equal lengths. The number of columns read is the number of column names, so there
+ * must be exactly one per column name.
  * @return A pointer to a Q object containing a table.
  *
- * @note header length determines the number of columns, while the column length determines the
- * number of rows.
- * @note Returns a type error if `header` is not a symbol list (`header` is released), or a domain
- * error if `header` is null or any column is null (a non-null `header` and all non-null columns
- * are released). Columns are not released when `header` is null or not a symbol list, as the
- * number of columns is unknown.
+ * @note Returns a domain error if `header` or any column is null, or a type error if `header` is
+ * not a symbol list. `header` is released on error. The columns are also released, except when
+ * `header` is null or not a symbol list, as the number of columns is then unknown.
  */
 QObj *qNewTableVar(QObj *header, va_list args);
 
@@ -579,6 +596,20 @@ static inline QObj *qUnkeyTable(QObj *keyedTable) {
 }
 
 #ifdef __cplusplus
+}
+
+/**
+ * @brief Create a Q object containing a table (C++).
+ *
+ * The C++ equivalent of the `qNewTable` macro: the number of columns is known at compile time and
+ * each column must be convertible to `QObj *`.
+ *
+ * @note See `qNewTableFromArray` for the errors returned.
+ */
+template <typename... Columns>
+inline QObj *qNewTable(QObj *header, Columns... columns) {
+    QObj *array[] = {static_cast<QObj *>(columns)..., nullptr};
+    return qNewTableFromArray(header, array, sizeof...(columns));
 }
 #endif
 
