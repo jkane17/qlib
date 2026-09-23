@@ -1436,6 +1436,51 @@ static void checkReleased(QObj *obj) {
     decRef(obj);
 }
 
+void testNewListLarge() {
+    // Larger lists, with a distinct value at each position, so that items copied to the wrong
+    // position or with the wrong size would be detected
+    enum { N = 1000 };
+
+    QLong longs[N];
+    QGuid guids[N];
+    QTimestamp timestamps[N];
+    QDate dates[N];
+    QReal reals[N];
+    QChar chars[N];
+    for (QSize i = 0; i < N; i++) {
+        longs[i] = (QLong)i * 1000003;
+        for (int b = 0; b < 16; b++)
+            guids[i].bytes[b] = (unsigned char)(i + (QSize)b * 7);
+        timestamps[i] = (QTimestamp)i * 86400000000000LL;
+        dates[i] = (QDate)i - 500;
+        reals[i] = (QReal)i / 4;
+        chars[i] = (QChar)('a' + i % 26);
+    }
+
+    QObj *longList = qNewLongList(longs, N);
+    QObj *guidList = qNewGuidList(guids, N);
+    QObj *timestampList = qNewTimestampList(timestamps, N);
+    QObj *dateList = qNewDateList(dates, N);
+    QObj *realList = qNewRealList(reals, N);
+    QObj *charList = qNewCharList(chars, N);
+
+    QObj *lists[] = {longList, guidList, timestampList, dateList, realList, charList};
+    for (QSize l = 0; l < sizeof(lists) / sizeof(lists[0]); l++)
+        TEST_ASSERT_EQUAL_UINT64(N, lists[l]->length);
+
+    for (QSize i = 0; i < N; i++) {
+        TEST_ASSERT_EQUAL_INT64(longs[i], qGetLongAtIndex(longList, i));
+        TEST_ASSERT_EQUAL_MEMORY(guids[i].bytes, qGetGuidAtIndex(guidList, i)->bytes, 16);
+        TEST_ASSERT_EQUAL_INT64(timestamps[i], qGetTimestampAtIndex(timestampList, i));
+        TEST_ASSERT_EQUAL_INT32(dates[i], qGetDateAtIndex(dateList, i));
+        TEST_ASSERT_EQUAL_FLOAT(reals[i], qGetRealAtIndex(realList, i));
+        TEST_ASSERT_EQUAL_CHAR(chars[i], qGetCharAtIndex(charList, i));
+    }
+
+    for (QSize l = 0; l < sizeof(lists) / sizeof(lists[0]); l++)
+        decRef(lists[l]);
+}
+
 void testNewListNullValues() {
     // Null values with zero length creates an empty list
     QObj *empty[] = {
@@ -2205,6 +2250,7 @@ int main() {
     RUN_TEST(testNewMinuteList);
     RUN_TEST(testNewSecondList);
     RUN_TEST(testNewTimeList);
+    RUN_TEST(testNewListLarge);
     RUN_TEST(testNewListNullValues);
 
     RUN_TEST(testNewMixedList);
