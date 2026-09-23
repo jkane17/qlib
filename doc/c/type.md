@@ -304,15 +304,10 @@ Q defines special null and infinity values for many of its types. These are expo
 | -------------- | --------------------- | ------- |
 | `Q_SHORT_NULL` | `(QShort)INT16_MIN`   | `0Nh`   |
 | `Q_SHORT_INF`  | `(QShort)INT16_MAX`   | `0Wh`   |
-| `Q_SHORT_NINF` | `(QShort)-INT16_MAX`  | `-0Wh`  |
 | `Q_INT_NULL`   | `(QInt)INT32_MIN`     | `0Ni`   |
 | `Q_INT_INF`    | `(QInt)INT32_MAX`     | `0Wi`   |
-| `Q_INT_NINF`   | `(QInt)-INT32_MAX`    | `-0Wi`  |
 | `Q_LONG_NULL`  | `(QLong)INT64_MIN`    | `0N`    |
 | `Q_LONG_INF`   | `(QLong)INT64_MAX`    | `0W`    |
-| `Q_LONG_NINF`  | `(QLong)-INT64_MAX`   | `-0W`   |
-
-The null value is the minimum value of the type, so negative infinity is one greater than it.
 
 ### Floating-Point Types
 
@@ -320,10 +315,8 @@ The null value is the minimum value of the type, so negative infinity is one gre
 | -------------- | -------------------- | ------- |
 | `Q_REAL_NULL`  | `(QReal)NAN`         | `0Ne`   |
 | `Q_REAL_INF`   | `(QReal)INFINITY`    | `0We`   |
-| `Q_REAL_NINF`  | `(QReal)-INFINITY`   | `-0We`  |
 | `Q_FLOAT_NULL` | `(QFloat)NAN`        | `0n`    |
 | `Q_FLOAT_INF`  | `(QFloat)INFINITY`   | `0w`    |
-| `Q_FLOAT_NINF` | `(QFloat)-INFINITY`  | `-0w`   |
 
 Q treats any NaN as null, and NaN never compares equal to anything (including itself), so test for a null with `isnan()` rather than `==`:
 
@@ -332,6 +325,19 @@ if (isnan(qGetFloat(obj))) {
     // null
 }
 ```
+
+### Negative Infinity
+
+There are no separate macros for negative infinity. Negate the infinity value instead:
+
+| Q value                  | C expression                                   |
+| ------------------------ | ---------------------------------------------- |
+| `-0Wh`, `-0Wi`, `-0W`    | `-Q_SHORT_INF`, `-Q_INT_INF`, `-Q_LONG_INF`    |
+| `-0We`, `-0w`            | `-Q_REAL_INF`, `-Q_FLOAT_INF`                  |
+
+For the integer types, the null value is the minimum value of the type, so negative infinity (`-MAX`) is one greater than null, and negating the infinity value cannot overflow. Do not use `INT32_MIN` (or similar) for negative infinity: it is the null value.
+
+`-Q_SHORT_INF` has type `int` (C promotes `short` operands), so it is converted back to `QShort` when assigned or passed to a function such as `qNewShort`, without changing its value.
 
 ### Char, Symbol, and GUID
 

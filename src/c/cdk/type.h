@@ -91,6 +91,9 @@ typedef uint64_t QSize;
 
 ///// Special Values /////
 
+// Negative infinity is the negation of infinity (e.g. -Q_INT_INF for -0Wi). For the integer types
+// this is one greater than null, and the negation cannot overflow.
+//
 // Temporal types use the null and infinity values of their underlying type:
 //   timestamp, timespan                     -> Q_LONG_*
 //   month, date, minute, second, time       -> Q_INT_*
@@ -102,17 +105,11 @@ typedef uint64_t QSize;
 // QShort infinity value (0Wh)
 #define Q_SHORT_INF ((QShort)INT16_MAX)
 
-// QShort negative infinity value (-0Wh)
-#define Q_SHORT_NINF ((QShort)-INT16_MAX)
-
 // QInt null value (0Ni)
 #define Q_INT_NULL ((QInt)INT32_MIN)
 
 // QInt infinity value (0Wi)
 #define Q_INT_INF ((QInt)INT32_MAX)
-
-// QInt negative infinity value (-0Wi)
-#define Q_INT_NINF ((QInt)-INT32_MAX)
 
 // QLong null value (0N)
 #define Q_LONG_NULL ((QLong)INT64_MIN)
@@ -120,26 +117,17 @@ typedef uint64_t QSize;
 // QLong infinity value (0W)
 #define Q_LONG_INF ((QLong)INT64_MAX)
 
-// QLong negative infinity value (-0W)
-#define Q_LONG_NINF ((QLong)-INT64_MAX)
-
 // QReal null value (0Ne). Any NaN is treated as null, so test with isnan() rather than ==.
 #define Q_REAL_NULL ((QReal)NAN)
 
 // QReal infinity value (0We)
 #define Q_REAL_INF ((QReal)INFINITY)
 
-// QReal negative infinity value (-0We)
-#define Q_REAL_NINF ((QReal)-INFINITY)
-
 // QFloat null value (0n). Any NaN is treated as null, so test with isnan() rather than ==.
 #define Q_FLOAT_NULL ((QFloat)NAN)
 
 // QFloat infinity value (0w)
 #define Q_FLOAT_INF ((QFloat)INFINITY)
-
-// QFloat negative infinity value (-0w)
-#define Q_FLOAT_NINF ((QFloat)-INFINITY)
 
 // QChar null value (" ")
 #define Q_CHAR_NULL ((QChar)' ')

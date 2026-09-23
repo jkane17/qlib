@@ -37,30 +37,28 @@ void testSizeMax() {
 void testIntegerSpecialValues() {
     TEST_ASSERT_EQUAL_INT16(-32768, Q_SHORT_NULL);
     TEST_ASSERT_EQUAL_INT16(32767, Q_SHORT_INF);
-    TEST_ASSERT_EQUAL_INT16(-32767, Q_SHORT_NINF);
 
     TEST_ASSERT_EQUAL_INT32(INT32_MIN, Q_INT_NULL);
     TEST_ASSERT_EQUAL_INT32(2147483647, Q_INT_INF);
-    TEST_ASSERT_EQUAL_INT32(-2147483647, Q_INT_NINF);
 
     TEST_ASSERT_EQUAL_INT64(INT64_MIN, Q_LONG_NULL);
     TEST_ASSERT_EQUAL_INT64(INT64_MAX, Q_LONG_INF);
-    TEST_ASSERT_EQUAL_INT64(-INT64_MAX, Q_LONG_NINF);
 
-    // Negative infinity is the negation of infinity, one greater than null
-    TEST_ASSERT_EQUAL_INT16(-Q_SHORT_INF, Q_SHORT_NINF);
-    TEST_ASSERT_EQUAL_INT32(Q_INT_NULL + 1, Q_INT_NINF);
-    TEST_ASSERT_EQUAL_INT64(Q_LONG_NULL + 1, Q_LONG_NINF);
+    // Negative infinity is written as the negation of infinity, which is one greater than null
+    TEST_ASSERT_EQUAL_INT16(-32767, -Q_SHORT_INF);
+    TEST_ASSERT_EQUAL_INT16(Q_SHORT_NULL + 1, -Q_SHORT_INF);
+    TEST_ASSERT_EQUAL_INT32(Q_INT_NULL + 1, -Q_INT_INF);
+    TEST_ASSERT_EQUAL_INT64(Q_LONG_NULL + 1, -Q_LONG_INF);
 }
 
 void testFloatingPointSpecialValues() {
     TEST_ASSERT_TRUE(isnan(Q_REAL_NULL));
     TEST_ASSERT_TRUE(isinf(Q_REAL_INF) && Q_REAL_INF > 0);
-    TEST_ASSERT_TRUE(isinf(Q_REAL_NINF) && Q_REAL_NINF < 0);
+    TEST_ASSERT_TRUE(isinf(-Q_REAL_INF) && -Q_REAL_INF < 0);
 
     TEST_ASSERT_TRUE(isnan(Q_FLOAT_NULL));
     TEST_ASSERT_TRUE(isinf(Q_FLOAT_INF) && Q_FLOAT_INF > 0);
-    TEST_ASSERT_TRUE(isinf(Q_FLOAT_NINF) && Q_FLOAT_NINF < 0);
+    TEST_ASSERT_TRUE(isinf(-Q_FLOAT_INF) && -Q_FLOAT_INF < 0);
 }
 
 void testOtherSpecialValues() {
@@ -82,8 +80,8 @@ void testSpecialValuesRoundTrip() {
     TEST_ASSERT_EQUAL_INT16(Q_SHORT_NULL, qGetShort(shortNull));
     decRef(shortNull);
 
-    QObj *intNinf = qNewInt(Q_INT_NINF);
-    TEST_ASSERT_EQUAL_INT32(Q_INT_NINF, qGetInt(intNinf));
+    QObj *intNinf = qNewInt(-Q_INT_INF);
+    TEST_ASSERT_EQUAL_INT32(-Q_INT_INF, qGetInt(intNinf));
     decRef(intNinf);
 
     QObj *timestampNull = qNewTimestamp(Q_LONG_NULL);
@@ -94,7 +92,7 @@ void testSpecialValuesRoundTrip() {
     TEST_ASSERT_TRUE(isnan(qGetReal(realNull)));
     decRef(realNull);
 
-    QObj *floatNinf = qNewFloat(Q_FLOAT_NINF);
+    QObj *floatNinf = qNewFloat(-Q_FLOAT_INF);
     TEST_ASSERT_TRUE(isinf(qGetFloat(floatNinf)) && qGetFloat(floatNinf) < 0);
     decRef(floatNinf);
 }
