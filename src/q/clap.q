@@ -1,10 +1,7 @@
 
 /
-    @file
-        clap.q
-    
-    @description
-        Command-Line Argument Parser.
+    @file clap.q
+    @brief Command-Line Argument Parser.
 \
 
 // Table to hold command line arguments.
@@ -54,6 +51,6 @@ raw:{[] .Q.opt .z.X};
 
 // @brief Generate a usage/help table showing all registered arguments.
 // @return string A formatted table describing arguments, defaults, and requirements.
-usage:{[] .Q.s2 select name, default, required, description from args where not null name};
+usage:{[] select name, default, required, description from args where not null name};
 
 export:([.z.m.get; given; .z.m.parse; raw; register; usage]);

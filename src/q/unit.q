@@ -14,6 +14,11 @@
             A single test function that verifies one logical unit of behaviour.  
             A case may contain multiple assertions, but they all support testing the same 
             unit of functionality.
+
+        Special export values:
+            | Name | Description                                       |
+            | -----| ------------------------------------------------- |
+            | init | Always run before any test cases run in the suite |
 \
 
 fs:use`qlib.fs;
@@ -30,12 +35,7 @@ suiteName:{[] fs.basenameNoExt first ` vs .Q.rp`:::};
 
 // @brief Create a temporary directory.
 // @return fileSymbol Path to temporary directory.
-createTmpDir:{[]
-    suite:suiteName[];
-    fs.mkdir dir:.Q.dd[fs.tmpdir[];(`qlibunit;`$raze string suite,"j"$.z.p)];
-    tmpDirs[suite]:dir;
-    dir
- };
+createTmpDir:{[] fs.mkdir dir:.Q.dd[tmpDir;suiteName[]]; dir};
 
 // @brief Register the test directory where all unit test files can be found.
 // @param dir fileSymbol Directory to register.
@@ -47,26 +47,23 @@ registerTestDir:{[dir]
     .Q.m.SP:-1_.Q.m.SP;
  };
 
-// @brief Register the source directory where all source files can be found (must be done before
-// registering a test directory).
-// @param dir fileSymbol Directory to register.
-registerSrcDir:{[dir] srcDir::dir;};
-
-// @brief Load a source file (from within the source dir if registered).
-// @param file symbol File to load (path relative to source directory if registered).
-loadSrc:{[file]
-    system "l ",$[null srcDir; string file; 1_string .Q.dd[srcDir;file]];
- };
-
 // @brief Run all tests.
 run:{[] raze runSuite each 1_key suites};
 
 // @brief Run all cases within the given suite.
 // @param suite symbol Test suite to run.
 // @return table Test results.
-runSuite:{[suite] 
-    results:runCase[suite;] each key suites suite;
-    deleteTmpDir suite;
+runSuite:{[suite]
+    caseNames:key suites suite;
+
+    // Always run init first
+    if[`init in caseNames;
+        if[not (r:runCase[suite;`init])`pass; :enlist r];
+        caseNames:caseNames except `init
+    ];
+
+    results:runCase[suite;] each caseNames;
+    fs.rmrf .Q.dd[tmpDir;suite];
     results
  };
 
@@ -84,13 +81,16 @@ runCase:{[suite;case]
  };
 
 // @brief Mock a value for the remainder of the test case (automatically restored).
-// @param moduleName symbol The name of the test module (obtained via .z.M).
+// @param module symbol The full name of the module where the name to be mocked is defined.
 // @param name symbol Name of value you want to mock.
 // @param newValue any The new value that the name should hold.
-mock:{[moduleName;name;newValue]
-    fname:` sv moduleName,name;
-    if[(::)~mocks fname; mocks[fname]:get fname];
-    fname set newValue;
+//
+// @example mock[`qlib.clap;`raw;{[] `blah}]
+mock:{[module;name;mockValue]
+    ns:.Q.m.mn module;
+    name:` sv ns,name;
+    if[(::)~mocks name; mocks[name]:get name];
+    name set mockValue;
  };
 
 // @brief Assert x is a truthy value.
@@ -163,21 +163,20 @@ print.failures:{[results]
  };
 
 export:([
-    createTmpDir; currentDir; suiteName; registerTestDir; registerSrcDir; 
-    loadSrc; run; runSuite; runCase; mock; assert; print 
+    createTmpDir; currentDir; suiteName; registerTestDir; run; runSuite; runCase; mock; assert; 
+    print 
  ]);
 
 
 ///// PRIVATE /////
 
+tmpDir:.Q.dd[fs.tmpdir[];`qlib`unit,"j"$.z.p];
+
 indentSize:4;
 stdout:-1;
 
-srcDir:`;
-
 mocks:(1#`$())!1#(::);
 suites:(1#`$())!1#(::);
-tmpDirs:([]);
 
 results:(
     [suite:`$(); case:`$()]
@@ -216,11 +215,9 @@ extractFromBacktrace:{[bt]
     ([file;lineNum;lineStr;lineIdx])
  };
 
-resetMocks:{[] {key[x] set' value x} 1_mocks};
-
-deleteTmpDir:{[suite]
-    fs.rmrf each tmpDirs;
-    tmpDirs::tmpDirs _ suite;
+resetMocks:{[] 
+    {key[x] set' value x} 1_mocks;
+    mocks::1#mocks;
  };
 
 formatFailure:{[res]

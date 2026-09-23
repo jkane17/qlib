@@ -1,7 +1,13 @@
 
-unit:use`qlib.unit;
+/
+    @file test_dbm.q
+    @brief Unit tests for dbm.q module.
+\
+
+dbm:use`qlib.dbm;
 fs:use`qlib.fs;
-unit.loadSrc `dbm.q;
+unit:use`qlib.unit;
+/ unit.loadSrc `dbm.q;
 
 tmp:unit.createTmpDir[];
 splayDB:.Q.dd[tmp;`splayDB];
@@ -17,7 +23,7 @@ init:{[]
     fs.mkdir splayDB;
     fs.mkdir partDB;
 
-    .z.m.trade:([]
+    trade::([]
         time:5#.z.P;
         sym:`IBM`AMZN`GOOGL`META`SPOT;
         venue:`NYSE`NASDAQ`IEX`NYSE`IEX;
@@ -33,8 +39,8 @@ init:{[]
         moves:3 cut -5+15?10
     );
 
-    .Q.dd[splayDB;`trade`] set .Q.en[splayDB;.z.m.trade];
-    {.Q.dd[partDB;x,`trade,`] set .Q.en[partDB;.z.m.trade]} each partDates;
+    .Q.dd[splayDB;`trade`] set .Q.en[splayDB;trade];
+    {.Q.dd[partDB;x,`trade,`] set .Q.en[partDB;trade]} each partDates;
 
     delete sym, trade from `.;
  };
@@ -42,10 +48,10 @@ init:{[]
 testListCols:{[]
     init[];
     
-    unit.assert.match[listCols[splayDB;`trade]; colNames];
-    unit.assert.match[listCols[partDB;`trade]; colNames];
-    unit.assert.match[listCols[`:nonExistingDB;`trade]; `$()];
-    unit.assert.match[listCols[splayDB;`nonExistingTable]; `$()];
+    unit.assert.match[dbm.listCols[splayDB;`trade]; colNames];
+    unit.assert.match[dbm.listCols[partDB;`trade]; colNames];
+    unit.assert.match[dbm.listCols[`:nonExistingDB;`trade]; `$()];
+    unit.assert.match[dbm.listCols[splayDB;`nonExistingTable]; `$()];
  };
 
 testAddCol:{[]
@@ -53,18 +59,18 @@ testAddCol:{[]
 
     check:{[db;tdirs]
         // No affect since column already exists
-        unit.assert.match[listCols[db;`trade]; colNames];
-        addCol[db;`sym;`trade;`size;0N];
-        unit.assert.match[listCols[db;`trade]; colNames];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
+        dbm.addCol[db;`sym;`trade;`size;0N];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
 
-        addCol[db;`sym;`trade;`newCol;0N];
+        dbm.addCol[db;`sym;`trade;`newCol;0N];
         {
             unit.assert.true `newCol in key x;
             unit.assert.true `newCol in get x,`.d;
             unit.assert.true all 0N=get x,`newCol
         } each tdirs;
 
-        unit.assert.match[listCols[db;`trade]; colNames,`newCol];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames,`newCol];
     };
 
     check[splayDB;splayTdir];
@@ -76,18 +82,18 @@ testAddCols:{[]
 
     check:{[db;tdirs]
         // No affect since column already exists
-        unit.assert.match[listCols[db;`trade]; colNames];
-        addCols[db;`sym;`trade;`size`venue;0N];
-        unit.assert.match[listCols[db;`trade]; colNames];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
+        dbm.addCols[db;`sym;`trade;`size`venue;0N];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
 
-        addCols[db;`sym;`trade;`newColA`newColB;0N];
+        dbm.addCols[db;`sym;`trade;`newColA`newColB;0N];
         {
             unit.assert.true all `newColA`newColB in key x;
             unit.assert.true all `newColA`newColB in get x,`.d;
             unit.assert.true all {all 0N=get x,y}[x;] each `newColA`newColB;
         } each tdirs;
 
-        unit.assert.match[listCols[db;`trade]; colNames,`newColA`newColB];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames,`newColA`newColB];
     };
 
     check[splayDB;splayTdir];
@@ -99,22 +105,22 @@ testDelCol:{[]
 
     check:{[db;tdirs]
         // No affect since column does not exist
-        unit.assert.match[listCols[db;`trade]; colNames];
-        delCol[db;`trade;`nonExistingCol];
-        unit.assert.match[listCols[db;`trade]; colNames];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
+        dbm.delCol[db;`trade;`nonExistingCol];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
 
-        delCol[db;`trade;`size];
+        dbm.delCol[db;`trade;`size];
         {
             unit.assert.false `size in key x;
             unit.assert.false `size in get x,`.d;
         } each tdirs;
-        unit.assert.match[listCols[db;`trade]; colNames except `size];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames except `size];
 
         // Delete nested - should delete associated # file
         {unit.assert.true all (`company,`$"company#") in key x} each tdirs;
-        delCol[db;`trade;`company];
+        dbm.delCol[db;`trade;`company];
         {unit.assert.false all (`company,`$"company#") in key x} each tdirs;
-        unit.assert.match[listCols[db;`trade]; colNames except `size`company];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames except `size`company];
     };
 
     check[splayDB;splayTdir];
@@ -126,26 +132,26 @@ testCopyCol:{[]
 
     check:{[db;tdirs]
         // No affect since price already exists
-        unit.assert.match[listCols[db;`trade]; colNames];
-        copyCol[db;`trade;`size;`price];
-        unit.assert.match[listCols[db;`trade]; colNames];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
+        dbm.copyCol[db;`trade;`size;`price];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
 
-        copyCol[db;`trade;`size;`sizeCopy];
+        dbm.copyCol[db;`trade;`size;`sizeCopy];
         {
             unit.assert.true `sizeCopy in key x;
             unit.assert.true `sizeCopy in get x,`.d;
             unit.assert.match[get x,`size;get x,`sizeCopy];
         } each tdirs;
-        unit.assert.match[listCols[db;`trade]; colNames,`sizeCopy];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames,`sizeCopy];
 
         // Copy nested - should copy associated # file
-        copyCol[db;`trade;`company;`companyCopy];
+        dbm.copyCol[db;`trade;`company;`companyCopy];
         {
             unit.assert.true all (`companyCopy,`$"companyCopy#") in key x;
             unit.assert.match[get x,`companyCopy;get x,`companyCopy];
             unit.assert.match[get x,`$"companyCopy#";get x,`$"companyCopy#"];
         } each tdirs;
-        unit.assert.match[listCols[db;`trade]; colNames,`sizeCopy`companyCopy];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames,`sizeCopy`companyCopy];
     };
 
     check[splayDB;splayTdir];
@@ -155,27 +161,27 @@ testCopyCol:{[]
 testHasCol:{[]
     init[];
     
-    unit.assert.true hasCol[splayDB;`trade;`size];
-    unit.assert.false hasCol[splayDB;`trade;`nonExistingCol];
-    unit.assert.true hasCol[partDB;`trade;`size];
-    unit.assert.false hasCol[partDB;`trade;`nonExistingCol];
+    unit.assert.true dbm.hasCol[splayDB;`trade;`size];
+    unit.assert.false dbm.hasCol[splayDB;`trade;`nonExistingCol];
+    unit.assert.true dbm.hasCol[partDB;`trade;`size];
+    unit.assert.false dbm.hasCol[partDB;`trade;`nonExistingCol];
  };
 
 testListTabs:{[]
     init[];
     
-    unit.assert.match[listTabs splayDB; enlist `trade];
-    unit.assert.match[listTabs partDB; enlist `trade];
+    unit.assert.match[dbm.listTabs splayDB; enlist `trade];
+    unit.assert.match[dbm.listTabs partDB; enlist `trade];
 
     schema:([] sym:`$(); ap:"f"$(); bp:"f"$());
-    addTab[splayDB;`sym;`quote;schema];
-    addTab[partDB;`sym;`quote;schema];
+    dbm.addTab[splayDB;`sym;`quote;schema];
+    dbm.addTab[partDB;`sym;`quote;schema];
 
-    unit.assert.match[listTabs splayDB; `quote`trade];
-    unit.assert.match[listTabs partDB; `quote`trade];
+    unit.assert.match[dbm.listTabs splayDB; `quote`trade];
+    unit.assert.match[dbm.listTabs partDB; `quote`trade];
 
     .Q.dd[partDB;`quote2`] set .Q.en[partDB;schema];
-    unit.assert.match[listTabs partDB; `quote`quote2`trade];
+    unit.assert.match[dbm.listTabs partDB; `quote`quote2`trade];
  };
 
 testRenameCol:{[]
@@ -183,12 +189,12 @@ testRenameCol:{[]
 
     check:{[db;tdirs]
         // No affect since price already exists
-        unit.assert.match[listCols[db;`trade]; colNames];
-        renameCol[db;`trade;`size;`price];
-        unit.assert.match[listCols[db;`trade]; colNames];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
+        dbm.renameCol[db;`trade;`size;`price];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
 
         sizeData:get first[tdirs],`size;
-        renameCol[db;`trade;`size;`sizeRenamed];
+        dbm.renameCol[db;`trade;`size;`sizeRenamed];
         {
             unit.assert.true `sizeRenamed in key x;
             unit.assert.true `sizeRenamed in get x,`.d;
@@ -197,19 +203,19 @@ testRenameCol:{[]
             unit.assert.match[y;get x,`sizeRenamed];
         }[;sizeData] each tdirs;
         newColNames:@[colNames;where colNames=`size;:;`sizeRenamed];
-        unit.assert.match[listCols[db;`trade]; newColNames];
+        unit.assert.match[dbm.listCols[db;`trade]; newColNames];
 
         // Rename nested - should rename associated # file
         companyData:get first[tdirs],`company;
         companyHashData:get first[tdirs],`$"company#";
-        renameCol[db;`trade;`company;`companyRenamed];
+        dbm.renameCol[db;`trade;`company;`companyRenamed];
         {
             unit.assert.true all (`companyRenamed,`$"companyRenamed#") in key x;
             unit.assert.match[y;get x,`companyRenamed];
             unit.assert.match[z;get x,`$"companyRenamed#"];
         }[;companyData;companyHashData] each tdirs;
         newColNames:@[newColNames;where newColNames=`company;:;`companyRenamed];
-        unit.assert.match[listCols[db;`trade]; newColNames];
+        unit.assert.match[dbm.listCols[db;`trade]; newColNames];
     };
 
     check[splayDB;splayTdir];
@@ -220,21 +226,21 @@ testReorderCols:{[]
     init[];
 
     check:{[db]
-        unit.assert.match[listCols[db;`trade]; colNames];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
 
         unit.assert.fail[
-            reorderCols;
+            dbm.reorderCols;
             (db;`trade;colNames,`unknownCol);
             "Unknown column(s): unknownCol"
         ];
 
-        reorderCols[db;`trade;reverse colNames];
-        unit.assert.match[listCols[db;`trade]; reverse colNames];
+        dbm.reorderCols[db;`trade;reverse colNames];
+        unit.assert.match[dbm.listCols[db;`trade]; reverse colNames];
 
         // Only named columns are reordered
         namedCols:`sym`company`time;
-        reorderCols[db;`trade;namedCols];
-        unit.assert.match[listCols[db;`trade]; namedCols,reverse[colNames] except namedCols];
+        dbm.reorderCols[db;`trade;namedCols];
+        unit.assert.match[dbm.listCols[db;`trade]; namedCols,reverse[colNames] except namedCols];
     };
 
     check splayDB;
@@ -246,13 +252,13 @@ testFnCol:{[]
 
     check:{[db;tdirs]
         // No affect since column does not exist
-        fnCol[db;`trade;`nonExistingCol;10*];
+        dbm.fnCol[db;`trade;`nonExistingCol;10*];
 
         sizeData:get first[tdirs],`size;
         companyData:get first[tdirs],`company;
 
-        fnCol[db;`trade;`size;10*];
-        fnCol[db;`trade;`company;upper];
+        dbm.fnCol[db;`trade;`size;10*];
+        dbm.fnCol[db;`trade;`company;upper];
         {
             unit.assert.match[10*y;get x,`size];
             unit.assert.match[upper z;get x,`company];
@@ -268,11 +274,11 @@ testCastCol:{[]
 
     check:{[db;tdirs]
         // No affect since column does not exist
-        castCol[db;`trade;`nonExistingCol;10*];
+        dbm.castCol[db;`trade;`nonExistingCol;10*];
 
         // Long to float
         {unit.assert.eq[7h;type get x,`size]} each tdirs;
-        castCol[db;`trade;`size;"f"];
+        dbm.castCol[db;`trade;`size;"f"];
         {unit.assert.eq[9h;type get x,`size]} each tdirs;
     };
 
@@ -285,13 +291,13 @@ testAttr:{[]
 
     check:{[db;tdirs]
         // No affect since column does not exist
-        setAttr[db;`trade;`nonExistingCol;`s];
+        dbm.setAttr[db;`trade;`nonExistingCol;`s];
 
         {unit.assert.eq[`;attr get x,`size]} each tdirs;
-        setAttr[db;`trade;`size;`s];
+        dbm.setAttr[db;`trade;`size;`s];
         {unit.assert.eq[`s;attr get x,`size]} each tdirs;
 
-        rmAttr[db;`trade;`size];
+        dbm.rmAttr[db;`trade;`size];
         {unit.assert.eq[`;attr get x,`size]} each tdirs;
     };
 
@@ -307,17 +313,17 @@ testAddMissingCols:{[]
         fs.rcopy[first tdirs;goodTdir];
         
         // Single missing column
-        unit.assert.match[listCols[db;`trade]; colNames];
-        delCol[db;`trade;`size];
-        unit.assert.match[listCols[db;`trade]; colNames except `size];
-        addMissingCols[db;`trade;goodTdir];
-        unit.assert.match[listCols[db;`trade]; colNames];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
+        dbm.delCol[db;`trade;`size];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames except `size];
+        dbm.addMissingCols[db;`trade;goodTdir];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
 
         // Multiple missing columns (including nested)
-        delCol[db;`trade;] each `size`price`company;
-        unit.assert.match[listCols[db;`trade]; colNames except `size`price`company];
-        addMissingCols[db;`trade;goodTdir];
-        unit.assert.match[listCols[db;`trade]; colNames];
+        dbm.delCol[db;`trade;] each `size`price`company;
+        unit.assert.match[dbm.listCols[db;`trade]; colNames except `size`price`company];
+        dbm.addMissingCols[db;`trade;goodTdir];
+        unit.assert.match[dbm.listCols[db;`trade]; colNames];
         {unit.assert.true all (`company,`$"company#") in key x} each tdirs;
     };
 
@@ -332,9 +338,9 @@ testAddTab:{[]
         schema:([] sym:`$(); ap:"f"$(); bp:"f"$());
         {unit.assert.false `quote in key .Q.dd[x;y]}[db;] each parts;
         
-        addTab[db;`sym;`quote;schema];
+        dbm.addTab[db;`sym;`quote;schema];
         {unit.assert.true `quote in key .Q.dd[x;y]}[db;] each parts;
-        unit.assert.match[listCols[db;`quote]; `sym`ap`bp];
+        unit.assert.match[dbm.listCols[db;`quote]; `sym`ap`bp];
     };
 
     check[splayDB;`];
@@ -346,7 +352,7 @@ testDelTab:{[]
 
     check:{[db;parts]
         {unit.assert.true `trade in key .Q.dd[x;y]}[db;] each parts;
-        delTab[db;`trade];
+        dbm.delTab[db;`trade];
         {unit.assert.false `trade in key .Q.dd[x;y]}[db;] each parts;
     };
 
@@ -359,10 +365,10 @@ testRenameTab:{[]
 
     check:{[db;parts]
         {unit.assert.true `trade in key .Q.dd[x;y]}[db;] each parts;
-        renameTab[db;`trade;`tradeRenamed];
+        dbm.renameTab[db;`trade;`tradeRenamed];
         {unit.assert.false `trade in key .Q.dd[x;y]}[db;] each parts;
         {unit.assert.true `tradeRenamed in key .Q.dd[x;y]}[db;] each parts;
-        unit.assert.match[listCols[db;`tradeRenamed]; colNames];
+        unit.assert.match[dbm.listCols[db;`tradeRenamed]; colNames];
     };
 
     check[splayDB;`];
@@ -374,22 +380,22 @@ testStrToSymCol:{[]
 
     check:{[db;tdirs]
         companyData:get first[tdirs],`company;
-        strToSymCol[db;`trade;`company;`sym];
+        dbm.strToSymCol[db;`trade;`company;`sym];
         domain:get db,`sym;
         unit.assert.true all (`$companyData) in domain;
         {unit.assert.match[y;x get z,`company]}[domain;`$companyData;] each tdirs;
 
         // Works for char column too
-        addCol[db;`;`trade;`charCol;"a"];
+        dbm.addCol[db;`;`trade;`charCol;"a"];
         {.Q.dd[y;`charCol] set count[x]#.Q.a}[companyData;] each tdirs;
         charData:get first[tdirs],`charCol;
-        strToSymCol[db;`trade;`charCol;`sym];
+        dbm.strToSymCol[db;`trade;`charCol;`sym];
         domain:get db,`sym;
         unit.assert.true all (`$/:charData) in domain;
         {unit.assert.match[y;x get z,`charCol]}[domain;`$/:charData;] each tdirs;
 
         // Failure for non-string column
-        unit.assert.fail[strToSymCol; (db;`trade;`size;`sym); "type"];
+        unit.assert.fail[dbm.strToSymCol; (db;`trade;`size;`sym); "type"];
     };
 
     check[splayDB;splayTdir];
@@ -402,11 +408,11 @@ testSymToStrCol:{[]
     check:{[db;tdirs]
         // No affect since column is not string type
         sizeData:get first[tdirs],`size;
-        symToStrCol[db;`trade;`size];
+        dbm.symToStrCol[db;`trade;`size];
         {unit.assert.match[x;get y,`size]}[sizeData;] each tdirs;
 
         venueData:get[db,`sym] get first[tdirs],`venue;
-        symToStrCol[db;`trade;`venue];
+        dbm.symToStrCol[db;`trade;`venue];
         {unit.assert.match[x;get y,`venue]}[string venueData;] each tdirs;
     };
 
@@ -419,11 +425,11 @@ testDomainUsed:{[]
 
     check:{[db;tdirs]
         indexes:value (union) . (get first[tdirs],) each `sym`venue;
-        unit.assert.match[indexes;domainUsed[db;`trade]`sym];
+        unit.assert.match[indexes;dbm.domainUsed[db;`trade]`sym];
 
-        addCol[db;`newSym;`trade;`newSymCol;`hello];
+        dbm.addCol[db;`newSym;`trade;`newSymCol;`hello];
         delete newSym from `.;
-        used:domainUsed[db;`trade];
+        used:dbm.domainUsed[db;`trade];
         unit.assert.match[indexes;used`sym];
         unit.assert.match[enlist 0;used`newSym];
     };
@@ -436,20 +442,20 @@ testDomainUnused:{[]
     init[];
 
     check:{[db;tdirs]
-        unit.assert.match[`long$();domainUnused[db;`trade]`sym];
+        unit.assert.match[`long$();dbm.domainUnused[db;`trade]`sym];
         
         indexes:value distinct get first[tdirs],`venue;
-        delCol[db;`trade;`venue];
-        unit.assert.match[indexes;domainUnused[db;`trade]`sym];
+        dbm.delCol[db;`trade;`venue];
+        unit.assert.match[indexes;dbm.domainUnused[db;`trade]`sym];
 
-        addCol[db;`newSym;`trade;`newSymCol;`hello];
+        dbm.addCol[db;`newSym;`trade;`newSymCol;`hello];
         delete newSym from `.;
-        used:domainUnused[db;`trade];
+        used:dbm.domainUnused[db;`trade];
         unit.assert.match[indexes;used`sym];
         unit.assert.match[`long$();used`newSym];
 
-        delCol[db;`trade;`newSymCol];
-        unit.assert.false `newSym in key domainUnused[db;`trade];
+        dbm.delCol[db;`trade;`newSymCol];
+        unit.assert.false `newSym in key dbm.domainUnused[db;`trade];
     };
 
     check[splayDB;splayTdir];
@@ -461,21 +467,21 @@ testDomainUsage:{[]
 
     check:{[db;tdirs]
         indexes:value (union) . (get first[tdirs],) each `sym`venue;
-        unit.assert.match[indexes;domainUsage[db]`sym];
+        unit.assert.match[indexes;dbm.domainUsage[db]`sym];
 
-        addCol[db;`newSym;`trade;`newSymCol;`hello];
+        dbm.addCol[db;`newSym;`trade;`newSymCol;`hello];
         delete newSym from `.;
-        used:domainUsage db;
+        used:dbm.domainUsage db;
         unit.assert.match[indexes;used`sym];
         unit.assert.match[enlist 0;used`newSym];
 
         // Add new table with new symbols
-        addTab[db;`sym;`quote;([] sym:`$(); ap:"f"$(); bp:"f"$())];
+        dbm.addTab[db;`sym;`quote;([] sym:`$(); ap:"f"$(); bp:"f"$())];
         tdir:.Q.dd[fs.dirname first tdirs;`quote];
         tdir set .Q.en[db;([] sym:`one`two`three; ap:1 2 3f; bp:4 5 6f)];
         delete sym from `.;
 
-        used:domainUsage db;
+        used:dbm.domainUsage db;
         unit.assert.match[indexes,value get tdir,`sym; asc used`sym];
     };
 
@@ -487,15 +493,15 @@ testResolveDomainMap:{[]
     init[];
 
     check:{[db]
-        dm:domainUsage db;
+        dm:dbm.domainUsage db;
         syms:get[db,`sym] dm;
-        unit.assert.match[syms;resolveDomainMap[db;dm]];
+        unit.assert.match[syms;dbm.resolveDomainMap[db;dm]];
 
-        addCol[db;`newSym;`trade;`newSymCol;`hello];
+        dbm.addCol[db;`newSym;`trade;`newSymCol;`hello];
         delete newSym from `.;
-        dm:domainUsage db;
+        dm:dbm.domainUsage db;
         syms:`sym`newSym!(get[db,`sym] dm`sym;get[db,`newSym] dm`newSym);
-        unit.assert.match[syms;resolveDomainMap[db;dm]];
+        unit.assert.match[syms;dbm.resolveDomainMap[db;dm]];
     };
 
     check splayDB;
@@ -508,15 +514,15 @@ testPersistDomainMap:{[]
     check:{[db]
         dir:.Q.dd[tmp;`temp];
         
-        dm:resolveDomainMap[db;] domainUsage db;
-        paths:persistDomainMap[dir;dm];
+        dm:dbm.resolveDomainMap[db;] dbm.domainUsage db;
+        paths:dbm.persistDomainMap[dir;dm];
         unit.assert.match[.Q.dd[dir;`sym];paths`sym];
         unit.assert.match[dm`sym;get paths`sym];
 
-        addCol[db;`newSym;`trade;`newSymCol;`hello];
+        dbm.addCol[db;`newSym;`trade;`newSymCol;`hello];
         delete newSym from `.;
-        dm:resolveDomainMap[db;] domainUsage db;
-        paths:persistDomainMap[dir;dm];
+        dm:dbm.resolveDomainMap[db;] dbm.domainUsage db;
+        paths:dbm.persistDomainMap[dir;dm];
         unit.assert.match[`sym`newSym!.Q.dd[dir;] each `sym`newSym;paths];
         unit.assert.match[dm;get each paths];
     };
@@ -531,15 +537,15 @@ testRebuildDomains:{[]
     check:{[db]
         dir:.Q.dd[tmp;`temp];
 
-        paths:rebuildDomains[db;dir];
-        dm:resolveDomainMap[db;] domainUsage db;
+        paths:dbm.rebuildDomains[db;dir];
+        dm:dbm.resolveDomainMap[db;] dbm.domainUsage db;
         unit.assert.match[.Q.dd[dir;`sym];paths`sym];
         unit.assert.match[dm`sym;get paths`sym];
 
-        addCol[db;`newSym;`trade;`newSymCol;`hello];
+        dbm.addCol[db;`newSym;`trade;`newSymCol;`hello];
         delete newSym from `.;
-        paths:rebuildDomains[db;dir];
-        dm:resolveDomainMap[db;] domainUsage db;
+        paths:dbm.rebuildDomains[db;dir];
+        dm:dbm.resolveDomainMap[db;] dbm.domainUsage db;
         unit.assert.match[`sym`newSym!.Q.dd[dir;] each `sym`newSym;paths];
         unit.assert.match[dm;get each paths];
     };
@@ -562,7 +568,7 @@ testReenumerateCol:{[]
         newDomainFile set reverse get db,`sym;
 
         // Re-enumerate sym column against newSym
-        reenumerateCol[db;`trade;`sym;newDomainFile];
+        dbm.reenumerateCol[db;`trade;`sym;newDomainFile];
 
         // Check correctly re-enumerated
         {[db;data;tdir]
@@ -590,7 +596,7 @@ testReenumerateColFrom:{[]
         newDomainFile set reverse get db,`sym;
 
         // Try re-enumerate from symOther to newSym
-        reenumerateColFrom[db;`trade;`sym;`symOther;newDomainFile];
+        dbm.reenumerateColFrom[db;`trade;`sym;`symOther;newDomainFile];
 
         // Check no re-enumeration occured
         {[db;data;tdir]
@@ -600,7 +606,7 @@ testReenumerateColFrom:{[]
         }[db;data;] each tdirs;
 
         // Re-enumerate sym column against newSym
-        reenumerateColFrom[db;`trade;`sym;`sym;newDomainFile];
+        dbm.reenumerateColFrom[db;`trade;`sym;`sym;newDomainFile];
 
         // Check correctly re-enumerated
         {[db;data;tdir]
@@ -632,7 +638,7 @@ testReenumerateTab:{[]
         newDomainFile set reverse get db,`sym;
 
         // Re-enumerate against newSym
-        reenumerateTab[db;`trade;newDomainFile];
+        dbm.reenumerateTab[db;`trade;newDomainFile];
 
         // Check correctly re-enumerated
         {[db;symData;venueData;tdir]
@@ -668,7 +674,7 @@ testReenumerateTabFrom:{[]
         newDomainFile set reverse get db,`sym;
 
         // Try re-enumerate from symOther to newSym
-        reenumerateTabFrom[db;`trade;`symOther;newDomainFile];
+        dbm.reenumerateTabFrom[db;`trade;`symOther;newDomainFile];
 
         // Check no re-enumeration occured
         {[db;symData;venueData;tdir]
@@ -682,7 +688,7 @@ testReenumerateTabFrom:{[]
         }[db;symData;venueData;] each tdirs;
 
         // Re-enumerate against newSym
-        reenumerateTabFrom[db;`trade;`sym;newDomainFile];
+        dbm.reenumerateTabFrom[db;`trade;`sym;newDomainFile];
 
         // Check correctly re-enumerated
         {[db;symData;venueData;tdir]
@@ -729,7 +735,7 @@ testReenumerateAll:{[]
         newDomainFile set reverse get db,`sym;
 
         // Re-enumerate against newSym
-        reenumerateAll[db;newDomainFile];
+        dbm.reenumerateAll[db;newDomainFile];
 
         // Check correctly re-enumerated
         {[db;tradeData;quoteData;tdir]
@@ -752,14 +758,14 @@ testReenumerateAllFrom:{[]
 
     check:{[db;tdirs]
         // Create quote table 
-        .z.m.quote:([]
+        quote::([]
             time:5#.z.P;
             sym:`IBM`AMZN`GOOGL`META`SPOT;
             ap:1 2 3 4 5f;
             bp:1 2 3 4 5f
         );
-        .Q.dd[splayDB;`quote`] set .Q.en[splayDB;.z.m.quote];
-        {.Q.dd[partDB;x,`quote,`] set .Q.en[partDB;.z.m.quote]} each partDates;
+        .Q.dd[splayDB;`quote`] set .Q.en[splayDB;quote];
+        {.Q.dd[partDB;x,`quote,`] set .Q.en[partDB;quote]} each partDates;
         delete sym, quote from `.;
 
         // sym column in trade and quote tables currently enumerated against sym
@@ -776,7 +782,7 @@ testReenumerateAllFrom:{[]
         newDomainFile set reverse get db,`sym;
 
         // Try re-enumerate from symOther to newSym
-        reenumerateAllFrom[db;`symOther;newDomainFile];
+        dbm.reenumerateAllFrom[db;`symOther;newDomainFile];
 
         // Check no re-enumeration occured
         {[db;tradeData;quoteData;tdir]
@@ -790,7 +796,7 @@ testReenumerateAllFrom:{[]
         }[db;tradeData;quoteData;] each tdirs;
 
         // Re-enumerate against newSym
-        reenumerateAllFrom[db;`sym;newDomainFile];
+        dbm.reenumerateAllFrom[db;`sym;newDomainFile];
 
         // Check correctly re-enumerated
         {[db;tradeData;quoteData;tdir]
@@ -828,7 +834,7 @@ testRenameDomain:{[]
         newDomainFile set reverse get db,`sym;
 
         // Re-enumerate sym column in trade only against newSym
-        reenumerateCol[db;`trade;`sym;newDomainFile];
+        dbm.reenumerateCol[db;`trade;`sym;newDomainFile];
 
         // Check only sym in trade re-enumerated
         {[db;tdir]
@@ -838,7 +844,7 @@ testRenameDomain:{[]
         }[db;] each tdirs;
 
         // Rename newSym to newSymRenamed
-        renameDomain[db;`newSym;`newSymRenamed];
+        dbm.renameDomain[db;`newSym;`newSymRenamed];
 
         // Check only sym in trade had domain renamed
         {[db;tdir]
@@ -848,7 +854,7 @@ testRenameDomain:{[]
         }[db;] each tdirs;
 
         // Rename sym to symRenamed
-        renameDomain[db;`sym;`symRenamed];
+        dbm.renameDomain[db;`sym;`symRenamed];
 
         // Check only venue in trade sym in quote  had domain renamed
         {[db;tdir]
@@ -863,10 +869,10 @@ testRenameDomain:{[]
  };
 
 export:([
-    testListCols; testAddCol; testAddCols; testDelCol; testCopyCol; testHasCol; testListTabs;
-    testRenameCol; testReorderCols; testFnCol; testCastCol; testAttr; testAddMissingCols; 
-    testAddTab; testDelTab; testRenameTab; testStrToSymCol; testSymToStrCol; testDomainUsed; 
-    testDomainUnused; testDomainUsage; testResolveDomainMap; testPersistDomainMap; 
-    testRebuildDomains; testReenumerateCol; testReenumerateColFrom; testReenumerateTab; 
+    testListCols; testAddCol; testAddCols; testDelCol; testCopyCol; testHasCol; testListTabs; 
+    testRenameCol; testReorderCols; testFnCol; testCastCol; testAttr; testAddMissingCols;
+    testAddTab; testDelTab; testRenameTab; testStrToSymCol; testSymToStrCol; testDomainUsed;
+    testDomainUnused; testDomainUsage; testResolveDomainMap; testPersistDomainMap;
+    testRebuildDomains; testReenumerateCol; testReenumerateColFrom; testReenumerateTab;
     testReenumerateTabFrom; testReenumerateAll; testReenumerateAllFrom; testRenameDomain
  ]);

@@ -1,10 +1,7 @@
 
 /
-    @file
-        dbm.q
-    
-    @description
-        Database Maintenance.
+    @file dbm.q
+    @brief Database maintenance.
 \
 
 fs:use`qlib.fs;
@@ -284,11 +281,11 @@ symToStrCol:{[db:`s;tname:`s;cname:`s]
 
 
 export:([
-    addCol; addCols; addMissingCols; castCol; copyCol; delCol; delTab; domainUnused; domainUsage; 
-    domainUsed; fnCol; hasCol; listCols; persistDomainMap; rebuildDomains; reenumerateAll;
-    reenumerateAllFrom; reenumerateCol; reenumerateColFrom; reenumerateTab; reenumerateTabFrom; 
-    renameCol; renameDomain; renameTab; reorderCols; resolveDomainMap; rmAttr; setAttr;
-    strToSymCol; symToStrCol 
+    addCol; addCols; addMissingCols; addTab; castCol; copyCol; delCol; delTab; domainUnused; 
+    domainUsage; domainUsed; fnCol; hasCol; listCols; listTabs; persistDomainMap; rebuildDomains; 
+    reenumerateAll; reenumerateAllFrom; reenumerateCol; reenumerateColFrom; reenumerateTab; 
+    reenumerateTabFrom; renameCol; renameDomain; renameTab; reorderCols; resolveDomainMap; rmAttr; 
+    setAttr; strToSymCol; symToStrCol 
  ]);
 
 

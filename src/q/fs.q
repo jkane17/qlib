@@ -108,7 +108,7 @@ rlistf:{[dir]
  };
 
 // @brief Foreceful and recursive removal of a file/directory.
-// @param dir fileSymbol Path to file/directory to remove.
+// @param path fileSymbol Path to file/directory to remove.
 rmrf:{[path] if[exists path; hdel each desc path,rlist path]}
 
 // @brief Get the path to the default temporary directory.
@@ -122,6 +122,11 @@ tmpdir:{[]
         getenv[`TMPDIR`TMP`TEMP],enlist "/tmp"
     ]
  };
+
+// @brief Compute the size (in bytes) of a file/directory. 
+// @param path fileSymbol Path to file/directory to compute size for.
+// @return long Size of file/directory in bytes.
+size:{[path] $[.fs.isdir path; sum (.z.s .Q.dd[path;]@) peach key path; @[hcount;path;0]]};
 
 // @brief Convert a file path to a correctly formatted string path based on the platform.
 // @param path fileSymbol File path to format.
