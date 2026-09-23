@@ -38,6 +38,9 @@ fi
 CC=/usr/bin/gcc
 STD=c2x
 CFLAGS=("-std=${STD}" "-I${C_SRC_DIR}" "-I${C_CDK_DIR}" -Wall -Wextra -Werror)
+CXX=/usr/bin/g++
+CXXSTD=c++20
+CXXFLAGS=("-std=${CXXSTD}" "-I${C_SRC_DIR}" "-I${C_CDK_DIR}" -Wall -Wextra -Werror)
 LFLAGS=(-lm)
 CDK_SO="${BUILD_QLIB_DIR}/libcdk.so"
 
@@ -149,6 +152,11 @@ compile_test() {
     local src_file="$1"
     local exe_file="$2"
 
+    if [[ "${src_file}" == *.cpp ]]; then
+        compile_cpp_test "${src_file}" "${exe_file}"
+        return
+    fi
+
     "${CC}" "${CFLAGS[@]}" \
         "-I${C_UNITY_DIR}" \
         "${C_UNITY_DIR}"/*.c \
@@ -160,8 +168,64 @@ compile_test() {
         "-DUNITY_INCLUDE_CONFIG_H" \
         -o "${exe_file}" || {
             echo "Compilation failed for ${src_file}" >&2
-            exit 1
+            return 1
         }
+}
+
+# Compile a C++ test: Unity is compiled as C, the test as C++, and both are linked against the
+# C-built libcdk.so (which checks that the C functions are declared with C linkage).
+compile_cpp_test() {
+    local src_file="$1"
+    local exe_file="$2"
+    local unity_obj="${build_test_dir}/unity.o"
+
+    if [ ! -e "${unity_obj}" ]; then
+        "${CC}" "${CFLAGS[@]}" "-DUNITY_INCLUDE_CONFIG_H" \
+            -c "${C_UNITY_DIR}/unity.c" -o "${unity_obj}" || {
+                echo "Compilation failed for ${C_UNITY_DIR}/unity.c" >&2
+                exit 1
+            }
+    fi
+
+    "${CXX}" "${CXXFLAGS[@]}" \
+        "-I${C_UNITY_DIR}" \
+        "-DUNITY_INCLUDE_CONFIG_H" \
+        "${src_file}" \
+        "${unity_obj}" \
+        "-L${BUILD_QLIB_DIR}" -lcdk \
+        "-Wl,-rpath,\$ORIGIN/../qlib" \
+        "${C_OBJ_FILE}" \
+        "${LFLAGS[@]}" \
+        -o "${exe_file}" || {
+            echo "Compilation failed for ${src_file}" >&2
+            return 1
+        }
+}
+
+# Check that every cdk header compiles on its own (includes everything it needs) as both C and
+# C++. Results are added to the pass/fail results of the C tests.
+check_headers() {
+    local header name error
+
+    for header in "${C_CDK_DIR}"/*.h; do
+        name="$(basename "${header}")"
+
+        error="$(printf '#include <%s>\n' "${name}" |
+            "${CC}" "${CFLAGS[@]}" -fsyntax-only -x c - 2>&1)"
+        if [ -z "${error}" ]; then
+            pass_results+=("${name}:0:compiles standalone as ${STD}:PASS")
+        else
+            fail_results+=("${name}:0:compiles standalone as ${STD}:FAIL:$(grep -m1 'error' <<< "${error}")")
+        fi
+
+        error="$(printf '#include <%s>\n' "${name}" |
+            "${CXX}" "${CXXFLAGS[@]}" -fsyntax-only -x c++ - 2>&1)"
+        if [ -z "${error}" ]; then
+            pass_results+=("${name}:0:compiles standalone as ${CXXSTD}:PASS")
+        else
+            fail_results+=("${name}:0:compiles standalone as ${CXXSTD}:FAIL:$(grep -m1 'error' <<< "${error}")")
+        fi
+    done
 }
 
 run_q_tests() {
@@ -214,18 +278,23 @@ run_c_tests() {
     build_test_dir="${BUILD_DIR}/test"
     create_dir "${build_test_dir}"
 
-    echo "Building C unit tests.."
-    for src_file in "${C_TEST_DIR}"/test_*.c; do
-        [ -e "${src_file}" ] || continue
-
-        exe_name="${build_test_dir}/$(basename "${src_file%.c}")"
-        compile_test "$src_file" "$exe_name"
-    done
-
-    echo "Running C unit tests.."
-
     pass_results=()
     fail_results=()
+
+    echo "Checking headers compile standalone as C and C++.."
+    check_headers
+
+    # A test that fails to compile is reported as a failure, and the remaining tests still run
+    echo "Building C and C++ unit tests.."
+    for src_file in "${C_TEST_DIR}"/test_*.c "${C_TEST_DIR}"/test_*.cpp; do
+        [ -e "${src_file}" ] || continue
+
+        exe_name="${build_test_dir}/$(basename "${src_file%.*}")"
+        compile_test "$src_file" "$exe_name" ||
+            fail_results+=("${src_file}:0:(build):FAIL:compilation failed, see output above")
+    done
+
+    echo "Running C and C++ unit tests.."
     
     for file in "${build_test_dir}"/test_*; do
         [ -f "${file}" ] && [ -x "${file}" ] || continue
@@ -299,8 +368,10 @@ fi
 
 if ${RELEASE} && !(${TEST} || ${ITEST}); then
     CFLAGS+=(-O3 -DNDEBUG)
+    CXXFLAGS+=(-O3 -DNDEBUG)
 else
     CFLAGS+=(-g -O0)
+    CXXFLAGS+=(-g -O0)
 fi
 
 OS=$(uname -s)
