@@ -63,7 +63,7 @@ int main() {
     for (QSize i = 0; i < qGetTableRowCount(table); i++)
         printf("%s %.2f\n", qGetSymbolAtIndex(symColumn, i), qGetFloatAtIndex(priceColumn, i));
 
-    decRef(table);
+    qDecRef(table);
     return 0;
 }
 ```

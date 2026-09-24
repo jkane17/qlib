@@ -38,7 +38,7 @@ void testInternStringEmpty() {
 void testInternStringMatchesSymbolAtom() {
     QObj *obj = qNewSymbol("hello");
     TEST_ASSERT_EQUAL_PTR(qGetSymbol(obj), qInternString("hello"));
-    decRef(obj);
+    qDecRef(obj);
 }
 
 void testInternFixedString() {
@@ -75,7 +75,7 @@ void testInternFillsSymbolList() {
 
     TEST_ASSERT_EQUAL_STRING("abc", qGetSymbolAtIndex(list, 0));
     TEST_ASSERT_EQUAL_STRING("def", qGetSymbolAtIndex(list, 1));
-    decRef(list);
+    qDecRef(list);
 }
 
 int main() {

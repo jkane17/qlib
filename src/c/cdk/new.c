@@ -110,7 +110,7 @@ QObj *qNewMixedListVar(QSize length, va_list args) {
         for (QSize i = 0; i < length; i++) {
             QObj *item = va_arg(args, QObj *);
             if (item)
-                decRef(item);
+                qDecRef(item);
         }
         return qNewError("domain");
     }
@@ -121,23 +121,23 @@ QObj *qNewMixedListVar(QSize length, va_list args) {
 QObj *qNewDict(QObj *keys, QObj *values) {
     if (!keys || !values) {
         if (keys)
-            decRef(keys);
+            qDecRef(keys);
         if (values)
-            decRef(values);
+            qDecRef(values);
         return qNewError("domain");
     }
 
     // Keys and values must be lists, dictionaries, or tables (not atoms or functions)
     if (keys->type < 0 || keys->type > Q_TYPE_DICTIONARY || values->type < 0 ||
         values->type > Q_TYPE_DICTIONARY) {
-        decRef(keys);
-        decRef(values);
+        qDecRef(keys);
+        qDecRef(values);
         return qNewError("type");
     }
 
     if (qGetCount(keys) != qGetCount(values)) {
-        decRef(keys);
-        decRef(values);
+        qDecRef(keys);
+        qDecRef(values);
         return qNewError("length");
     }
 
@@ -184,19 +184,19 @@ QObj *qNewTableFromArray(QObj *header, QObj *const *columns, QSize count) {
     // The column count is always known, so every argument can be released on error
     if (error) {
         if (header)
-            decRef(header);
+            qDecRef(header);
         for (QSize i = 0; columns && i < count; i++) {
             if (columns[i])
-                decRef(columns[i]);
+                qDecRef(columns[i]);
         }
         return qNewError(error);
     }
 
     QObj *list = qNewList(Q_TYPE_MIXED, count);
     if (!list) {
-        decRef(header);
+        qDecRef(header);
         for (QSize i = 0; i < count; i++)
-            decRef(columns[i]);
+            qDecRef(columns[i]);
         return list;
     }
     for (QSize i = 0; i < count; i++)
@@ -216,7 +216,7 @@ QObj *qNewTableVar(QObj *header, va_list args) {
     // The number of columns is only known from a valid header, so the columns cannot be released
     // if it is not one
     if (!qIsSymbolList(header)) {
-        decRef(header);
+        qDecRef(header);
         return qNewError("type");
     }
 
@@ -226,9 +226,9 @@ QObj *qNewTableVar(QObj *header, va_list args) {
         for (QSize i = 0; i < count; i++) {
             QObj *column = va_arg(args, QObj *);
             if (column)
-                decRef(column);
+                qDecRef(column);
         }
-        decRef(header);
+        qDecRef(header);
         return qNewError("wsfull");
     }
 

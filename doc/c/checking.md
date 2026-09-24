@@ -104,9 +104,9 @@ int main() {
     printf("%s\n", describe(list));  // simple list
     printf("%s\n", describe(mixed)); // mixed list
 
-    decRef(atom);
-    decRef(list);
-    decRef(mixed);
+    qDecRef(atom);
+    qDecRef(list);
+    qDecRef(mixed);
     return 0;
 }
 ```

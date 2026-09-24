@@ -28,7 +28,7 @@ This document describes the accessor functions from [`get.h`](/src/c/cdk/get.h).
 
 A failed check aborts the program with a message naming the accessor. The checks are strict: types that share a C representation are not interchangeable, so reading a timestamp atom with `qGetLong` fails the check. Use the accessor that matches the type (`qGetTimestamp`). Release builds (`build.sh --release` defines `NDEBUG`) contain no checks.
 
-**Borrowed results.** Accessors that return a `QObj *` return a pointer to an object owned by the object being accessed. The reference count is not incremented, so the result must not be released with `decRef`, and it is only valid while the containing object is alive. Call `incRef` on it to keep it beyond that (see [Memory](/doc/c/memory.md)).
+**Borrowed results.** Accessors that return a `QObj *` return a pointer to an object owned by the object being accessed. The reference count is not incremented, so the result must not be released with `qDecRef`, and it is only valid while the containing object is alive. Call `qIncRef` on it to keep it beyond that (see [Memory](/doc/c/memory.md)).
 
 **Const.** Accessors take a `const QObj *` and do not modify the object.
 
@@ -193,7 +193,7 @@ int main() {
     printf("count = %" PRIu64 "\n", qGetCount(table));
     printTable(table);
 
-    decRef(table);
+    qDecRef(table);
     return 0;
 }
 ```

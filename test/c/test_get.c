@@ -28,11 +28,11 @@ void testGetCountNull() {
 void testGetCountAtom() {
     QObj *atom = qNewLong(42);
     TEST_ASSERT_EQUAL_UINT64(1, qGetCount(atom));
-    decRef(atom);
+    qDecRef(atom);
 
     QObj *symbol = qNewSymbol("abc");
     TEST_ASSERT_EQUAL_UINT64(1, qGetCount(symbol));
-    decRef(symbol);
+    qDecRef(symbol);
 }
 
 void testGetCountFunction() {
@@ -45,15 +45,15 @@ void testGetCountLists() {
     QLong longs[] = {1, 2, 3, 4};
     QObj *empty = qNewLongList(longs, 0);
     TEST_ASSERT_EQUAL_UINT64(0, qGetCount(empty));
-    decRef(empty);
+    qDecRef(empty);
 
     QObj *list = qNewLongList(longs, 4);
     TEST_ASSERT_EQUAL_UINT64(4, qGetCount(list));
-    decRef(list);
+    qDecRef(list);
 
     QObj *mixed = qNewMixedList(2, qNewLong(1), qNewChar('a'));
     TEST_ASSERT_EQUAL_UINT64(2, qGetCount(mixed));
-    decRef(mixed);
+    qDecRef(mixed);
 
     // Enumerated list (only the type and length are read)
     QObj enumerated = {.type = Q_TYPE_ENUM_FIRST, .length = 5};
@@ -66,7 +66,7 @@ void testGetCountDict() {
     QObj *dict = qNewDict(qNewSymbolList(keys, 3), qNewLongList(values, 3));
     TEST_ASSERT_EQUAL_UINT64(3, qGetCount(dict));
     TEST_ASSERT_EQUAL_UINT64(3, qGetDictCount(dict));
-    decRef(dict);
+    qDecRef(dict);
 }
 
 void testGetCountTable() {
@@ -74,12 +74,12 @@ void testGetCountTable() {
     TEST_ASSERT_EQUAL_UINT64(3, qGetCount(table));
     TEST_ASSERT_EQUAL_UINT64(3, qGetTableRowCount(table));
     TEST_ASSERT_EQUAL_UINT64(2, qGetTableColumnCount(table));
-    decRef(table);
+    qDecRef(table);
 
     QObj *emptyRows = newTable(0);
     TEST_ASSERT_EQUAL_UINT64(0, qGetCount(emptyRows));
     TEST_ASSERT_EQUAL_UINT64(0, qGetTableRowCount(emptyRows));
-    decRef(emptyRows);
+    qDecRef(emptyRows);
 }
 
 void testGetCountTableNoColumns() {
@@ -115,7 +115,7 @@ void testGetCountKeyedTable() {
     // The keys of a keyed table are a table, so the count is its row count
     TEST_ASSERT_EQUAL_UINT64(3, qGetCount(keyedTable));
     TEST_ASSERT_EQUAL_UINT64(3, qGetDictCount(keyedTable));
-    decRef(keyedTable);
+    qDecRef(keyedTable);
 }
 
 int main() {

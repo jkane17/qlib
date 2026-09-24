@@ -71,30 +71,30 @@ void testOtherSpecialValues() {
     // The null guid round-trips through a guid atom
     QObj *guid = qNewGuid(Q_GUID_NULL);
     TEST_ASSERT_EQUAL_MEMORY(Q_GUID_NULL.bytes, qGetGuid(guid)->bytes, 16);
-    decRef(guid);
+    qDecRef(guid);
 }
 
 void testSpecialValuesRoundTrip() {
     // Special values survive being stored in, and read back from, Q atoms
     QObj *shortNull = qNewShort(Q_SHORT_NULL);
     TEST_ASSERT_EQUAL_INT16(Q_SHORT_NULL, qGetShort(shortNull));
-    decRef(shortNull);
+    qDecRef(shortNull);
 
     QObj *intNinf = qNewInt(-Q_INT_INF);
     TEST_ASSERT_EQUAL_INT32(-Q_INT_INF, qGetInt(intNinf));
-    decRef(intNinf);
+    qDecRef(intNinf);
 
     QObj *timestampNull = qNewTimestamp(Q_LONG_NULL);
     TEST_ASSERT_EQUAL_INT64(Q_LONG_NULL, qGetTimestamp(timestampNull));
-    decRef(timestampNull);
+    qDecRef(timestampNull);
 
     QObj *realNull = qNewReal(Q_REAL_NULL);
     TEST_ASSERT_TRUE(isnan(qGetReal(realNull)));
-    decRef(realNull);
+    qDecRef(realNull);
 
     QObj *floatNinf = qNewFloat(-Q_FLOAT_INF);
     TEST_ASSERT_TRUE(isinf(qGetFloat(floatNinf)) && qGetFloat(floatNinf) < 0);
-    decRef(floatNinf);
+    qDecRef(floatNinf);
 }
 
 void testTypeCodes() {

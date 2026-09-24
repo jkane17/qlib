@@ -42,7 +42,7 @@ QObj *qCheckError(QObj *obj);
 
 If `obj` is a null pointer, return an error object containing the current error message and clear the error indicator. Otherwise, return `obj` unchanged.
 
-The caller owns the returned error object and should release it with `decRef` when finished with it.
+The caller owns the returned error object and should release it with `qDecRef` when finished with it.
 
 Because the indicator is cleared, call `qCheckError` immediately after the call that may have failed. If several failing calls are made first, only the last error is available, and a second `qCheckError` finds no error.
 

@@ -37,28 +37,28 @@ void testAtoms() {
     QObj *boolean = qNewBoolean(7);
     TEST_ASSERT_TRUE(qIsBoolean(boolean));
     TEST_ASSERT_EQUAL_UINT8(1, qGetBoolean(boolean));
-    decRef(boolean);
+    qDecRef(boolean);
 
     QObj *longAtom = qNewLong(42);
     TEST_ASSERT_TRUE(qIsLong(longAtom));
     TEST_ASSERT_EQUAL_INT64(42, qGetLong(longAtom));
-    decRef(longAtom);
+    qDecRef(longAtom);
 
     QObj *floatAtom = qNewFloat(Q_FLOAT_NULL);
     TEST_ASSERT_TRUE(qIsFloat(floatAtom));
     TEST_ASSERT_TRUE(std::isnan(qGetFloat(floatAtom)));
-    decRef(floatAtom);
+    qDecRef(floatAtom);
 
     // A string literal can be passed directly to qNewSymbol
     QObj *symbol = qNewSymbol("abc");
     TEST_ASSERT_TRUE(qIsSymbol(symbol));
     TEST_ASSERT_EQUAL_STRING("abc", qGetSymbol(symbol));
-    decRef(symbol);
+    qDecRef(symbol);
 
     QObj *guid = qNewGuid(Q_GUID_NULL);
     TEST_ASSERT_TRUE(qIsGuid(guid));
     TEST_ASSERT_EQUAL_MEMORY(Q_GUID_NULL.bytes, qGetGuid(guid)->bytes, 16);
-    decRef(guid);
+    qDecRef(guid);
 }
 
 void testLists() {
@@ -68,23 +68,23 @@ void testLists() {
     TEST_ASSERT_TRUE(qIsSimpleList(longList));
     TEST_ASSERT_EQUAL_UINT64(3, qGetCount(longList));
     TEST_ASSERT_EQUAL_INT64(3, qGetLongAtIndex(longList, 2));
-    decRef(longList);
+    qDecRef(longList);
 
     const QSymbol symbols[] = {sym("x"), sym("y")};
     QObj *symbolList = qNewSymbolList(symbols, 2);
     TEST_ASSERT_TRUE(qIsSymbolList(symbolList));
     TEST_ASSERT_EQUAL_STRING("y", qGetSymbolAtIndex(symbolList, 1));
-    decRef(symbolList);
+    qDecRef(symbolList);
 
     QObj *chars = qNewCharListFromString("hello");
     TEST_ASSERT_TRUE(qIsCharList(chars));
     TEST_ASSERT_EQUAL_UINT64(5, chars->length);
-    decRef(chars);
+    qDecRef(chars);
 
     QObj *empty = qNewIntList(nullptr, 0);
     TEST_ASSERT_TRUE(qIsIntList(empty));
     TEST_ASSERT_EQUAL_UINT64(0, empty->length);
-    decRef(empty);
+    qDecRef(empty);
 }
 
 void testMixedListAndDict() {
@@ -93,7 +93,7 @@ void testMixedListAndDict() {
     TEST_ASSERT_TRUE(qIsList(mixed));
     TEST_ASSERT_TRUE(qIsListType(mixed, Q_TYPE_MIXED));
     TEST_ASSERT_TRUE(qIsLong(qGetMixedAtIndex(mixed, 0)));
-    decRef(mixed);
+    qDecRef(mixed);
 
     const QSymbol keys[] = {sym("a"), sym("b")};
     const QLong values[] = {10, 20};
@@ -101,7 +101,7 @@ void testMixedListAndDict() {
     TEST_ASSERT_TRUE(qIsDict(dict));
     TEST_ASSERT_EQUAL_UINT64(2, qGetDictCount(dict));
     TEST_ASSERT_EQUAL_INT64(20, qGetLongAtIndex(qGetDictValues(dict), 1));
-    decRef(dict);
+    qDecRef(dict);
 }
 
 void testTables() {
@@ -123,7 +123,7 @@ void testTables() {
     TEST_ASSERT_TRUE(qIsTable(unkeyed));
     TEST_ASSERT_EQUAL_UINT64(2, qGetTableColumnCount(unkeyed));
 
-    decRef(unkeyed);
+    qDecRef(unkeyed);
 }
 
 void testTableOverload() {
@@ -133,14 +133,14 @@ void testTableOverload() {
     // Too few columns - Error, header and column released
     QObj *header = qNewSymbolList(names, 2);
     QObj *column = qNewLongList(longs, 3);
-    incRef(header);
-    incRef(column);
+    qIncRef(header);
+    qIncRef(column);
     TEST_ASSERT_NULL(qNewTable(header, column));
     TEST_ASSERT_TRUE(std::string(qGetError(qCheckError(nullptr))) == "length");
     TEST_ASSERT_EQUAL_INT(0, header->refs);
     TEST_ASSERT_EQUAL_INT(0, column->refs);
-    decRef(header);
-    decRef(column);
+    qDecRef(header);
+    qDecRef(column);
 
     // Null header with no columns - Error
     TEST_ASSERT_NULL(qNewTable(nullptr));
@@ -158,17 +158,17 @@ void testErrors() {
     // qGetError returns an empty string for anything that is not an error
     QObj *atom = qNewLong(1);
     TEST_ASSERT_EQUAL_STRING("", qGetError(atom));
-    decRef(atom);
+    qDecRef(atom);
 }
 
 void testReferenceCounting() {
     QObj *atom = qNewLong(1);
     TEST_ASSERT_EQUAL_INT(0, atom->refs);
-    incRef(atom);
+    qIncRef(atom);
     TEST_ASSERT_EQUAL_INT(1, atom->refs);
-    decRef(atom);
+    qDecRef(atom);
     TEST_ASSERT_EQUAL_INT(0, atom->refs);
-    decRef(atom);
+    qDecRef(atom);
 }
 
 void testTypeCodeSwitch() {
@@ -183,7 +183,7 @@ void testTypeCodeSwitch() {
             break;
     }
     TEST_ASSERT_EQUAL_STRING("long", name);
-    decRef(atom);
+    qDecRef(atom);
 }
 
 int main() {

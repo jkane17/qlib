@@ -1428,12 +1428,12 @@ static void checkDomainError(QObj *obj) {
 /**
  * @brief Check that a function taking ownership of obj released exactly one reference to it.
  *
- * The caller takes an extra reference (incRef) before passing obj, so if the function released its
+ * The caller takes an extra reference (qIncRef) before passing obj, so if the function released its
  * reference, refs is back to 0 and the caller still holds a valid object (released here).
  */
 static void checkReleased(QObj *obj) {
     TEST_ASSERT_EQUAL_INT(0, obj->refs);
-    decRef(obj);
+    qDecRef(obj);
 }
 
 void testNewListLarge() {
@@ -1478,7 +1478,7 @@ void testNewListLarge() {
     }
 
     for (QSize l = 0; l < sizeof(lists) / sizeof(lists[0]); l++)
-        decRef(lists[l]);
+        qDecRef(lists[l]);
 }
 
 void testNewListNullValues() {
@@ -1502,7 +1502,7 @@ void testNewListNullValues() {
         TEST_ASSERT_NOT_NULL(empty[i]);
         checkListType(empty[i], emptyTypes[i]);
         TEST_ASSERT_EQUAL_UINT64(0, empty[i]->length);
-        decRef(empty[i]);
+        qDecRef(empty[i]);
     }
 
     // Null values with non-zero length is an error (checked immediately after each call, since
@@ -1920,18 +1920,18 @@ void testNewKeyedTable() {
     QObj *col11 = qNewCharList(valueChars1, 2);
     QInt valueInts1[] = {100, 200};
     QObj *col12 = qNewIntList(valueInts1, 2);
-    incRef(valueHeader); // Reused after being consumed by values (qNewTable takes ownership)
+    qIncRef(valueHeader); // Reused after being consumed by values (qNewTable takes ownership)
     QObj *values1 = qNewTable(valueHeader, col10, col11, col12);
 
-    incRef(keys); // Reused after being consumed by keyedTable (qNewKeyedTable takes ownership)
+    qIncRef(keys); // Reused after being consumed by keyedTable (qNewKeyedTable takes ownership)
     QObj *keyedTable1 = qNewKeyedTable(keys, values1);
     QObj *error0 = qCheckError(keyedTable1);
     TEST_ASSERT_TRUE(qIsError(error0));
     TEST_ASSERT_EQUAL_STRING("length", qGetError(error0));
 
     // Keys and values must be tables
-    incRef(keys);
-    incRef(valueHeader);
+    qIncRef(keys);
+    qIncRef(valueHeader);
     QObj *keyedTable2 = qNewKeyedTable(keys, valueHeader);
     QObj *error1 = qCheckError(keyedTable2);
     TEST_ASSERT_TRUE(qIsError(error1));
@@ -1972,7 +1972,7 @@ void testKeyTable() {
     checkBorrowedTableColumn(values, Q_TYPE_INT, valueInts, 3, 2);
 
     // qKeyTable took ownership of table, so releasing the keyed table releases everything
-    decRef(keyedTable);
+    qDecRef(keyedTable);
 }
 
 static QObj *newKeyTableInput(void) {
@@ -1984,14 +1984,14 @@ static QObj *newKeyTableInput(void) {
 
 void testKeyTableTakesOwnership() {
     QObj *table = newKeyTableInput();
-    incRef(table);
+    qIncRef(table);
     QObj *keyedTable = qKeyTable(1, table);
     checkIsKeyedTable(keyedTable);
     checkReleased(table);
 
     // The keyed table holds its own references to the columns, so it outlives the table
     TEST_ASSERT_EQUAL_UINT64(3, qGetTableRowCount(qGetKeyedTableKeys(keyedTable)));
-    decRef(keyedTable);
+    qDecRef(keyedTable);
 }
 
 void testKeyTableErrorsRelease() {
@@ -2001,25 +2001,25 @@ void testKeyTableErrorsRelease() {
     // Not a table - Error, released
     QLong longs[] = {1, 2, 3};
     QObj *list = qNewLongList(longs, 3);
-    incRef(list);
+    qIncRef(list);
     checkError(qKeyTable(1, list), "type");
     checkReleased(list);
 
     // No key columns - Error, released (kdb+'s knt would crash)
     QObj *table0 = newKeyTableInput();
-    incRef(table0);
+    qIncRef(table0);
     checkError(qKeyTable(0, table0), "length");
     checkReleased(table0);
 
     // Every column a key column - Error, released
     QObj *table1 = newKeyTableInput();
-    incRef(table1);
+    qIncRef(table1);
     checkError(qKeyTable(3, table1), "length");
     checkReleased(table1);
 
     // More key columns than columns - Error, released
     QObj *table2 = newKeyTableInput();
-    incRef(table2);
+    qIncRef(table2);
     checkError(qKeyTable(Q_SIZE_MAX, table2), "length");
     checkReleased(table2);
 }
@@ -2057,7 +2057,7 @@ void testUnkeyTable() {
     checkTableColumn(table, Q_TYPE_CHAR, valueChars, 3, 3);
     checkTableColumn(table, Q_TYPE_INT, valueInts, 3, 4);
 
-    decRef(table);
+    qDecRef(table);
 }
 
 void testUnkeyTableEdgeCases() {
@@ -2068,13 +2068,13 @@ void testUnkeyTableEdgeCases() {
     QObj *table = newKeyTableInput();
     QObj *unkeyed = qUnkeyTable(table);
     TEST_ASSERT_EQUAL_PTR(table, unkeyed);
-    decRef(unkeyed);
+    qDecRef(unkeyed);
 
     // Dictionary - Error, released
     QSymbol keys[] = {"a"};
     QLong values[] = {1};
     QObj *dict = qNewDict(qNewSymbolList(keys, 1), qNewLongList(values, 1));
-    incRef(dict);
+    qIncRef(dict);
     checkError(qUnkeyTable(dict), "type");
     checkReleased(dict);
 }
@@ -2088,10 +2088,10 @@ void testNewMixedListTooLong() {
 void testNewMixedListTakesOwnership() {
     // The list takes the caller's reference, so releasing the list releases the items
     QObj *long_ = qNewLong(1);
-    incRef(long_);
+    qIncRef(long_);
     QObj *mixedList = qNewMixedList(1, long_);
     TEST_ASSERT_EQUAL_INT(1, long_->refs);
-    decRef(mixedList);
+    qDecRef(mixedList);
     checkReleased(long_);
 }
 
@@ -2099,15 +2099,15 @@ void testNewMixedListNullItemReleases() {
     // Null item - Error, the other items released
     QObj *long0 = qNewLong(1);
     QObj *long1 = qNewLong(2);
-    incRef(long0);
-    incRef(long1);
+    qIncRef(long0);
+    qIncRef(long1);
     checkDomainError(qNewMixedList(3, long0, (QObj *)NULL, long1));
     checkReleased(long0);
     checkReleased(long1);
 
     // Same for the va_list form
     QObj *long2 = qNewLong(3);
-    incRef(long2);
+    qIncRef(long2);
     checkDomainError(newMixedListVar(2, (QObj *)NULL, long2));
     checkReleased(long2);
 
@@ -2121,8 +2121,8 @@ void testNewDictErrorsRelease() {
     // Atom keys - Error, both released
     QObj *atomKeys = qNewLong(1);
     QObj *values0 = qNewLongList(longs, 3);
-    incRef(atomKeys);
-    incRef(values0);
+    qIncRef(atomKeys);
+    qIncRef(values0);
     checkError(qNewDict(atomKeys, values0), "type");
     checkReleased(atomKeys);
     checkReleased(values0);
@@ -2131,8 +2131,8 @@ void testNewDictErrorsRelease() {
     QSymbol symbols[] = {"a", "b", "c"};
     QObj *keys1 = qNewSymbolList(symbols, 3);
     QObj *atomValues = qNewLong(1);
-    incRef(keys1);
-    incRef(atomValues);
+    qIncRef(keys1);
+    qIncRef(atomValues);
     checkError(qNewDict(keys1, atomValues), "type");
     checkReleased(keys1);
     checkReleased(atomValues);
@@ -2140,15 +2140,15 @@ void testNewDictErrorsRelease() {
     // Length mismatch - Error, both released
     QObj *keys2 = qNewSymbolList(symbols, 3);
     QObj *values2 = qNewLongList(longs, 2);
-    incRef(keys2);
-    incRef(values2);
+    qIncRef(keys2);
+    qIncRef(values2);
     checkError(qNewDict(keys2, values2), "length");
     checkReleased(keys2);
     checkReleased(values2);
 
     // Null values - Error, keys released
     QObj *keys3 = qNewSymbolList(symbols, 3);
-    incRef(keys3);
+    qIncRef(keys3);
     checkDomainError(qNewDict(keys3, nullptr));
     checkReleased(keys3);
 
@@ -2157,7 +2157,7 @@ void testNewDictErrorsRelease() {
     QObj *dict = qNewDict(mixedKeys, qNewLongList(longs, 3));
     checkIsDict(dict);
     TEST_ASSERT_EQUAL_UINT64(3, qGetDictCount(dict));
-    decRef(dict);
+    qDecRef(dict);
 }
 
 void testNewTableColumnKinds() {
@@ -2182,9 +2182,9 @@ void testNewTableColumnKinds() {
     TEST_ASSERT_NOT_NULL(table2);
     TEST_ASSERT_EQUAL_UINT64(0, qGetTableRowCount(table2));
 
-    decRef(table0);
-    decRef(table1);
-    decRef(table2);
+    qDecRef(table0);
+    qDecRef(table1);
+    qDecRef(table2);
 }
 
 void testNewTableErrorsRelease() {
@@ -2194,8 +2194,8 @@ void testNewTableErrorsRelease() {
     // Header is not a symbol list - Error, header and column released
     QObj *longHeader = qNewLongList(longs, 1);
     QObj *column0 = qNewLongList(longs, 3);
-    incRef(longHeader);
-    incRef(column0);
+    qIncRef(longHeader);
+    qIncRef(column0);
     checkError(qNewTable(longHeader, column0), "type");
     checkReleased(longHeader);
     checkReleased(column0);
@@ -2203,15 +2203,15 @@ void testNewTableErrorsRelease() {
     // Null header - Error, columns released (the column count is known from the arguments)
     QObj *column1 = qNewLongList(longs, 3);
     QObj *column2 = qNewCharList(chars, 3);
-    incRef(column1);
-    incRef(column2);
+    qIncRef(column1);
+    qIncRef(column2);
     checkDomainError(qNewTable(nullptr, column1, column2));
     checkReleased(column1);
     checkReleased(column2);
 
     // Header is a symbol atom - Error, header released
     QObj *atomHeader = qNewSymbol("col");
-    incRef(atomHeader);
+    qIncRef(atomHeader);
     checkError(qNewTable(atomHeader), "type");
     checkReleased(atomHeader);
 
@@ -2220,9 +2220,9 @@ void testNewTableErrorsRelease() {
     QObj *header = qNewSymbolList(symbols, 3);
     QObj *colA = qNewLongList(longs, 3);
     QObj *colC = qNewCharList(chars, 3);
-    incRef(header);
-    incRef(colA);
-    incRef(colC);
+    qIncRef(header);
+    qIncRef(colA);
+    qIncRef(colC);
     checkDomainError(qNewTable(header, colA, nullptr, colC));
     checkReleased(header);
     checkReleased(colA);
@@ -2231,8 +2231,8 @@ void testNewTableErrorsRelease() {
     // Fewer columns than column names - Error, all released
     QObj *header3 = qNewSymbolList(symbols, 3);
     QObj *colA3 = qNewLongList(longs, 3);
-    incRef(header3);
-    incRef(colA3);
+    qIncRef(header3);
+    qIncRef(colA3);
     checkError(qNewTable(header3, colA3), "length");
     checkReleased(header3);
     checkReleased(colA3);
@@ -2241,9 +2241,9 @@ void testNewTableErrorsRelease() {
     QObj *header4 = qNewSymbolList(symbols, 1);
     QObj *colA4 = qNewLongList(longs, 3);
     QObj *colB4 = qNewCharList(chars, 3);
-    incRef(header4);
-    incRef(colA4);
-    incRef(colB4);
+    qIncRef(header4);
+    qIncRef(colA4);
+    qIncRef(colB4);
     checkError(qNewTable(header4, colA4, colB4), "length");
     checkReleased(header4);
     checkReleased(colA4);
@@ -2254,9 +2254,9 @@ void testNewTableErrorsRelease() {
     QObj *header5 = qNewSymbolList(names, 2);
     QObj *colA5 = qNewLongList(longs, 3);
     QObj *atom5 = qNewLong(1);
-    incRef(header5);
-    incRef(colA5);
-    incRef(atom5);
+    qIncRef(header5);
+    qIncRef(colA5);
+    qIncRef(atom5);
     checkError(qNewTable(header5, colA5, atom5), "type");
     checkReleased(header5);
     checkReleased(colA5);
@@ -2266,9 +2266,9 @@ void testNewTableErrorsRelease() {
     QObj *header6 = qNewSymbolList(names, 2);
     QObj *colA6 = qNewLongList(longs, 2);
     QObj *dict6 = qNewDict(qNewSymbolList(names, 2), qNewLongList(longs, 2));
-    incRef(header6);
-    incRef(colA6);
-    incRef(dict6);
+    qIncRef(header6);
+    qIncRef(colA6);
+    qIncRef(dict6);
     checkError(qNewTable(header6, colA6, dict6), "type");
     checkReleased(header6);
     checkReleased(colA6);
@@ -2278,9 +2278,9 @@ void testNewTableErrorsRelease() {
     QObj *header7 = qNewSymbolList(names, 2);
     QObj *colA7 = qNewLongList(longs, 3);
     QObj *colB7 = qNewCharList(chars, 2);
-    incRef(header7);
-    incRef(colA7);
-    incRef(colB7);
+    qIncRef(header7);
+    qIncRef(colA7);
+    qIncRef(colB7);
     checkError(qNewTable(header7, colA7, colB7), "length");
     checkReleased(header7);
     checkReleased(colA7);
@@ -2289,8 +2289,8 @@ void testNewTableErrorsRelease() {
     // Same checks through the va_list variant
     QObj *headerVar = qNewSymbolList(symbols, 2);
     QObj *colVar = qNewLongList(longs, 3);
-    incRef(headerVar);
-    incRef(colVar);
+    qIncRef(headerVar);
+    qIncRef(colVar);
     checkDomainError(newTableVar(headerVar, nullptr, colVar));
     checkReleased(headerVar);
     checkReleased(colVar);
@@ -2312,15 +2312,15 @@ void testNewTableFromArray() {
 
     // Null array with a non-zero count - Error, header released
     QObj *header = qNewSymbolList(symbols, 2);
-    incRef(header);
+    qIncRef(header);
     checkDomainError(qNewTableFromArray(header, nullptr, 2));
     checkReleased(header);
 
     // Count does not match the header - Error, all released
     QObj *header1 = qNewSymbolList(symbols, 2);
     QObj *columns1[] = {qNewLongList(longs, 3)};
-    incRef(header1);
-    incRef(columns1[0]);
+    qIncRef(header1);
+    qIncRef(columns1[0]);
     checkError(qNewTableFromArray(header1, columns1, 1), "length");
     checkReleased(header1);
     checkReleased(columns1[0]);
@@ -2334,23 +2334,23 @@ void testNewKeyedTableErrorsRelease() {
     // Values are not a table - Error, both released
     QObj *keys = qNewTable(qNewSymbolList(keySymbols, 1), qNewLongList(longs, 3));
     QObj *notTable = qNewLongList(longs, 3);
-    incRef(keys);
-    incRef(notTable);
+    qIncRef(keys);
+    qIncRef(notTable);
     checkError(qNewKeyedTable(keys, notTable), "type");
     checkReleased(keys);
     checkReleased(notTable);
 
     // Null keys - Error, values released
     QObj *values = qNewTable(qNewSymbolList(valueSymbols, 1), qNewLongList(longs, 3));
-    incRef(values);
+    qIncRef(values);
     checkDomainError(qNewKeyedTable(nullptr, values));
     checkReleased(values);
 
     // Row count mismatch - Error, both released
     QObj *keys2 = qNewTable(qNewSymbolList(keySymbols, 1), qNewLongList(longs, 3));
     QObj *values2 = qNewTable(qNewSymbolList(valueSymbols, 1), qNewLongList(longs, 2));
-    incRef(keys2);
-    incRef(values2);
+    qIncRef(keys2);
+    qIncRef(values2);
     checkError(qNewKeyedTable(keys2, values2), "length");
     checkReleased(keys2);
     checkReleased(values2);

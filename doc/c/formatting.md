@@ -179,9 +179,9 @@ int main() {
     qDateToStr(buffer, sizeof(buffer), qGetDate(date));
     printf("date: %s\n", buffer);
 
-    decRef(intAtom);
-    decRef(symbolList);
-    decRef(date);
+    qDecRef(intAtom);
+    qDecRef(symbolList);
+    qDecRef(date);
     return 0;
 }
 ```

@@ -4,7 +4,7 @@
         math.q
     
     @description
-        Mathematical Utilities.
+        Mathematical utilities.
 \
 
 // @brief Compute the factorial of the given integer (n!).

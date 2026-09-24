@@ -19,7 +19,7 @@ extern "C" {
  *
  * @param obj A pointer to a Q object to decrement.
  */
-static inline void decRef(QObj *obj) {
+static inline void qDecRef(QObj *obj) {
     extern void r0(QObj *);
     r0(obj);
 }
@@ -29,7 +29,7 @@ static inline void decRef(QObj *obj) {
  *
  * @param obj A pointer to a Q object to increment.
  */
-static inline void incRef(QObj *obj) {
+static inline void qIncRef(QObj *obj) {
     extern void r1(QObj *);
     r1(obj);
 }
@@ -38,7 +38,7 @@ static inline void incRef(QObj *obj) {
  * @brief Release the memory allocated for a thread’s pool. Call when the thread is about to
  * complete.
  */
-static inline void freePool() {
+static inline void qFreePool() {
     extern void m9();
     m9();
 }
@@ -48,7 +48,7 @@ static inline void freePool() {
  *
  * @param mode 1 to enable the lock, 0 to disable.
  */
-static inline void toggleSymbolLock(QInt mode) {
+static inline void qToggleSymbolLock(QInt mode) {
     extern QInt setm(QInt);
     setm(mode);
 }
@@ -66,7 +66,7 @@ static inline void toggleSymbolLock(QInt mode) {
  *          1   The corresponding symbol memory usage (null if this is not the main thread).
  * @return A pointer to a Q object contain the memory statistic as a 3 or 2 item list of longs.
  */
-static inline QObj *memoryStats(QInt mode) {
+static inline QObj *qMemoryStats(QInt mode) {
     extern QObj *m4(QInt);
     return m4(mode);
 }

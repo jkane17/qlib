@@ -78,9 +78,9 @@ The errors returned by this library are:
 | `type`   | An argument has the wrong Q type (e.g. a table header that is not a symbol list)           |
 | `length` | Arguments that must have the same count do not (e.g. dictionary keys and values)           |
 
-**Ownership.** Functions documented as taking ownership of an argument release it (see [Memory](/doc/c/memory.md)) whether they succeed or fail, so the caller must not use or release that argument afterwards. To keep using an object after passing it to such a function, call `incRef` on it first.
+**Ownership.** Functions documented as taking ownership of an argument release it (see [Memory](/doc/c/memory.md)) whether they succeed or fail, so the caller must not use or release that argument afterwards. To keep using an object after passing it to such a function, call `qIncRef` on it first.
 
-**Examples.** For brevity, the examples in this document do not release the objects they create. Real code should call `decRef` on each object it owns once it is no longer needed.
+**Examples.** For brevity, the examples in this document do not release the objects they create. Real code should call `qDecRef` on each object it owns once it is no longer needed.
 
 ## Atom Creation
 
@@ -2265,7 +2265,7 @@ int main() {
     printf("Column count = %" PRIu64 "\n", qGetTableColumnCount(table));
     printf("Row count = %" PRIu64 "\n", qGetTableRowCount(table));
 
-    decRef(table);
+    qDecRef(table);
     return 0;
 }
 ```
@@ -2544,7 +2544,7 @@ int main() {
     printf("Key columns = %" PRIu64 "\n", qGetTableColumnCount(qGetKeyedTableKeys(keyedTable)));
     printf("Value columns = %" PRIu64 "\n", qGetTableColumnCount(qGetKeyedTableValues(keyedTable)));
 
-    decRef(keyedTable);
+    qDecRef(keyedTable);
     return 0;
 }
 ```
@@ -2605,7 +2605,7 @@ int main() {
     printf("Columns = %" PRIu64 "\n", qGetTableColumnCount(table));
     printf("Rows = %" PRIu64 "\n", qGetTableRowCount(table));
 
-    decRef(table);
+    qDecRef(table);
     return 0;
 }
 ```

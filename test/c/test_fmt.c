@@ -1426,7 +1426,7 @@ void testGuidListFromQObject() {
     result = qGuidListToLiteral(buffer, SIZE, (const QGuid *)list->list, list->length);
     TEST_ASSERT_EQUAL_INT(73, result);
 
-    decRef(list);
+    qDecRef(list);
 }
 
 void testListToLiteral() {

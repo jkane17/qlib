@@ -19,7 +19,7 @@ A Q symbol (`QSymbol`) is a pointer to an interned string. kdb+ keeps a single c
 
 `qNewSymbol` and `qNewSymbolList` intern their arguments automatically. The functions in this document are needed when symbols are written into a list directly, for example into a symbol list allocated with [`qNewList`](/doc/c/creating.md#qnewlist). Every element of a symbol list must be an interned symbol: storing a pointer to an ordinary C string breaks comparisons with `==` and leaves the list pointing at memory kdb+ does not own.
 
-When symbols may be interned from more than one thread, enable the symbol table lock with [`toggleSymbolLock`](/doc/c/memory.md#togglesymbollock).
+When symbols may be interned from more than one thread, enable the symbol table lock with [`qToggleSymbolLock`](/doc/c/memory.md#qtogglesymbollock).
 
 ## Functions
 
@@ -149,7 +149,7 @@ int main() {
     for (QSize i = 0; i < list->length; i++)
         printf("sym[%" PRIu64 "] = %s\n", i, qGetSymbolAtIndex(list, i));
 
-    decRef(list);
+    qDecRef(list);
     return 0;
 }
 ```

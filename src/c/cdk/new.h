@@ -578,8 +578,8 @@ QObj *qNewTableVar(QObj *header, va_list args);
 static inline QObj *qNewKeyedTable(QObj *keys, QObj *values) {
     // Null inputs are reported (and released) by qNewDict
     if (keys && values && (!qIsTable(keys) || !qIsTable(values))) {
-        decRef(keys);
-        decRef(values);
+        qDecRef(keys);
+        qDecRef(values);
         return qNewError("type");
     }
     return qNewDict(keys, values);
@@ -603,18 +603,18 @@ static inline QObj *qKeyTable(QSize nkeys, QObj *table) {
     if (!table)
         return qNewError("domain");
     if (!qIsTable(table)) {
-        decRef(table);
+        qDecRef(table);
         return qNewError("type");
     }
     // knt crashes for 0 keys, and Q's n! gives a length error for n not less than the column count
     if (nkeys == 0 || nkeys >= qGetTableColumnCount(table)) {
-        decRef(table);
+        qDecRef(table);
         return qNewError("length");
     }
     // knt does not take ownership of the table (the keyed table takes its own references to the
     // columns), so release the caller's reference here
     QObj *keyedTable = knt((QLong)nkeys, table);
-    decRef(table);
+    qDecRef(table);
     return keyedTable;
 }
 
