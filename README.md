@@ -19,13 +19,13 @@ clap:use`qlib.clap
 
 ## Requirements
 
-| Requirement                               | Needed for                                  |
-| ----------------------------------------- | ------------------------------------------- |
-| Bash                                      | Running `build.sh`                          |
-| A C compiler with C23 support (`-std=c2x`), GCC or Clang | Building `libcdk.so`             |
-| A C++ compiler with C++20 support         | C++ tests (`--ctest`)                       |
-| `q` on the `PATH`                         | Q tests (`--qtest`)                         |
-| KX's C API library for your platform      | C and documentation tests (`--ctest`, `--doctest`) |
+| Requirement                                              | Needed for                                         |
+| -------------------------------------------------------- | -------------------------------------------------- |
+| Bash                                                     | Running `build.sh`                                 |
+| A C compiler with C23 support (`-std=c2x`), GCC or Clang | Building `libcdk.so`                               |
+| A C++ compiler with C++20 support                        | C++ tests (`--ctest`)                              |
+| `q` on the `PATH`                                        | Q tests (`--qtest`)                                |
+| KX's C API library for your platform                     | C and documentation tests (`--ctest`, `--doctest`) |
 
 The C interface is tested with GCC 13 and Clang 18. The compilers can be changed with the `CC` and `CXX` environment variables (see [Environment Variables](#environment-variables)).
 
@@ -35,10 +35,10 @@ The C interface is tested with GCC 13 and Clang 18. The compilers can be changed
 
 The C and documentation tests are standalone programs, so they link against KX's C API library, which provides the kdb+ functions that the C interface calls. The library is not distributed with QLib. Download the files for your platform from the [KxSystems/kdb](https://github.com/KxSystems/kdb) repository (see [C client for q](https://code.kx.com/q/interfaces/c-client-for-q/#two-sets-of-files) for details). KX provides two sets of files, so choose one:
 
-| Platform      | Without SSL/TLS                        | With SSL/TLS (requires OpenSSL)        |
-| ------------- | -------------------------------------- | -------------------------------------- |
-| Linux, macOS  | `c.o`                                  | `e.o`                                  |
-| Windows       | `c.dll` and `c.lib` (and variants)     | `e.dll` and `e.lib` (and variants)     |
+| Platform     | Without SSL/TLS                    | With SSL/TLS (requires OpenSSL)    |
+| ------------ | ---------------------------------- | ---------------------------------- |
+| Linux, macOS | `c.o`                              | `e.o`                              |
+| Windows      | `c.dll` and `c.lib` (and variants) | `e.dll` and `e.lib` (and variants) |
 
 Then set the `QCLIB` environment variable to the library to link, followed by any other linker arguments it needs. For example:
 
@@ -59,10 +59,10 @@ If `QCLIB` is not set, or its library file does not exist, `--ctest`, `--doctest
 
 This clears the `build` directory, then builds the library into `build/qlib`:
 
-| File                | Description                                      |
-| ------------------- | ------------------------------------------------ |
-| `*.q`               | The Q modules, copied from `src/q`               |
-| `libcdk.so`         | The C interface, compiled from `src/c/cdk/*.c`   |
+| File        | Description                                    |
+| ----------- | ---------------------------------------------- |
+| `*.q`       | The Q modules, copied from `src/q`             |
+| `libcdk.so` | The C interface, compiled from `src/c/cdk/*.c` |
 
 By default, `libcdk.so` is a debug build (`-g -O0`), with assertions enabled. For an optimised build with assertions removed (`-O3 -DNDEBUG`), add `--release`:
 
@@ -111,19 +111,19 @@ If a C or documentation test fails, installation is skipped. If a Q test fails, 
 
 Tests always use a debug build, so that assertions are enabled.
 
-| Option      | Tests run                                                              |
-| ----------- | ---------------------------------------------------------------------- |
-| `-t`        | All of the tests below (except `--itest`)                              |
-| `--qtest`   | Q unit tests                                                           |
-| `--ctest`   | C and C++ unit tests, and header checks                                |
-| `--doctest` | The C examples in the documentation                                    |
-| `--itest`   | Starts a Q process with the Q tests loaded, for interactive use        |
+| Option      | Tests run                                                       |
+| ----------- | --------------------------------------------------------------- |
+| `-t`        | All of the tests below (except `--itest`)                       |
+| `--qtest`   | Q unit tests                                                    |
+| `--ctest`   | C and C++ unit tests, and header checks                         |
+| `--doctest` | The C examples in the documentation                             |
+| `--itest`   | Starts a Q process with the Q tests loaded, for interactive use |
 
 The options can be combined, for example `./build.sh --ctest --doctest`. When several are given, the Q tests run first.
 
 ### Q Tests (`--qtest`)
 
-Runs the Q unit tests in `test/q` with the [`unit`](doc/unit.md) module, against the modules in `build`. A summary and any failures are printed. If any test fails, `build.sh` exits with a non-zero status straight away.
+Runs the Q unit tests in `test/q` with the [`unit`](doc/q/unit.md) module, against the modules in `build`. A summary and any failures are printed. If any test fails, `build.sh` exits with a non-zero status straight away.
 
 `--itest` instead starts a Q process listening on port `5000`, with the tests registered but not run, so that they can be run and debugged interactively.
 
@@ -167,12 +167,12 @@ Tests 251 | Passed 251 | Failed 0
 
 A test that fails to build, crashes, or fails is listed with a message. Details are written to:
 
-| File                                | Contents                                           |
-| ----------------------------------- | -------------------------------------------------- |
-| `build/test/test_fail_output.log`   | The full output of a C or C++ test that crashed    |
+| File                                   | Contents                                                             |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| `build/test/test_fail_output.log`      | The full output of a C or C++ test that crashed                      |
 | `build/doctest/<doc>_<line>.build.log` | The compiler output for a documentation example that failed to build |
-| `build/doctest/<doc>_<line>.out`    | The output of a documentation example              |
-| `build/doctest/<doc>_<line>.diff`   | The difference from the documented output          |
+| `build/doctest/<doc>_<line>.out`       | The output of a documentation example                                |
+| `build/doctest/<doc>_<line>.diff`      | The difference from the documented output                            |
 
 `<doc>_<line>` identifies the example by the documentation file and the line on which the example starts.
 
@@ -182,26 +182,26 @@ A test that fails to build, crashes, or fails is listed with a message. Details 
 
 ### Options
 
-| Option              | Description                                                           |
-| ------------------- | --------------------------------------------------------------------- |
-| `-h`, `--help`      | Show the usage message and exit                                       |
-| `-i`, `--install`   | Install the library after building (and testing, if requested)        |
-| `-d`, `--dir <dir>` | Install to `<dir>` instead of the default install directory          |
-| `-t`, `--test`      | Run all tests (Q, C and C++, and documentation)                       |
-| `--qtest`           | Run the Q unit tests                                                  |
-| `--ctest`           | Run the C and C++ unit tests and header checks                        |
-| `--doctest`         | Build and run the documentation examples in `doc/c`                   |
-| `--itest`           | Start a Q process on port `5000` for interactive testing              |
+| Option              | Description                                                            |
+| ------------------- | ---------------------------------------------------------------------- |
+| `-h`, `--help`      | Show the usage message and exit                                        |
+| `-i`, `--install`   | Install the library after building (and testing, if requested)         |
+| `-d`, `--dir <dir>` | Install to `<dir>` instead of the default install directory            |
+| `-t`, `--test`      | Run all tests (Q, C and C++, and documentation)                        |
+| `--qtest`           | Run the Q unit tests                                                   |
+| `--ctest`           | Run the C and C++ unit tests and header checks                         |
+| `--doctest`         | Build and run the documentation examples in `doc/c`                    |
+| `--itest`           | Start a Q process on port `5000` for interactive testing               |
 | `--release`         | Build an optimised `libcdk.so` without assertions (ignored with tests) |
-| `--clean`           | Remove the contents of the `build` directory and exit                 |
+| `--clean`           | Remove the contents of the `build` directory and exit                  |
 
 ### Environment Variables
 
-| Variable | Description                         | Default |
-| -------- | ----------------------------------- | ------- |
-| `CC`     | C compiler                          | `gcc`   |
-| `CXX`    | C++ compiler                        | `g++`   |
-| `QHOME`  | Used for the default install directory (`$QHOME/mod/qlib`) | Not set |
+| Variable | Description                                                                                                                                                                           | Default |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `CC`     | C compiler                                                                                                                                                                            | `gcc`   |
+| `CXX`    | C++ compiler                                                                                                                                                                          | `g++`   |
+| `QHOME`  | Used for the default install directory (`$QHOME/mod/qlib`)                                                                                                                            | Not set |
 | `QCLIB`  | KX's C API library (and any other linker arguments), used to link the C and documentation tests. Required by `--ctest` and `--doctest` (see [KX's C API Library](#kxs-c-api-library)) | Not set |
 
 For example, to build and test with Clang:
@@ -223,14 +223,14 @@ The C interface is documented separately, in [doc/c](doc/c/README.md).
 
 ## Repository Layout
 
-| Directory     | Contents                                                        |
-| ------------- | --------------------------------------------------------------- |
-| `src/q`       | Q modules                                                       |
-| `src/c/cdk`   | C interface headers and sources                                 |
-| `test/q`      | Q unit tests                                                    |
-| `test/c`      | C and C++ unit tests, and the Unity test framework              |
-| `doc`         | Module documentation (`doc/c` for the C interface)              |
-| `build`       | Build output (created by `build.sh`)                            |
+| Directory   | Contents                                                          |
+| ----------- | ----------------------------------------------------------------- |
+| `src/q`     | Q modules                                                         |
+| `src/c/cdk` | C interface headers and sources                                   |
+| `test/q`    | Q unit tests                                                      |
+| `test/c`    | C and C++ unit tests, and the Unity test framework                |
+| `doc`       | Module documentation (`doc/q` for Q, `doc/c` for the C interface) |
+| `build`     | Build output (created by `build.sh`)                              |
 
 ## Contributing
 
