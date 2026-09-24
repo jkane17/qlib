@@ -902,7 +902,7 @@ QObj *qNewList(QTypeCode type, QSize length);
 
 A pointer to a Q object containing an allocated list.
 
-> Note: The elements are not initialised. Returns a `domain` error if `length` exceeds `Q_SIZE_MAX`.
+> Note: The elements are not initialised. Returns a `domain` error if `length` exceeds `Q_SIZE_MAX`. The elements of a symbol list must be set to interned symbols (see [Symbols](/doc/c/symbols.md)).
 
 **Example**
 

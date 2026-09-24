@@ -12,9 +12,9 @@
 #include "mem.h"
 #include "new.h"
 #include "obj.h"
+#include "sym.h"
 #include "type.h"
 
-extern QSymbol ss(QSymbol str);
 extern QObj *xD(QObj *, QObj *);
 extern QObj *xT(QObj *);
 
@@ -56,7 +56,7 @@ QObj *qNewSymbolList(const QSymbol *values, QSize length) {
     if (obj) {
         QSymbol *list = (QSymbol *)obj->list;
         for (QSize i = 0; i < length; i++) {
-            list[i] = ss(values[i]);
+            list[i] = qInternString(values[i]);
         }
     }
     return obj;

@@ -31,6 +31,7 @@ Debug builds check the arguments of the accessor functions with `assert`. Define
 | [Type Checking](checking.md)        | `is.h`    | Checking what kind of value an object holds                     |
 | [Errors](errors.md)                 | `err.h`   | Signalling and retrieving errors                                |
 | [Memory](memory.md)                 | `mem.h`   | Reference counting and ownership                                |
+| [Symbols](symbols.md)               | `sym.h`   | Interning strings as symbols                                    |
 | [Formatting](formatting.md)         | `fmt.h`   | Writing Q values as strings and Q literals                      |
 | [Utilities](utilities.md)           | `util.h`  | General-purpose helpers                                         |
 

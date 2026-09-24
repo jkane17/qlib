@@ -24,7 +24,7 @@ typedef struct _q0 {
     signed char _reserved_m; // internal value
     signed char _reserved_a; // internal value
 
-    QType type;   // data type (negative for atom, zero or postive for list)
+    QType type;   // data type (negative for atom, zero or positive for list)
     QAttr attr;   // attribute flag (sorted, unique, grouped, parted)
     int32_t refs; // reference count
 

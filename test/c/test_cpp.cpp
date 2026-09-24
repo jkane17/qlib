@@ -108,8 +108,7 @@ void testTables() {
     const QSymbol names[] = {sym("id"), sym("code")};
     const QLong ids[] = {1, 2, 3};
     const QChar codes[] = {'a', 'b', 'c'};
-    QObj *table =
-        qNewTable(qNewSymbolList(names, 2), qNewLongList(ids, 3), qNewCharList(codes, 3));
+    QObj *table = qNewTable(qNewSymbolList(names, 2), qNewLongList(ids, 3), qNewCharList(codes, 3));
     TEST_ASSERT_TRUE(qIsTable(table));
     TEST_ASSERT_EQUAL_UINT64(2, qGetTableColumnCount(table));
     TEST_ASSERT_EQUAL_UINT64(3, qGetTableRowCount(table));
@@ -178,11 +177,11 @@ void testTypeCodeSwitch() {
     QObj *atom = qNewLong(1);
     const char *name = "other";
     switch (static_cast<QTypeCode>(-atom->type)) {
-    case Q_TYPE_LONG:
-        name = "long";
-        break;
-    default:
-        break;
+        case Q_TYPE_LONG:
+            name = "long";
+            break;
+        default:
+            break;
     }
     TEST_ASSERT_EQUAL_STRING("long", name);
     decRef(atom);

@@ -14,6 +14,7 @@
 #include "mem.h"
 #include "new.h"
 #include "obj.h"
+#include "sym.h"
 #include "type.h"
 #include "util.h"
 
