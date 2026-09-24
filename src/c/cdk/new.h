@@ -512,13 +512,15 @@ QObj *qNewDict(QObj *keys, QObj *values);
  *
  * @param header A pointer to a Q object containing a symbol list of column names (takes ownership).
  * @param columns Array of `count` Q object pointers, each containing a single column (takes
- * ownership of each column, but not of the array itself). All columns should have equal lengths.
+ * ownership of each column, but not of the array itself). Each column must be a list or a table,
+ * and all columns must have the same count.
  * @param count Number of columns, which must equal the number of column names.
  * @return A pointer to a Q object containing a table.
  *
  * @note Returns a domain error if `header`, `columns` (with a non-zero `count`) or any column is
- * null, a type error if `header` is not a symbol list, or a length error if `count` is not the
- * number of column names. On error, `header` and all non-null columns are released.
+ * null, a type error if `header` is not a symbol list or a column is not a list or table (e.g. an
+ * atom or dictionary), or a length error if `count` is not the number of column names or the
+ * columns have different counts. On error, `header` and all non-null columns are released.
  */
 QObj *qNewTableFromArray(QObj *header, QObj *const *columns, QSize count);
 
@@ -532,7 +534,7 @@ QObj *qNewTableFromArray(QObj *header, QObj *const *columns, QSize count);
  *
  * @param header A pointer to a Q object containing a symbol list of column names (takes ownership).
  * @param ... Q object pointers, each containing a single column (takes ownership). All columns
- * should have equal lengths, and there must be one per column name.
+ * must have the same count, and there must be one per column name.
  * @return A pointer to a Q object containing a table.
  *
  * @note See `qNewTableFromArray` for the errors returned.
@@ -550,12 +552,13 @@ QObj *qNewTableFromArray(QObj *header, QObj *const *columns, QSize count);
  *
  * @param header A pointer to a Q object containing a symbol list of column names (takes ownership).
  * @param args Q object pointers, each containing a single column (takes ownership). All columns
- * should have equal lengths. The number of columns read is the number of column names, so there
+ * must have the same count. The number of columns read is the number of column names, so there
  * must be exactly one per column name.
  * @return A pointer to a Q object containing a table.
  *
  * @note Returns a domain error if `header` or any column is null, or a type error if `header` is
- * not a symbol list. `header` is released on error. The columns are also released, except when
+ * not a symbol list. Otherwise the columns are checked as for `qNewTableFromArray`. `header` is
+ * released on error. The columns are also released, except when
  * `header` is null or not a symbol list, as the number of columns is then unknown.
  */
 QObj *qNewTableVar(QObj *header, va_list args);
@@ -585,31 +588,53 @@ static inline QObj *qNewKeyedTable(QObj *keys, QObj *values) {
 /**
  * @brief Create a Q object containing a keyed table from a Q object containing a simple table.
  *
- * @param nkeys Number of leading columns to use as the key columns.
- * @param table A pointer to a Q object containing the table to key (does not take ownership).
- * @return A pointer to a Q object containing a keyed table or a null pointer if an error occurred.
+ * The first nkeys columns become the key table, and the remaining columns become the value table.
  *
- * @note Does not take ownership of table. The first nkeys columns become the key table, and the
- * remaining columns become the value table.
- * @note keys and values must be tables and have the same row count.
+ * @param nkeys Number of leading columns to use as the key columns (at least 1, and fewer than the
+ * number of columns).
+ * @param table A pointer to a Q object containing the table to key (takes ownership).
+ * @return A pointer to a Q object containing a keyed table.
+ *
+ * @note Returns a domain error if `table` is null, a type error if it is not a table, or a length
+ * error if `nkeys` is 0 or not less than the number of columns. `table` is released on error.
  */
 static inline QObj *qKeyTable(QSize nkeys, QObj *table) {
     extern QObj *knt(QLong, QObj *);
-    if (nkeys > Q_SIZE_MAX)
+    if (!table)
         return qNewError("domain");
-    if (!qIsTable(table))
+    if (!qIsTable(table)) {
+        decRef(table);
         return qNewError("type");
-    return knt((QLong)nkeys, table);
+    }
+    // knt crashes for 0 keys, and Q's n! gives a length error for n not less than the column count
+    if (nkeys == 0 || nkeys >= qGetTableColumnCount(table)) {
+        decRef(table);
+        return qNewError("length");
+    }
+    // knt does not take ownership of the table (the keyed table takes its own references to the
+    // columns), so release the caller's reference here
+    QObj *keyedTable = knt((QLong)nkeys, table);
+    decRef(table);
+    return keyedTable;
 }
 
 /**
  * @brief Create a Q object containing a simple table from a Q object containing a keyed table.
  *
+ * The key columns are followed by the value columns in the resulting table. A simple table is
+ * returned unchanged.
+ *
  * @param keyedTable A pointer to a Q object containing the keyed table to unkey (takes ownership).
  * @return A pointer to a Q object containing a simple table.
+ *
+ * @note Returns a domain error if `keyedTable` is null, or a type error if it is not a keyed table
+ * or table. `keyedTable` is released on error.
  */
 static inline QObj *qUnkeyTable(QObj *keyedTable) {
     extern QObj *ktd(QObj *);
+    // ktd does not check for null
+    if (!keyedTable)
+        return qNewError("domain");
     return ktd(keyedTable);
 }
 

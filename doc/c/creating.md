@@ -2145,7 +2145,7 @@ In C++, `qNewTable` is an inline function template with the same behaviour.
 | Parameter | Description                                                                                                                  |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `header`  | A pointer to a Q object containing a symbol list of column names (takes ownership)                                           |
-| `...`     | Q object pointers, each containing a single column (takes ownership). All columns should have equal lengths, and there must be one per column name. |
+| `...`     | Q object pointers, each containing a single column (takes ownership). Each must be a list or a table, all must have the same count, and there must be one per column name. |
 
 **Returns**
 
@@ -2239,7 +2239,7 @@ QObj *qNewTableFromArray(QObj *header, QObj *const *columns, QSize count);
 
 A pointer to a Q object containing a table.
 
-> Note: Returns a `domain` error if `header`, `columns` (with a non-zero `count`) or any column is `NULL`, a `type` error if `header` is not a symbol list, or a `length` error if `count` is not the number of column names. On error, `header` and all non-`NULL` columns are released.
+> Note: Returns a `domain` error if `header`, `columns` (with a non-zero `count`) or any column is `NULL`, a `type` error if `header` is not a symbol list or a column is not a list or table (e.g. an atom or dictionary), a `length` error if `count` is not the number of column names or the columns have different counts, or a `rank` error if there are no columns. On error, `header` and all non-`NULL` columns are released.
 
 **Example**
 
@@ -2300,7 +2300,7 @@ A pointer to a Q object containing a table.
 
 > Note: `header` length determines the number of columns, while the column length determines the number of rows.
 
-> Note: Returns a `domain` error if `header` or any column is `NULL`, or a `type` error if `header` is not a symbol list. `header` is released on error. The columns are also released, except when `header` is `NULL` or not a symbol list, as the number of columns is then unknown. Passing a different number of columns than column names is undefined behaviour, since a `va_list` does not record its length.
+> Note: Returns a `domain` error if `header` or any column is `NULL`, or a `type` error if `header` is not a symbol list. Otherwise the columns are checked as for [`qNewTableFromArray`](#qnewtablefromarray). `header` is released on error. The columns are also released, except when `header` is `NULL` or not a symbol list, as the number of columns is then unknown. Passing a different number of columns than column names is undefined behaviour, since a `va_list` does not record its length.
 
 **Example**
 
@@ -2500,16 +2500,16 @@ QObj *qKeyTable(QSize nkeys, QObj *table);
 
 | Parameter | Description                                               |
 | --------- | --------------------------------------------------------- |
-| `nkeys`   | Number of leading columns to use as the key columns       |
-| `table`   | Pointer to the simple table to split into keys and values (does not take ownership) |
+| `nkeys`   | Number of leading columns to use as the key columns (at least 1, and fewer than the number of columns) |
+| `table`   | Pointer to the simple table to split into keys and values (takes ownership) |
 
 **Returns**
 
 A pointer to a Q object containing a keyed table or a null pointer if an error occurred.
 
-> Note: Does not take ownership of `table`. The first `nkeys` columns become the key table, and the remaining columns become the value table.
+> Note: Takes ownership of `table`. The first `nkeys` columns become the key table, and the remaining columns become the value table.
 
-> Note: Returns a `type` error if `table` is not a table, or a `domain` error if `nkeys` exceeds `Q_SIZE_MAX`.
+> Note: Returns a `domain` error if `table` is `NULL`, a `type` error if `table` is not a table, or a `length` error if `nkeys` is `0` or not less than the number of columns. `table` is released on error.
 
 **Example**
 
@@ -2539,11 +2539,12 @@ int main() {
 
     QObj *table =
         qNewTable(header, keyColumn0, keyColumn1, valueColumn0, valueColumn1, valueColumn2);
-    QObj *keyedTable = qKeyTable(2, table);
+    QObj *keyedTable = qKeyTable(2, table); // takes ownership of table
 
     printf("Key columns = %" PRIu64 "\n", qGetTableColumnCount(qGetKeyedTableKeys(keyedTable)));
     printf("Value columns = %" PRIu64 "\n", qGetTableColumnCount(qGetKeyedTableValues(keyedTable)));
 
+    decRef(keyedTable);
     return 0;
 }
 ```
@@ -2574,7 +2575,9 @@ QObj *qUnkeyTable(QObj *keyedTable);
 A pointer to a Q object containing a simple table.
 
 > Note: `qUnkeyTable` takes ownership of `keyedTable`. The key columns are followed by the value
-> columns in the resulting table.
+> columns in the resulting table. A simple table is returned unchanged.
+
+> Note: Returns a `domain` error if `keyedTable` is `NULL`, or a `type` error if it is not a keyed table or table. `keyedTable` is released on error.
 
 **Example**
 
@@ -2602,6 +2605,7 @@ int main() {
     printf("Columns = %" PRIu64 "\n", qGetTableColumnCount(table));
     printf("Rows = %" PRIu64 "\n", qGetTableRowCount(table));
 
+    decRef(table);
     return 0;
 }
 ```

@@ -7,6 +7,8 @@
 #ifndef QLIB_IPC_H
 #define QLIB_IPC_H
 
+// THIS FILE IS A WORK IN PROGRESS
+
 // /**
 //  * @brief Remove the callback on `handle` and call `kclose` (only call from main thread).
 //  *

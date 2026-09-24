@@ -1971,22 +1971,57 @@ void testKeyTable() {
     checkBorrowedTableColumn(values, Q_TYPE_CHAR, valueChars, 3, 1);
     checkBorrowedTableColumn(values, Q_TYPE_INT, valueInts, 3, 2);
 
-    // // Too many keys
-    QObj *manyKeys = qKeyTable(Q_SIZE_MAX + 1, table);
-    QObj *error0 = qCheckError(manyKeys);
-    TEST_ASSERT_TRUE(qIsError(error0));
-    TEST_ASSERT_EQUAL_STRING("domain", qGetError(error0));
+    // qKeyTable took ownership of table, so releasing the keyed table releases everything
+    decRef(keyedTable);
+}
 
-    // Second argumen must be a table
-    QObj *badArg1 = qKeyTable(2, nullptr);
-    QObj *error1 = qCheckError(badArg1);
-    TEST_ASSERT_TRUE(qIsError(error1));
-    TEST_ASSERT_EQUAL_STRING("type", qGetError(error1));
+static QObj *newKeyTableInput(void) {
+    QSymbol symbols[] = {"a", "b", "c"};
+    QLong longs[] = {1, 2, 3};
+    return qNewTable(qNewSymbolList(symbols, 3), qNewLongList(longs, 3), qNewLongList(longs, 3),
+                     qNewLongList(longs, 3));
+}
 
-    QObj *badArg2 = qKeyTable(2, col2);
-    QObj *error3 = qCheckError(badArg2);
-    TEST_ASSERT_TRUE(qIsError(error3));
-    TEST_ASSERT_EQUAL_STRING("type", qGetError(error3));
+void testKeyTableTakesOwnership() {
+    QObj *table = newKeyTableInput();
+    incRef(table);
+    QObj *keyedTable = qKeyTable(1, table);
+    checkIsKeyedTable(keyedTable);
+    checkReleased(table);
+
+    // The keyed table holds its own references to the columns, so it outlives the table
+    TEST_ASSERT_EQUAL_UINT64(3, qGetTableRowCount(qGetKeyedTableKeys(keyedTable)));
+    decRef(keyedTable);
+}
+
+void testKeyTableErrorsRelease() {
+    // Null table - Error
+    checkDomainError(qKeyTable(1, nullptr));
+
+    // Not a table - Error, released
+    QLong longs[] = {1, 2, 3};
+    QObj *list = qNewLongList(longs, 3);
+    incRef(list);
+    checkError(qKeyTable(1, list), "type");
+    checkReleased(list);
+
+    // No key columns - Error, released (kdb+'s knt would crash)
+    QObj *table0 = newKeyTableInput();
+    incRef(table0);
+    checkError(qKeyTable(0, table0), "length");
+    checkReleased(table0);
+
+    // Every column a key column - Error, released
+    QObj *table1 = newKeyTableInput();
+    incRef(table1);
+    checkError(qKeyTable(3, table1), "length");
+    checkReleased(table1);
+
+    // More key columns than columns - Error, released
+    QObj *table2 = newKeyTableInput();
+    incRef(table2);
+    checkError(qKeyTable(Q_SIZE_MAX, table2), "length");
+    checkReleased(table2);
 }
 
 void testUnkeyTable() {
@@ -2021,6 +2056,27 @@ void testUnkeyTable() {
     checkTableColumn(table, Q_TYPE_LONG, valueLongs, 3, 2);
     checkTableColumn(table, Q_TYPE_CHAR, valueChars, 3, 3);
     checkTableColumn(table, Q_TYPE_INT, valueInts, 3, 4);
+
+    decRef(table);
+}
+
+void testUnkeyTableEdgeCases() {
+    // Null - Error
+    checkDomainError(qUnkeyTable(nullptr));
+
+    // Simple table - Returned unchanged
+    QObj *table = newKeyTableInput();
+    QObj *unkeyed = qUnkeyTable(table);
+    TEST_ASSERT_EQUAL_PTR(table, unkeyed);
+    decRef(unkeyed);
+
+    // Dictionary - Error, released
+    QSymbol keys[] = {"a"};
+    QLong values[] = {1};
+    QObj *dict = qNewDict(qNewSymbolList(keys, 1), qNewLongList(values, 1));
+    incRef(dict);
+    checkError(qUnkeyTable(dict), "type");
+    checkReleased(dict);
 }
 
 void testNewMixedListTooLong() {
@@ -2104,6 +2160,33 @@ void testNewDictErrorsRelease() {
     decRef(dict);
 }
 
+void testNewTableColumnKinds() {
+    QSymbol names[] = {"a", "b"};
+    QLong longs[] = {1, 2};
+
+    // A mixed column and a table column are both accepted, as in Q
+    QObj *mixedColumn = qNewMixedList(2, qNewLong(1), qNewSymbol("x"));
+    QObj *table0 = qNewTable(qNewSymbolList(names, 2), qNewLongList(longs, 2), mixedColumn);
+    TEST_ASSERT_NOT_NULL(table0);
+    TEST_ASSERT_EQUAL_INT(Q_TYPE_TABLE, table0->type);
+    TEST_ASSERT_EQUAL_UINT64(2, qGetTableRowCount(table0));
+
+    QSymbol innerNames[] = {"c"};
+    QObj *inner = qNewTable(qNewSymbolList(innerNames, 1), qNewLongList(longs, 2));
+    QObj *table1 = qNewTable(qNewSymbolList(names, 2), qNewLongList(longs, 2), inner);
+    TEST_ASSERT_NOT_NULL(table1);
+    TEST_ASSERT_EQUAL_INT(Q_TYPE_TABLE, table1->type);
+
+    // Zero rows
+    QObj *table2 = qNewTable(qNewSymbolList(names, 2), qNewLongList(longs, 0), qNewLongList(longs, 0));
+    TEST_ASSERT_NOT_NULL(table2);
+    TEST_ASSERT_EQUAL_UINT64(0, qGetTableRowCount(table2));
+
+    decRef(table0);
+    decRef(table1);
+    decRef(table2);
+}
+
 void testNewTableErrorsRelease() {
     QLong longs[] = {1, 2, 3};
     QChar chars[] = {'a', 'b', 'c'};
@@ -2165,6 +2248,43 @@ void testNewTableErrorsRelease() {
     checkReleased(header4);
     checkReleased(colA4);
     checkReleased(colB4);
+
+    // Atom column - Error, all released
+    QSymbol names[] = {"a", "b"};
+    QObj *header5 = qNewSymbolList(names, 2);
+    QObj *colA5 = qNewLongList(longs, 3);
+    QObj *atom5 = qNewLong(1);
+    incRef(header5);
+    incRef(colA5);
+    incRef(atom5);
+    checkError(qNewTable(header5, colA5, atom5), "type");
+    checkReleased(header5);
+    checkReleased(colA5);
+    checkReleased(atom5);
+
+    // Dictionary column - Error, all released
+    QObj *header6 = qNewSymbolList(names, 2);
+    QObj *colA6 = qNewLongList(longs, 2);
+    QObj *dict6 = qNewDict(qNewSymbolList(names, 2), qNewLongList(longs, 2));
+    incRef(header6);
+    incRef(colA6);
+    incRef(dict6);
+    checkError(qNewTable(header6, colA6, dict6), "type");
+    checkReleased(header6);
+    checkReleased(colA6);
+    checkReleased(dict6);
+
+    // Columns of different lengths - Error, all released
+    QObj *header7 = qNewSymbolList(names, 2);
+    QObj *colA7 = qNewLongList(longs, 3);
+    QObj *colB7 = qNewCharList(chars, 2);
+    incRef(header7);
+    incRef(colA7);
+    incRef(colB7);
+    checkError(qNewTable(header7, colA7, colB7), "length");
+    checkReleased(header7);
+    checkReleased(colA7);
+    checkReleased(colB7);
 
     // Same checks through the va_list variant
     QObj *headerVar = qNewSymbolList(symbols, 2);
@@ -2290,11 +2410,15 @@ int main() {
     RUN_TEST(testNewTableVar);
     RUN_TEST(testNewKeyedTable);
     RUN_TEST(testKeyTable);
+    RUN_TEST(testKeyTableTakesOwnership);
+    RUN_TEST(testKeyTableErrorsRelease);
     RUN_TEST(testUnkeyTable);
+    RUN_TEST(testUnkeyTableEdgeCases);
     RUN_TEST(testNewMixedListTooLong);
     RUN_TEST(testNewMixedListTakesOwnership);
     RUN_TEST(testNewMixedListNullItemReleases);
     RUN_TEST(testNewDictErrorsRelease);
+    RUN_TEST(testNewTableColumnKinds);
     RUN_TEST(testNewTableErrorsRelease);
     RUN_TEST(testNewTableFromArray);
     RUN_TEST(testNewKeyedTableErrorsRelease);

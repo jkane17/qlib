@@ -113,7 +113,7 @@ void testTables() {
     TEST_ASSERT_EQUAL_UINT64(2, qGetTableColumnCount(table));
     TEST_ASSERT_EQUAL_UINT64(3, qGetTableRowCount(table));
 
-    // qKeyTable does not take ownership of table
+    // qKeyTable takes ownership of table
     QObj *keyedTable = qKeyTable(1, table);
     TEST_ASSERT_TRUE(qIsKeyedTable(keyedTable));
     TEST_ASSERT_EQUAL_UINT64(3, qGetCount(keyedTable));
@@ -124,7 +124,6 @@ void testTables() {
     TEST_ASSERT_EQUAL_UINT64(2, qGetTableColumnCount(unkeyed));
 
     decRef(unkeyed);
-    decRef(table);
 }
 
 void testTableOverload() {

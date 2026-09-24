@@ -161,6 +161,26 @@ QObj *qNewTableFromArray(QObj *header, QObj *const *columns, QSize count) {
         }
     }
 
+    // xT does not check its columns, so an atom column or columns of different lengths would give
+    // a malformed table. A column must be a list, or a table (whose rows are dictionaries, as Q's
+    // flip allows); not an atom, dictionary, or function. All columns must have the same count.
+    if (!error) {
+        for (QSize i = 0; i < count; i++) {
+            if (columns[i]->type < 0 || columns[i]->type > Q_TYPE_TABLE) {
+                error = "type";
+                break;
+            }
+        }
+    }
+    if (!error) {
+        for (QSize i = 1; i < count; i++) {
+            if (qGetCount(columns[i]) != qGetCount(columns[0])) {
+                error = "length";
+                break;
+            }
+        }
+    }
+
     // The column count is always known, so every argument can be released on error
     if (error) {
         if (header)
