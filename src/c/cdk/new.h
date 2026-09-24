@@ -443,38 +443,31 @@ QObj *qNewTimeList(const QTime *values, QSize length);
 /**
  * @brief Create a Q object containing a mixed list.
  *
- * @param length Number of elements in the list.
- * @param ... Q object pointers to populate the list.
+ * @param length Number of elements in the list, which must equal the number of arguments that
+ * follow.
+ * @param ... Q object pointers to populate the list (takes ownership).
  * @return A pointer to a Q object containing a mixed list.
  *
- * @note length must not exceed INT32_MAX, otherwise a domain error is returned.
+ * @note Returns a domain error if any item is null, in which case the other items are released.
+ * `length` must not exceed INT32_MAX, otherwise a domain error is returned before any items are
+ * read (so they are not released).
  */
-static inline QObj *qNewMixedList(QSize length, ...) {
-    extern QObj *vaknk(QInt, va_list);
-    if (length > INT32_MAX)
-        return qNewError("domain");
-    va_list args;
-    va_start(args, length);
-    QObj *obj = vaknk((QInt)length, args);
-    va_end(args);
-    return obj;
-}
+QObj *qNewMixedList(QSize length, ...);
 
 /**
  * @brief Create a Q object containing a mixed list from an existing va_list.
  *
- * @param length Number of elements in the list.
- * @param args Q object pointers to populate the list.
+ * Intended for writing variadic wrappers. The caller still owns `args` and must call `va_end` on
+ * it.
+ *
+ * @param length Number of elements in the list, which must equal the number of arguments in
+ * `args`.
+ * @param args Q object pointers to populate the list (takes ownership).
  * @return A pointer to a Q object containing a mixed list.
  *
- * @note length must not exceed INT32_MAX, otherwise a domain error is returned.
+ * @note See `qNewMixedList` for the errors returned.
  */
-static inline QObj *qNewMixedListVar(QSize length, va_list args) {
-    extern QObj *vaknk(QInt, va_list);
-    if (length > INT32_MAX)
-        return qNewError("domain");
-    return vaknk((QInt)length, args);
-}
+QObj *qNewMixedListVar(QSize length, va_list args);
 
 /**
  * @brief Create a Q object containing a dictionary.

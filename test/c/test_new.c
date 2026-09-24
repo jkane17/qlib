@@ -2029,6 +2029,36 @@ void testNewMixedListTooLong() {
     checkDomainError(newMixedListVar((QSize)INT32_MAX + 1));
 }
 
+void testNewMixedListTakesOwnership() {
+    // The list takes the caller's reference, so releasing the list releases the items
+    QObj *long_ = qNewLong(1);
+    incRef(long_);
+    QObj *mixedList = qNewMixedList(1, long_);
+    TEST_ASSERT_EQUAL_INT(1, long_->refs);
+    decRef(mixedList);
+    checkReleased(long_);
+}
+
+void testNewMixedListNullItemReleases() {
+    // Null item - Error, the other items released
+    QObj *long0 = qNewLong(1);
+    QObj *long1 = qNewLong(2);
+    incRef(long0);
+    incRef(long1);
+    checkDomainError(qNewMixedList(3, long0, (QObj *)NULL, long1));
+    checkReleased(long0);
+    checkReleased(long1);
+
+    // Same for the va_list form
+    QObj *long2 = qNewLong(3);
+    incRef(long2);
+    checkDomainError(newMixedListVar(2, (QObj *)NULL, long2));
+    checkReleased(long2);
+
+    // Only null items
+    checkDomainError(qNewMixedList(1, (QObj *)NULL));
+}
+
 void testNewDictErrorsRelease() {
     QLong longs[] = {1, 2, 3};
 
@@ -2262,6 +2292,8 @@ int main() {
     RUN_TEST(testKeyTable);
     RUN_TEST(testUnkeyTable);
     RUN_TEST(testNewMixedListTooLong);
+    RUN_TEST(testNewMixedListTakesOwnership);
+    RUN_TEST(testNewMixedListNullItemReleases);
     RUN_TEST(testNewDictErrorsRelease);
     RUN_TEST(testNewTableErrorsRelease);
     RUN_TEST(testNewTableFromArray);

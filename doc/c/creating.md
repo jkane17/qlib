@@ -1887,16 +1887,16 @@ QObj *qNewMixedList(QSize length, ...);
 
 **Parameters**
 
-| Parameter | Description                            |
-| --------- | -------------------------------------- |
-| `length`  | Number of elements in the list         |
-| `...`     | Q object pointers to populate the list |
+| Parameter | Description                                                                  |
+| --------- | ---------------------------------------------------------------------------- |
+| `length`  | Number of elements in the list (must equal the number of arguments that follow) |
+| `...`     | Q object pointers to populate the list (takes ownership)                     |
 
 **Returns**
 
 A pointer to a Q object containing a mixed list.
 
-> Note: `length` must not exceed `INT32_MAX`, otherwise a `domain` error is returned.
+> Note: The list takes ownership of its items, so releasing the list releases them, and `qGetMixedAtIndex` returns a borrowed pointer. Returns a `domain` error if any item is `NULL`, in which case the other items are released. `length` must not exceed `INT32_MAX`, otherwise a `domain` error is returned before any items are read (so they are not released). Nothing checks that `length` matches the number of arguments: a mismatch is undefined behaviour.
 
 **Example**
 
@@ -1950,16 +1950,16 @@ QObj *qNewMixedListVar(QSize length, va_list args);
 
 **Parameters**
 
-| Parameter | Description                            |
-| --------- | -------------------------------------- |
-| `length`  | Number of elements in the list         |
-| `args`    | Q object pointers to populate the list |
+| Parameter | Description                                                              |
+| --------- | ------------------------------------------------------------------------ |
+| `length`  | Number of elements in the list (must equal the number of arguments in `args`) |
+| `args`    | Q object pointers to populate the list (takes ownership)                 |
 
 **Returns**
 
 A pointer to a Q object containing a mixed list.
 
-> Note: `length` must not exceed `INT32_MAX`, otherwise a `domain` error is returned.
+> Note: Intended for writing variadic wrappers. The caller still owns `args` and must call `va_end` on it. Ownership and errors are as for [`qNewMixedList`](#qnewmixedlist).
 
 **Example**
 

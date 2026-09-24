@@ -5,6 +5,7 @@
  */
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -78,6 +79,44 @@ Q_NEW_LIST_IMPL(qNewTimespanList, Q_TYPE_TIMESPAN, QLong, QTimespan)
 Q_NEW_LIST_IMPL(qNewMinuteList, Q_TYPE_MINUTE, QInt, QMinute)
 Q_NEW_LIST_IMPL(qNewSecondList, Q_TYPE_SECOND, QInt, QSecond)
 Q_NEW_LIST_IMPL(qNewTimeList, Q_TYPE_TIME, QInt, QTime)
+
+QObj *qNewMixedList(QSize length, ...) {
+    va_list args;
+    va_start(args, length);
+    QObj *obj = qNewMixedListVar(length, args);
+    va_end(args);
+    return obj;
+}
+
+QObj *qNewMixedListVar(QSize length, va_list args) {
+    extern QObj *vaknk(QInt, va_list);
+
+    // Checked before any arguments are read, as reading INT32_MAX + 1 arguments is not possible
+    if (length > INT32_MAX)
+        return qNewError("domain");
+
+    // Check a copy of the arguments for null items first, so that args is still unread for vaknk
+    // (or for releasing the items)
+    bool hasNull = false;
+    va_list check;
+    va_copy(check, args);
+    for (QSize i = 0; i < length; i++) {
+        if (!va_arg(check, QObj *))
+            hasNull = true;
+    }
+    va_end(check);
+
+    if (hasNull) {
+        for (QSize i = 0; i < length; i++) {
+            QObj *item = va_arg(args, QObj *);
+            if (item)
+                decRef(item);
+        }
+        return qNewError("domain");
+    }
+
+    return vaknk((QInt)length, args);
+}
 
 QObj *qNewDict(QObj *keys, QObj *values) {
     if (!keys || !values) {
