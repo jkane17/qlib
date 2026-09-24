@@ -18,6 +18,7 @@ usage() {
     echo "Environment:"
     echo "  CC                   C compiler (default: gcc)"
     echo "  CXX                  C++ compiler (default: g++)"
+    echo "  KDB_C_OBJ            KX's c.o, needed by --ctest and --doctest (default: src/c/obj/c.o)"
 }
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -38,7 +39,8 @@ C_DOC_DIR="${DOC_DIR}/c"
 C_CDK_DIR="${C_SRC_DIR}/cdk"
 C_LIB_DIR="${C_SRC_DIR}/lib"
 C_UNITY_DIR="${C_TEST_DIR}/unity"
-C_OBJ_FILE="${C_SRC_DIR}/obj/c.o"
+# KX's c.o is not distributed with QLib, so it must be provided to link the C tests
+C_OBJ_FILE="${KDB_C_OBJ:-${C_SRC_DIR}/obj/c.o}"
 
 if [ -z "${QHOME:-}" ]; then
     INSTALL_DIR="${HOME}/.kx/mod/qlib/"
@@ -537,6 +539,12 @@ if ${TEST} || ${DOCTEST}; then
 fi
 
 if ${RUN_C_TESTS} || ${RUN_DOC_TESTS}; then
+    if [ ! -f "${C_OBJ_FILE}" ]; then
+        echo "Error: KX's c.o was not found at ${C_OBJ_FILE}" >&2
+        echo "The C and documentation tests link against it. Download the c.o for your platform" >&2
+        echo "from KX, then place it at src/c/obj/c.o or set KDB_C_OBJ to its path." >&2
+        exit 1
+    fi
     echo
     compile_test_cdk
 fi

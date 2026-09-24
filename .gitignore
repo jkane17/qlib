@@ -1,1 +1,4 @@
 build/
+
+# KX's c.o is not distributed with QLib. Place a local copy here (or set KDB_C_OBJ) to run the C tests.
+src/c/obj/
