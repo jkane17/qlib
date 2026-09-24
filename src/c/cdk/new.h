@@ -470,6 +470,31 @@ QObj *qNewMixedList(QSize length, ...);
 QObj *qNewMixedListVar(QSize length, va_list args);
 
 /**
+ * @brief Collapse a mixed list into a simple list or a table, where possible.
+ *
+ * A mixed list whose items are atoms of the same type becomes a simple list of that type (for
+ * example, three long atoms become a long list). A mixed list whose items are conforming
+ * dictionaries (the same symbol keys, in the same order) becomes a table, with one row per
+ * dictionary. Any other mixed list (including an empty one) is returned unchanged, as is any object
+ * that is not a mixed list.
+ *
+ * Only available inside a q process (for example, in a shared library loaded with 2:), as kdb+'s
+ * vk is not provided by the standalone C library (c.o).
+ *
+ * @param obj A pointer to a Q object (takes ownership). Its items must not be null. If obj is null,
+ * null is returned.
+ * @return A pointer to the collapsed list or table, in which case obj has been released, or obj
+ * itself if it was not collapsed.
+ */
+static inline QObj *qCollapseMixedList(QObj *obj) {
+    extern QObj *vk(QObj *);
+    // vk reads every item as a QObj pointer, so it must only be given a mixed list
+    if (!obj || obj->type != Q_TYPE_MIXED)
+        return obj;
+    return vk(obj);
+}
+
+/**
  * @brief Create a Q object containing a dictionary.
  *
  * @param keys A pointer to a Q object containing a list of keys or a table (takes ownership).

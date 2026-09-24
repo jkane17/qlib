@@ -49,6 +49,7 @@ This document provides comprehensive documentation for Q object creation functio
 - [Complex Creation](#complex-creation)
     - [`qNewMixedList`](#qnewmixedlist)
     - [`qNewMixedListVar`](#qnewmixedlistvar)
+    - [`qCollapseMixedList`](#qcollapsemixedlist)
     - [`qNewDict`](#qnewdict)
     - [`qNewTable`](#qnewtable)
     - [`qNewTableFromArray`](#qnewtablefromarray)
@@ -2012,6 +2013,51 @@ mixedList[1] = 10
 mixedList[2][0] = a
 mixedList[2][1] = b
 mixedList[2][2] = c
+```
+
+### `qCollapseMixedList`
+
+Collapse a mixed list into a simple list or a table, where possible.
+
+```c
+QObj *qCollapseMixedList(QObj *obj);
+```
+
+**Parameters**
+
+| Parameter | Description                                                |
+| --------- | ---------------------------------------------------------- |
+| `obj`     | A pointer to a Q object (takes ownership)                  |
+
+**Returns**
+
+A pointer to the collapsed list or table, in which case `obj` has been released, or `obj` itself if it was not collapsed.
+
+| Items of `obj`                                                     | Result                              |
+| ------------------------------------------------------------------ | ----------------------------------- |
+| Atoms of the same type                                             | A simple list of that type          |
+| Conforming dictionaries (the same symbol keys, in the same order) | A table, with one row per dictionary |
+| Anything else, or no items                                         | `obj`, unchanged                    |
+
+> Note: Only available inside a q process (for example, in a shared library loaded with `2:`), as kdb+'s `vk` is not provided by the standalone C library (`c.o`). Any object that is not a mixed list is returned unchanged. The items of `obj` must not be `NULL`. If `obj` is `NULL`, `NULL` is returned.
+
+**Example**
+
+Because the result may be a different object, always use the returned pointer in place of `obj`:
+
+```c
+QObj *list = qNewMixedList(3, qNewLong(1), qNewLong(2), qNewLong(3)); // type 0
+list = qCollapseMixedList(list);                                        // type 7
+
+QObj *mixed = qNewMixedList(2, qNewLong(1), qNewSymbol("a"));         // type 0
+mixed = qCollapseMixedList(mixed);                                      // still type 0
+
+QSymbol keys[] = {"a", "b"};
+QLong row0[] = {1, 2}, row1[] = {3, 4};
+QObj *rows = qNewMixedList(2,
+                           qNewDict(qNewSymbolList(keys, 2), qNewLongList(row0, 2)),
+                           qNewDict(qNewSymbolList(keys, 2), qNewLongList(row1, 2)));
+rows = qCollapseMixedList(rows);                                        // table (type 98)
 ```
 
 ### `qNewDict`
