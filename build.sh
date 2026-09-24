@@ -18,7 +18,8 @@ usage() {
     echo "Environment:"
     echo "  CC                   C compiler (default: gcc)"
     echo "  CXX                  C++ compiler (default: g++)"
-    echo "  KDB_C_OBJ            KX's c.o, needed by --ctest and --doctest (default: src/c/obj/c.o)"
+    echo "  QCLIB                KX's C API library to link the C tests with (required by --ctest and"
+    echo "                       --doctest), e.g. \"\$HOME/kdb/l64/c.o\" or \"\$HOME/kdb/l64/e.o -lssl -lcrypto\""
 }
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -39,8 +40,10 @@ C_DOC_DIR="${DOC_DIR}/c"
 C_CDK_DIR="${C_SRC_DIR}/cdk"
 C_LIB_DIR="${C_SRC_DIR}/lib"
 C_UNITY_DIR="${C_TEST_DIR}/unity"
-# KX's c.o is not distributed with QLib, so it must be provided to link the C tests
-C_OBJ_FILE="${KDB_C_OBJ:-${C_SRC_DIR}/obj/c.o}"
+# KX's C API library (c.o, e.o, c.lib, ...) is not distributed with QLib, so it must be provided to
+# link the C tests. QCLIB holds the path to the library file, followed by any other linker arguments
+# it needs (e.g. -lssl -lcrypto for e.o), separated by spaces.
+read -r -a QCLIB_ARGS <<< "${QCLIB:-}"
 
 if [ -z "${QHOME:-}" ]; then
     INSTALL_DIR="${HOME}/.kx/mod/qlib/"
@@ -188,7 +191,7 @@ compile_library() {
 # Set test_link to the link flags for an executable that uses the test copy of libcdk.so
 # $1 : Path from the executable's directory to the test build directory
 test_link_flags() {
-    test_link=("-L${BUILD_TEST_DIR}" -lcdk "-Wl,-rpath,\$ORIGIN/$1" "${C_OBJ_FILE}" "${LFLAGS[@]}")
+    test_link=("-L${BUILD_TEST_DIR}" -lcdk "-Wl,-rpath,\$ORIGIN/$1" "${QCLIB_ARGS[@]}" "${LFLAGS[@]}")
 }
 
 compile_test() {
@@ -539,10 +542,15 @@ if ${TEST} || ${DOCTEST}; then
 fi
 
 if ${RUN_C_TESTS} || ${RUN_DOC_TESTS}; then
-    if [ ! -f "${C_OBJ_FILE}" ]; then
-        echo "Error: KX's c.o was not found at ${C_OBJ_FILE}" >&2
-        echo "The C and documentation tests link against it. Download the c.o for your platform" >&2
-        echo "from KX, then place it at src/c/obj/c.o or set KDB_C_OBJ to its path." >&2
+    if (( ${#QCLIB_ARGS[@]} == 0 )); then
+        echo "Error: QCLIB is not set" >&2
+        echo "The C and documentation tests link against KX's C API library. Download the files for" >&2
+        echo "your platform from https://github.com/KxSystems/kdb, then set QCLIB to the library to" >&2
+        echo "link, e.g. QCLIB=\"\$HOME/kdb/l64/c.o\" ./build.sh --ctest" >&2
+        exit 1
+    fi
+    if [ ! -f "${QCLIB_ARGS[0]}" ]; then
+        echo "Error: KX's C API library was not found at ${QCLIB_ARGS[0]} (from QCLIB)" >&2
         exit 1
     fi
     echo

@@ -479,7 +479,7 @@ QObj *qNewMixedListVar(QSize length, va_list args);
  * that is not a mixed list.
  *
  * Only available inside a q process (for example, in a shared library loaded with 2:), as kdb+'s
- * vk is not provided by the standalone C library (c.o).
+ * vk is not provided by KX's standalone C API library (such as c.o).
  *
  * @param obj A pointer to a Q object (takes ownership). Its items must not be null. If obj is null,
  * null is returned.

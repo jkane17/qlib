@@ -2039,7 +2039,7 @@ A pointer to the collapsed list or table, in which case `obj` has been released,
 | Conforming dictionaries (the same symbol keys, in the same order) | A table, with one row per dictionary |
 | Anything else, or no items                                         | `obj`, unchanged                    |
 
-> Note: Only available inside a q process (for example, in a shared library loaded with `2:`), as kdb+'s `vk` is not provided by the standalone C library (`c.o`). Any object that is not a mixed list is returned unchanged. The items of `obj` must not be `NULL`. If `obj` is `NULL`, `NULL` is returned.
+> Note: Only available inside a q process (for example, in a shared library loaded with `2:`), as kdb+'s `vk` is not provided by KX's standalone C API library (such as `c.o`). Any object that is not a mixed list is returned unchanged. The items of `obj` must not be `NULL`. If `obj` is `NULL`, `NULL` is returned.
 
 **Example**
 

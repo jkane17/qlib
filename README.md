@@ -25,20 +25,31 @@ clap:use`qlib.clap
 | A C compiler with C23 support (`-std=c2x`), GCC or Clang | Building `libcdk.so`             |
 | A C++ compiler with C++20 support         | C++ tests (`--ctest`)                       |
 | `q` on the `PATH`                         | Q tests (`--qtest`)                         |
-| KX's `c.o` for your platform              | C and documentation tests (`--ctest`, `--doctest`) |
+| KX's C API library for your platform      | C and documentation tests (`--ctest`, `--doctest`) |
 
 The C interface is tested with GCC 13 and Clang 18. The compilers can be changed with the `CC` and `CXX` environment variables (see [Environment Variables](#environment-variables)).
 
 `build.sh` supports Linux, macOS, and Windows (MinGW, MSYS, or Cygwin) on x86-64 and ARM64.
 
-### KX's `c.o`
+### KX's C API Library
 
-The C and documentation tests are standalone programs, so they link against KX's C library, `c.o`, which provides the kdb+ functions that the C interface calls. `c.o` is not distributed with QLib. Download the `c.o` for your platform from KX, then either:
+The C and documentation tests are standalone programs, so they link against KX's C API library, which provides the kdb+ functions that the C interface calls. The library is not distributed with QLib. Download the files for your platform from the [KxSystems/kdb](https://github.com/KxSystems/kdb) repository (see [C client for q](https://code.kx.com/q/interfaces/c-client-for-q/#two-sets-of-files) for details). KX provides two sets of files, so choose one:
 
-- place it at `src/c/obj/c.o` (this path is ignored by Git), or
-- set the `KDB_C_OBJ` environment variable to its path.
+| Platform      | Without SSL/TLS                        | With SSL/TLS (requires OpenSSL)        |
+| ------------- | -------------------------------------- | -------------------------------------- |
+| Linux, macOS  | `c.o`                                  | `e.o`                                  |
+| Windows       | `c.dll` and `c.lib` (and variants)     | `e.dll` and `e.lib` (and variants)     |
 
-If `c.o` cannot be found, `--ctest`, `--doctest`, and `-t` stop with an error before running any C tests. Building, installing, and the Q tests do not need `c.o`, and neither does code loaded into a Q process as a shared library.
+Then set the `QCLIB` environment variable to the library to link, followed by any other linker arguments it needs. For example:
+
+```bash
+export QCLIB="$HOME/kdb/l64/c.o"                   # Linux, without SSL/TLS
+export QCLIB="$HOME/kdb/l64/e.o -lssl -lcrypto"    # Linux, with SSL/TLS
+```
+
+`QCLIB` is split on spaces, so the path to the library must not contain any. On Windows, the matching DLL must also be on the `PATH` when the tests run.
+
+If `QCLIB` is not set, or its library file does not exist, `--ctest`, `--doctest`, and `-t` stop with an error before running any C tests. Building, installing, and the Q tests do not need the library, and neither does code loaded into a Q process as a shared library, since the Q process provides the kdb+ functions itself.
 
 ## Building
 
@@ -191,7 +202,7 @@ A test that fails to build, crashes, or fails is listed with a message. Details 
 | `CC`     | C compiler                          | `gcc`   |
 | `CXX`    | C++ compiler                        | `g++`   |
 | `QHOME`  | Used for the default install directory (`$QHOME/mod/qlib`) | Not set |
-| `KDB_C_OBJ` | Path to KX's `c.o`, used to link the C and documentation tests | `src/c/obj/c.o` |
+| `QCLIB`  | KX's C API library (and any other linker arguments), used to link the C and documentation tests. Required by `--ctest` and `--doctest` (see [KX's C API Library](#kxs-c-api-library)) | Not set |
 
 For example, to build and test with Clang:
 
@@ -216,7 +227,6 @@ The C interface is documented separately, in [doc/c](doc/c/README.md).
 | ------------- | --------------------------------------------------------------- |
 | `src/q`       | Q modules                                                       |
 | `src/c/cdk`   | C interface headers and sources                                 |
-| `src/c/obj`   | Where to place KX's `c.o` to run the C tests (not tracked by Git) |
 | `test/q`      | Q unit tests                                                    |
 | `test/c`      | C and C++ unit tests, and the Unity test framework              |
 | `doc`         | Module documentation (`doc/c` for the C interface)              |
