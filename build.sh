@@ -25,6 +25,7 @@ usage() {
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="${PROJECT_DIR}/build"
 BUILD_QLIB_DIR="${BUILD_DIR}/qlib"
+BUILD_INCLUDE_DIR="${BUILD_QLIB_DIR}/include"
 BUILD_TEST_DIR="${BUILD_DIR}/test"
 BUILD_DOCTEST_DIR="${BUILD_DIR}/doctest"
 SRC_DIR="${PROJECT_DIR}/src"
@@ -522,6 +523,8 @@ create_dir "${BUILD_DIR}"
 clean_dir "${BUILD_DIR}"
 create_dir "${BUILD_QLIB_DIR}"
 copy_files "${Q_SRC_DIR}"/*.q "${BUILD_QLIB_DIR}"
+create_dir "${BUILD_INCLUDE_DIR}"
+copy_files "${C_CDK_DIR}"/*.h "${BUILD_INCLUDE_DIR}"
 compile_cdk
 # compile_library "fstr"
 echo "Build complete"
@@ -578,7 +581,7 @@ elif ${INSTALL}; then
 
     create_dir "${INSTALL_DIR}"
     clean_dir "${INSTALL_DIR}"
-    copy_files "${BUILD_QLIB_DIR}"/* "${INSTALL_DIR}"
+    copy_files -r "${BUILD_QLIB_DIR}"/* "${INSTALL_DIR}"
 
     echo "Installation complete."
 fi

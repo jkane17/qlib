@@ -63,6 +63,7 @@ This clears the `build` directory, then builds the library into `build/qlib`:
 | ----------- | ---------------------------------------------- |
 | `*.q`       | The Q modules, copied from `src/q`             |
 | `libcdk.so` | The C interface, compiled from `src/c/cdk/*.c` |
+| `include`   | C header files                                 |
 
 By default, `libcdk.so` is a debug build (`-g -O0`), with assertions enabled. For an optimised build with assertions removed (`-O3 -DNDEBUG`), add `--release`:
 
