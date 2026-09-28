@@ -1,35 +1,34 @@
 
 /
-    @file
-        math.q
+    @file math.q
     
-    @description
-        Mathematical utilities.
+    @overview
+        Mathematical functions.
 \
 
-// @brief Compute the factorial of the given integer (n!).
-// @param n long Integer to compute factorial for.
-// @return long n!.
+// @brief Compute the factorial of the given integer, i.e., computes $n!$.
+// @param n {long} Integer to compute factorial for.
+// @return {long} $n!$.
 factorial:{[n:`j] prd 1+til n};
 
-// @brief Compute the number of ordered k-element subsets (k-permutations) of n elements, i.e.,
-// computes n! / (n - k)!
-// @param n long The total number of elements in the set.
-// @param k long The number of elements to select and arrange.
-// @return long The number of ordered subsets (permutations) of size k from n elements.
+// @brief Compute the number of ordered `k`-element subsets (`k`-permutations) of `n` elements, i.e.,
+// computes $\cfrac{n!}{(n - k)!}$
+// @param n {long} The total number of elements in the set.
+// @param k {long} The number of elements to select and arrange.
+// @return {long} The number of ordered subsets (permutations) of size `k` from `n` elements.
 permCount:{[n:`j;k:`j] prd (n-k-1)+til k};
 
-// @brief Compute the number of unordered k-element subsets (k-combinations) of n elements, i.e., 
-// computes n! / (k!(n - k)!)
-// @param n long The total number of elements in the set.
-// @param k long The number of elements to select.
-// @return long The number of unordered subsets (combinations) of size k from n elements.
+// @brief Compute the number of unordered `k`-element subsets (`k`-combinations) of `n` elements, i.e., 
+// computes $\cfrac{n!}{k!(n - k)!}$
+// @param n {long} The total number of elements in the set.
+// @param k {long} The number of elements to select.
+// @return {long} The number of unordered subsets (combinations) of size `k` from `n` elements.
 combCount:{[n:`j;k:`j] permCount[n;k] div factorial k};
 
-// @brief Build the unordered k-element subsets (k-combinations) taken from n elements.
-// @param n long The total number of elements in the set.
-// @param k long The number of elements to select.
-// @return list k-element subsets (index masks).
+// @brief Build the unordered `k`-element subsets (`k`-combinations) taken from `n` elements.
+// @param n {long} The total number of elements in the set.
+// @param k {long} The number of elements to select.
+// @return {list} `k`-element subsets (index masks).
 comb:{[n:`j;k:`j] 
     $[
         k=n; enlist til k; 
@@ -38,11 +37,11 @@ comb:{[n:`j;k:`j]
     ] 
  };
 
-// @breif Splits n into k parts as evenly as possible, distributing any remainder from left to 
+// @brief Splits `n` into `k` parts as evenly as possible, distributing any remainder from left to 
 // right.
-// @param n long The number to split.
-// @param k long The number of parts to split into.
-// @return longs k parts.
+// @param n {long} The number to split.
+// @param k {long} The number of parts to split into.
+// @return {long[]} `k` parts.
 balancedPartition:{[n:`j;k:`j] p+c,(k-count c:(n-sum p:k#n div k)#1)#0};
 
 

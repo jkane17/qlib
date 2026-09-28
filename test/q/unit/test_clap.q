@@ -1,7 +1,9 @@
 
 /
     @file test_clap.q
-    @brief Unit tests for clap.q module.
+
+    @overview 
+        Unit tests for the clap.q module.
 \
 
 clap:use`qlib.clap;

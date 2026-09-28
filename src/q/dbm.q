@@ -1,17 +1,25 @@
 
 /
     @file dbm.q
-    @brief Database maintenance.
+
+    @overview 
+        A modernised version of the original KX `dbmaint.q` script used for database maintenance.
 \
 
 fs:use`qlib.fs;
 
 // @brief Add a column to a database table.
-// @param db fileSymbol Path to database root.
-// @param domain symbol Sym file (domain) name (only used if column is symbol type).
-// @param tname symbol Table name.
-// @param cname symbol Column name.
-// @param default any Default value of the column.
+// @param db {fileSymbol} Path to database root.
+// @param domain {symbol} Sym file (domain) name (only used if column is symbol type).
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @param default {any} Default value of the column.
+// @example 
+//     // Add a newCol to the trade table with a default value of 10
+//     dbm.addCol[`:db;`;`trade;`newCol;10]
+// @example
+//     // Add a newSymCol to the trade table with a default value of `abc, enumeated against mySym
+//     dbm.addCol[`:db;`mySym;`trade;`newSymCol;`abc]
 addCol:{[db:`s;domain:`s;tname:`s;cname:`s;default]
     validateName cname;
     default:enum[db;domain;default];
@@ -19,11 +27,18 @@ addCol:{[db:`s;domain:`s;tname:`s;cname:`s;default]
  };
 
 // @brief Add columns of matching types to a database table.
-// @param db fileSymbol Path to database root.
-// @param domain symbol Sym file (domain) name (only used if columns are symbol type).
-// @param tname symbol Table name.
-// @param cnames symbols Column names.
-// @param default any Default value of the columns.
+// @param db {fileSymbol} Path to database root.
+// @param domain {symbol} Sym file (domain) name (only used if columns are symbol type).
+// @param tname {symbol} Table name.
+// @param cnames {symbol[]} Column names.
+// @param default {any} Default value of the columns.
+// @example
+//     // Add newColA & newColB to the trade table with a default value of 10
+//     dbm.addCols[`:db;`;`trade;`newColA`newColB;10]
+// @example
+//     // Add newSymColA & newSymColB to the trade table with a default value of `abc, enumerated
+//     // against mySym
+//     dbm.addCols[`:db;`mySym;`trade;`newSymColA`newSymColB;`abc]
 addCols:{[db:`s;domain:`s;tname:`s;cnames:`S;default]
     validateName each cnames;
     default:enum[db;domain;default];
@@ -32,102 +47,157 @@ addCols:{[db:`s;domain:`s;tname:`s;cnames:`S;default]
  };
 
 // @brief Add missing columns across all partitions of a table.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param goodTdir fileSymbol Path of a table directory which has no missing columns.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param goodTdir {fileSymbol} Path of a table directory which has no missing columns.
+// @example
+//     // Add any missing columns to the trade table which exist in the 2025.12.17 partition, but
+//     // are missing from other partitions
+//     dbm.addMissingCols[`:db;`trade;`:db/2025.12.17/trade]
 addMissingCols:{[db:`s;tname:`s;goodTdir:`s]
     add1MissingCols[;0#get goodTdir] peach allTablePaths[db;tname] except goodTdir;
  };
 
 // @brief Add a new table to all partitions of a database.
-// @param db fileSymbol Path to database root.
-// @param domain symbol Sym file (domain) name.
-// @param tname symbol New table name.
-// @param schema table New table schema.
+// @param db {fileSymbol} Path to database root.
+// @param domain {symbol} Sym file (domain) name.
+// @param tname {symbol} New table name.
+// @param schema {table} New table schema.
+// @example
+//     // Add the quote table to the database
+//     dbm.addTab[`:db;`sym;`quote;([] sym:`$(); ap:"f"$(); bp:"f"$())]
 addTab:{[db:`s;domain:`s;tname:`s;schema] 
     add1Tab[db;domain;;schema] peach buildTablePaths[db;tname];
  };
 
 // @brief Cast a column to a given type.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param cname symbol Column name.
-// @param typ short|char|symbol Type to cast column to.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @param typ {short|char|symbol} Type to cast column to.
+// @example
+//     // Cast the size column, in the trade table, to a float
+//     dbm.castCol[`:db;`trade;`size;"f"]
 castCol:{[db:`s;tname:`s;cname:`s;typ] fnCol[db;tname;cname;typ$];};
 
 // @brief Copy a column across all partitions of a table.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param srcCol symbol Column name whose data will be copied.
-// @param dstCol symbol New column name that will be created.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param srcCol {symbol} Column name whose data will be copied.
+// @param dstCol {symbol} New column name that will be created.
+// @example
+//     // Copy the size column to a new column called sizeCopy in the trade table
+//     dbm.copyCol[`:db;`trade;`size;`sizeCopy]
 copyCol:{[db:`s;tname:`s;srcCol:`s;dstCol:`s] 
     validateName dstCol;
     copy1Col[;srcCol;dstCol] peach allTablePaths[db;tname];
  };
 
 // @brief Delete a column from a database table.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param cname symbol Column name.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @example
+//     // Delete the column oldCol from the trade table
+//     dbm.delCol[`:db;`trade;`oldCol]
 delCol:{[db:`s;tname:`s;cname:`s] del1Col[;cname] peach allTablePaths[db;tname];};
 
 // @brief Delete a table from a database.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @example
+//     // Delete the trade table
+//     dbm.delTab[`:db;`trade]
 delTab:{[db:`s;tname:`s] del1Tab peach allTablePaths[db;tname];};
 
 // @brief Build a mapping of domain name to indexes of unused symbols in the given database table.
 // If a domain is not used at all, it will not show up in the result.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @return dict Mapping of domain name to indexes of unused symbols.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @return {dict} Mapping of domain name to indexes of unused symbols.
+// @example
+//     // Unused symbol indexes per domain of the trade table
+//     q)dbm.domainUnused[`:db;`trade]
+//     sym     | 5 6 7
+//     otherSym| 2 8
 domainUnused:{[db:`s;tname:`s] 
     except'[;used] (til count get db,) each key used:domainUsed[db;tname]
  };
 
 // @brief Build a mapping of domain name to indexes of used symbols in the given database.
-// @param db fileSymbol Path to database root.
-// @return dict Mapping of domain name to indexes of used symbols.
+// @param db {fileSymbol} Path to database root.
+// @return {dict} Mapping of domain name to indexes of used symbols.
+// @example
+//     // Used symbol indexes per domain of the entire database
+//     q)dbm.domainUsage `:db
+//     sym     | 0 1 2 3 4
+//     otherSym| 0 1 3 4 5 6 7 9
 domainUsage:{[db:`s] (union'/) domainUsed[db;] peach listTabs db};
 
 // @brief Build a mapping of domain name to indexes of used symbols in the given database table.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @return dict Mapping of domain name to indexes of used symbols.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @return {dict} Mapping of domain name to indexes of used symbols.
+// @example
+//     // Used symbol indexes per domain of the trade table
+//     q)dbm.domainUsed[`:db;`trade]
+//     sym     | 0 2 4
+//     otherSym| 0 3 4 7 9
 domainUsed:{[db:`s;tname:`s] (union'/) domainUsed1 peach allTablePaths[db;tname]};
 
 // @brief Apply a function to a column across all partitions of a table.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param cname symbol Column name.
-// @param fn function Unary function to apply to the column.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @param fn {function} Unary function to apply to the column.
+// @example
+//     // Multiply the price column in the trade table by 2
+//     dbm.fnCol[`:db;`trade;`price;2*]
+// @example
+//     // Make the characters in the alpha column of the trade table uppercase
+//     dbm.fnCol[`:db;`trade;`alpha;upper]
 fnCol:{[db:`s;tname:`s;cname:`s;fn] fn1Col[;cname;fn] peach allTablePaths[db;tname];};
 
 // @brief Does the given column exist in the table.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param cname symbol Column name.
-// @return bool 1b if the column exists within the table, 0b otherwise.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @return {boolean} `1b` if the column exists within the table, `0b` otherwise.
+// @example
+//     // Does the trade table have the size column?
+//     dbm.hasCol[`:db;`trade;`size]
 hasCol:{[db:`s;tname:`s;cname:`s] 
     $[count paths:allTablePaths[db;tname]; all has1Col[;cname] peach paths; 0b]
  };
 
 // @brief List all column names of the given table.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @return symbols Column names.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @return {symbol[]} Column names.
+// @example
+//     // List the columns of the trade table
+//     q)dbm.listCols[`:db;`trade]
+//     `time`sym`venue`size`price`company`moves
 listCols:{[db:`s;tname:`s] getColNames mostRecentTdir[db;tname]};
 
 // @brief List all enumeration (symbol) column names of the given table.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @return symbols Enumeration (symbol) column names.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @return {symbol[]} Enumeration (symbol) column names.
+// @example
+//     // List the enumeration (symbol) columns of the trade table
+//     q)dbm.listEnumCols[`:db;`trade]
+//     `sym`venue
 listEnumCols:{[db:`s;tname:`s] where 20h=colTypes[db;tname]};
 
 // @brief List all table names in a database.
-// @NOTE Uses the most recent partition in a partitioned database.
-// @param db fileSymbol Path to database root.
-// @return symbols Table names.
+// @note Uses the most recent partition in a partitioned database.
+// @param db {fileSymbol} Path to database root.
+// @return {symbol[]} Table names.
+// @example
+//     // List the tables of the given database
+//     q)dbm.listTabs `:db
+//     `trade`quote
 listTabs:{[db:`s] 
     if[0=count files:key db; :`$()];
     if[any files like "par.txt"; :distinct raze .z.s peach hsym `$read0 .Q.dd[db;`par.txt]];
@@ -138,35 +208,59 @@ listTabs:{[db:`s]
  };
 
 // @brief Save each domain as a file containing the symbol values.
-// @param dir fileSymbol Path to persist to.
-// @param dm dict Mapping of domain name to symbol values.
-// @return dict Mapping of domain name to persisted path.
+// @param dir {fileSymbol} Path to persist to.
+// @param dm {dict} Mapping of domain name to symbol values.
+// @return {dict} Mapping of domain name to persisted path.
+// @example
+//     // Persist a domain map
+//     q)dm
+//     sym     | IBM AMZN GOOGL
+//     otherSym| A D E H J
+//
+//     q)dbm.persistDomainMap[`:temp;dm]
+//     sym     | :temp/sym
+//     otherSym| :temp/otherSym
 persistDomainMap:{[dir:`s;dm] (.Q.dd[dir;] each key dm) set' dm};
 
 // @brief Recreate all domains of the given database with only the used symbols.
-// @param db fileSymbol Path to database root.
-// @param dir fileSymbol Path to persist to.
-// @return dict Mapping of domain name to persisted path.
+// @param db {fileSymbol} Path to database root.
+// @param dir {fileSymbol} Path to persist to.
+// @return {dict} Mapping of domain name to persisted path.
+// @example
+//     // Rebuild domains of the given database
+//     q)dbm.rebuildDomains[`:db;`:temp]
+//     sym     | :temp/sym
+//     otherSym| :temp/otherSym
 rebuildDomains:{[db:`s;dir] persistDomainMap[dir;] resolveDomainMap[db;] domainUsage db};
 
 // @brief Re-enumerate every table in the database.
-// @param db fileSymbol Path to database root.
-// @param newDomainFile fileSymbol New domain file to re-enumerate against.
+// @param db {fileSymbol} Path to database root.
+// @param newDomainFile {fileSymbol} New domain file to re-enumerate against.
+// @example
+//     // Re-enumerate all tables within the given database against the temp/new domain file
+//     dbm.reenumerateAll[`:db;`:temp/new]
 reenumerateAll:{[db:`s;newDomainFile:`s] reenumerateTab[db;;newDomainFile] peach listTabs db;};
 
 // @brief Re-enumerate every table in the database from a given domain.
-// @param db fileSymbol Path to database root.
-// @param currDomainName symbol Name of the current domain.
-// @param newDomainFile fileSymbol New domain file to re-enumerate against.
+// @param db {fileSymbol} Path to database root.
+// @param currDomainName {symbol} Name of the current domain.
+// @param newDomainFile {fileSymbol} New domain file to re-enumerate against.
+// @example
+//     // Re-enumerate all columns within the given database, currently enumerated against sym,
+//     // against the temp/new domain file
+//     dbm.reenumerateAllFrom[`:db;`sym;`:temp/new]
 reenumerateAllFrom:{[db:`s;currDomainName:`s;newDomainFile:`s] 
     reenumerateTabFrom[db;;currDomainName;newDomainFile] peach listTabs db;
  };
 
 // @brief Re-enumerate a column against a new domain across all partitions.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param cname symbol Column name.
-// @param newDomainFile fileSymbol New domain file to re-enumerate against.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @param newDomainFile {fileSymbol} New domain file to re-enumerate against.
+// @example
+//     // Re-enumerate the venue column within the trade table against the temp/new domain file
+//     dbm.reenumerateCol[`:db;`trade;`venue;`:temp/new]
 reenumerateCol:{[db:`s;tname:`s;cname:`s;newDomainFile:`s]
     if[not null currDomainName:colDomainName[db;tname;cname];
         reenumerateCol0[db;tname;cname;currDomainName;newDomainFile]
@@ -174,11 +268,15 @@ reenumerateCol:{[db:`s;tname:`s;cname:`s;newDomainFile:`s]
  };
 
 // @brief Re-enumerate a column from a specific domain to a new domain.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param cname symbol Column name.
-// @param currDomainName symbol Name of the current domain.
-// @param newDomainFile fileSymbol New domain file to re-enumerate against.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @param currDomainName {symbol} Name of the current domain.
+// @param newDomainFile {fileSymbol} New domain file to re-enumerate against.
+// @example
+//     // Re-enumerate the venue column within the trade table against the temp/new domain file
+//     // only if it is currently enumerated against sym
+//     dbm.reenumerateColFrom[`:db;`trade;`venue;`sym;`:temp/new]
 reenumerateColFrom:{[db:`s;tname:`s;cname:`s;currDomainName:`s;newDomainFile:`s]
     if[currDomainName=colDomainName[db;tname;cname];
         reenumerateCol0[db;tname;cname;currDomainName;newDomainFile]
@@ -186,36 +284,49 @@ reenumerateColFrom:{[db:`s;tname:`s;cname:`s;currDomainName:`s;newDomainFile:`s]
  };
 
 // @brief Re-enumerate all enumeration columns in a table.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param newDomainFile fileSymbol New domain file to re-enumerate against.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param newDomainFile {fileSymbol} New domain file to re-enumerate against.
+// @example
+//     // Re-enumerate all symbol columns within the trade table against the temp/new domain file
+//     dbm.reenumerateTab[`:db;`trade;`:temp/new]
 reenumerateTab:{[db:`s;tname:`s;newDomainFile:`s]
     reenumerateCol[db;tname;;newDomainFile] peach listEnumCols[db;tname];
  };
 
 // @brief Re-enumerate all enumeration columns in a table from a given domain.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param currDomainName symbol Name of the current domain.
-// @param newDomainFile fileSymbol New domain file to re-enumerate against.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param currDomainName {symbol} Name of the current domain.
+// @param newDomainFile {fileSymbol} New domain file to re-enumerate against.
+// @example
+//     // Re-enumerate all symbol columns within the trade table, currently enumerated against sym,
+//     // against the temp/new domain file
+//     dbm.reenumerateTabFrom[`:db;`trade;`sym;`:temp/new]
 reenumerateTabFrom:{[db:`s;tname:`s;currDomainName:`s;newDomainFile:`s]
     reenumerateColFrom[db;tname;;currDomainName;newDomainFile] peach listEnumCols[db;tname];
  };
 
 // @brief Rename a column across all partitions of a table.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param old symbol Current column name.
-// @param new symbol New column name.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param old {symbol} Current column name.
+// @param new {symbol} New column name.
+// @example
+//     // Rename the size column to sizeRenamed in the trade table
+//     dbm.renameCol[`:db;`trade;`size;`sizeRenamed]
 renameCol:{[db:`s;tname:`s;old:`s;new:`s] 
     validateName new;
     rename1Col[;old;new] peach allTablePaths[db;tname];
  };
 
 // @brief Rename a (symbol) domain.
-// @param db fileSymbol Path to database root.
-// @param currName symbol Current domain name.
-// @param newName symbol New domain name.
+// @param db {fileSymbol} Path to database root.
+// @param currName {symbol} Current domain name.
+// @param newName {symbol} New domain name.
+// @example
+//     // Rename the sym domain to symRenamed
+//     dbm.renameDomain[`:db;`sym;`symRenamed]
 renameDomain:{[db:`s;currName:`s;newName:`s]
     currFile:.Q.dd[db;currName];
     newFile:.Q.dd[db;newName];
@@ -225,44 +336,69 @@ renameDomain:{[db:`s;currName:`s;newName:`s]
  };
 
 // @brief Rename a table in all partitions.
-// @param db fileSymbol Path to database root.
-// @param old symbol Current table name.
-// @param new symbol New table name.
+// @param db {fileSymbol} Path to database root.
+// @param old {symbol} Current table name.
+// @param new {symbol} New table name.
+// @example
+//     // Rename the trade table to quote
+//     dbm.renameTab[`:db;`trade;`quote]
 renameTab:{[db:`s;old:`s;new:`s] 
     validateName new;
     .[rename1Tab;] peach flip buildTablePaths[db;] each old,new;
  };
 
 // @brief Reorder the columns across all partitions of a table.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param order symbols New ordering of the columns (some or all).
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param order {symbol[]} New ordering of the columns (some or all).
+// @example
+//     // Reorder the columns of the trade table so that sym, time, and price appear first
+//     dbm.reorderCols[`:db;`trade;`sym`time`price]
 reorderCols:{[db:`s;tname:`s;order:`S] reorder1Cols[;order] peach allTablePaths[db;tname];};
 
 // @brief Convert a domain mapping from index values to symbol values.
-// @param db fileSymbol Path to database root.
-// @param dm dict Mapping of domain name to indexes.
-// @return dict Mapping of domain name to symbols.
+// @param db {fileSymbol} Path to database root.
+// @param dm {dict} Mapping of domain name to indexes.
+// @return {dict} Mapping of domain name to symbols.
+// @example
+//     // Resolve a domain map of indexes to symbols
+//     q)dm
+//     sym     | 0 2 4
+//     otherSym| 0 3 4 7 9
+//
+//     q)dbm.resolveDomainMap[`:db;dm]
+//     sym     | IBM AMZN GOOGL
+//     otherSym| A D E H J
 resolveDomainMap:{[db:`s;dm] ((get db,) each key dm)@'dm};
 
 // @brief Remove an attribute from a column.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param cname symbol Column name.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @example
+//     // Remove attribute from the sym column in the trade table
+//     dbm.rmAttr[`:db;`trade;`sym]
 rmAttr:{[db:`s;tname:`s;cname:`s] setAttr[db;tname;cname;`];};
 
 // @brief Set an attribute on a column.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param cname symbol Column name.
-// @param attrb symbol Attribute (s, u, p, g).
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @param attrb {symbol} Attribute (s, u, p, g).
+// @example
+//     // Apply the parted attribute to the sym column in the trade table
+//     dbm.setAttr[`:db;`trade;`sym;`p]
 setAttr:{[db:`s;tname:`s;cname:`s;attrb:`s] fnCol[db;tname;cname;attrb#];};
 
 // @brief Convert a column from string type to symbol type.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param cname symbol Column name.
-// @param dname symbol Name of domain to enumerate against.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @param dname {symbol} Name of domain to enumerate against.
+// @example
+//     // Convert the company column of the trade table from string to symbol type, enumerated
+//     // against the sym domain
+//     dbm.strToSymCol[`:db;`trade;`company;`sym]
 strToSymCol:{[db:`s;tname:`s;cname:`s;dname:`s]
     dfile:.Q.dd[db;dname];
     domain:strToSym1Col[;;cname;dname]/[get dfile;allTablePaths[db;tname]];
@@ -270,9 +406,12 @@ strToSymCol:{[db:`s;tname:`s;cname:`s;dname:`s]
  };
 
 // @brief Convert a column from symbol type to string type.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param cname symbol Column name.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @example
+//     // Convert the venue column of the trade table from symbol to string type
+//     dbm.symToStrCol[`:db;`trade;`venue]
 symToStrCol:{[db:`s;tname:`s;cname:`s]
     if[not null domainName:colDomainName[db;tname;cname];
         fnCol[db;tname;cname;string get[db,domainName]@]
@@ -290,9 +429,9 @@ export:([
 
 
 // @brief Add a column to a splayed table.
-// @param tdir fileSymbol Table directory.
-// @param cname symbol Column name.
-// @param default any Default value of the column.
+// @param tdir {fileSymbol} Table directory.
+// @param cname {symbol} Column name.
+// @param default {any} Default value of the column.
 add1Col:{[tdir:`s;cname:`s;default]
     if[not cname in colNames:getColNames tdir;
         len:count get tdir,first colNames;
@@ -302,8 +441,8 @@ add1Col:{[tdir:`s;cname:`s;default]
  };
 
 // @brief Add missing columns to a single database table
-// @param tdir fileSymbol Table directory.
-// @param good table Table which has no missing columns to be used as a template.
+// @param tdir {fileSymbol} Table directory.
+// @param good {table} Table which has no missing columns to be used as a template.
 add1MissingCols:{[tdir:`s;good]
     goodCols:cols good;
     if[count missing:goodCols except getColNames tdir;
@@ -312,17 +451,17 @@ add1MissingCols:{[tdir:`s;good]
     ]
  };
 
-// @param Add a single new table.
-// @param db fileSymbol Path to database root.
-// @param domain symbol Sym file (domain) name.
-// @param tdir fileSymbol New table directory.
-// @param schema table New table schema.
+// @brief Add a single new table.
+// @param db {fileSymbol} Path to database root.
+// @param domain {symbol} Sym file (domain) name.
+// @param tdir {fileSymbol} New table directory.
+// @param schema {table} New table schema.
 add1Tab:{[db:`s;domain:`s;tdir:`s;schema] @[tdir;`;:;.Q.ens[db;0#schema;domain]];};
 
 // @brief Copy the data from an existing column in a table to a new column.
-// @param tdir fileSymbol Table directory.
-// @param srcCol symbol Column name whose data will be copied. 
-// @param dstCol symbol New column name that will be created.
+// @param tdir {fileSymbol} Table directory.
+// @param srcCol {symbol} Column name whose data will be copied. 
+// @param dstCol {symbol} New column name that will be created.
 copy1Col:{[tdir:`s;srcCol:`s;dstCol:`s]
     if[(srcCol in colNames) and not dstCol in colNames:getColNames tdir;
         fs.copy . .Q.dd[tdir;] each srcCol,dstCol;
@@ -334,8 +473,8 @@ copy1Col:{[tdir:`s;srcCol:`s;dstCol:`s]
  };
 
 // @brief Delete a column from a database table.
-// @param tdir fileSymbol Table directory.
-// @param cname symbol Name of column to be deleted.
+// @param tdir {fileSymbol} Table directory.
+// @param cname {symbol} Name of column to be deleted.
 del1Col:{[tdir:`s;cname:`s]
     if[cname in colNames:getColNames tdir;
         hdel .Q.dd[tdir;cname];
@@ -345,12 +484,12 @@ del1Col:{[tdir:`s;cname:`s]
  };
 
 // @brief Delete a table directory and its contents.
-// @param tdir fileSymbol Table directory to delete.
+// @param tdir {fileSymbol} Table directory to delete.
 del1Tab:{[tdir:`s] if[not ()~files:key tdir; (hdel .Q.dd[tdir;]@) each files,`]};
 
 // @brief Build a mapping of domain name to indexes of used symbols in the given splayed table.
-// @param tdir fileSymbol Table directory.
-// @return dict Mapping of domain name to indexes of symbols used.
+// @param tdir {fileSymbol} Table directory.
+// @return {dict} Mapping of domain name to indexes of symbols used.
 domainUsed1:{[tdir]
     {[tdir;map;col]
         if[20h=type enum:get tdir,col; map[key enum]:map[key enum] union value enum];
@@ -359,9 +498,9 @@ domainUsed1:{[tdir]
  };
 
 // @brief Apply a function to a single database table.
-// @param tdir fileSymbol Table directory.
-// @param cname symbol Column name.
-// @param fn function Unary function to apply to the column.
+// @param tdir {fileSymbol} Table directory.
+// @param cname {symbol} Column name.
+// @param fn {function} Unary function to apply to the column.
 fn1Col:{[tdir:`s;cname:`s;fn]
     if[has1Col[tdir;cname];
         oldAttr:attr oldVal:get tdir,cname;
@@ -373,17 +512,17 @@ fn1Col:{[tdir:`s;cname:`s;fn]
  };
 
 // @brief Does the given column exist in the table.
-// @param tdir fileSymbol Table directory.
-// @param cname symbol Column name.
-// @return bool 1b if the column exists within the table, 0b otherwise.
+// @param tdir {fileSymbol} Table directory.
+// @param cname {symbol} Column name.
+// @return {boolean} `1b` if the column exists within the table, `0b` otherwise.
 has1Col:{[tdir:`s;cname:`s] cname in getColNames tdir};
 
 // @brief Re-enumerate a column against a new domain across all partitions.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param cname symbol Column name.
-// @param currDomainName symbol Name of the current domain.
-// @param newDomainFile fileSymbol New domain file to re-enumerate against.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @param currDomainName {symbol} Name of the current domain.
+// @param newDomainFile {fileSymbol} New domain file to re-enumerate against.
 reenumerateCol0:{[db;tname;cname;currDomainName;newDomainFile]
     currDomain:get db,currDomainName;
     newDomain:get newDomainFile;
@@ -395,9 +534,9 @@ reenumerateCol0:{[db;tname;cname;currDomainName;newDomainFile]
  };
 
 // @brief Rename a column in a single database table.
-// @param tdir fileSymbol Table directory.
-// @param old symbol Current column name.
-// @param new symbol New column name.
+// @param tdir {fileSymbol} Table directory.
+// @param old {symbol} Current column name.
+// @param new {symbol} New column name.
 rename1Col:{[tdir:`s;old:`s;new:`s]
     if[(old in colNames) and not new in colNames:getColNames tdir;
         fs.move . .Q.dd[tdir;] each old,new;
@@ -409,13 +548,13 @@ rename1Col:{[tdir:`s;old:`s;new:`s]
  };
 
 // @brief Rename a table.
-// @param old fileSymbol Path to current table within a partition.
-// @param new fileSymbol Path to new table within a partition.
+// @param old {fileSymbol} Path to current table within a partition.
+// @param new {fileSymbol} Path to new table within a partition.
 rename1Tab:{[old:`s;new:`s] if[()~key new; fs.move[old;new]]};
 
 // @brief Reorder the columns in a single database table.
-// @param tdir fileSymbol Table directory.
-// @param order symbols New ordering of the columns.
+// @param tdir {fileSymbol} Table directory.
+// @param order {symbol[]} New ordering of the columns.
 reorder1Cols:{[tdir:`s;order:`S]
     if[not all exists:order in colNames:getColNames tdir;
         '"Unknown column(s): ","," sv string order where not exists
@@ -424,11 +563,11 @@ reorder1Cols:{[tdir:`s;order:`S]
  };
 
 // @brief Convert a column from string type to symbol type.
-// @param domain symbols Symbol domain.
-// @param tdir fileSymbol Table directory.
-// @param cname symbol Column name.
-// @param dname symbol Domain name.
-// @return symbols Updated domain.
+// @param domain {symbol[]} Symbol domain.
+// @param tdir {fileSymbol} Table directory.
+// @param cname {symbol} Column name.
+// @param dname {symbol} Domain name.
+// @return {symbol[]} Updated domain.
 strToSym1Col:{[domain:`S;tdir:`s;cname:`s;dname:`s]
     if[has1Col[tdir;cname];
         domain:domain union vals:`$/:get cfile:.Q.dd[tdir;cname];
@@ -438,15 +577,15 @@ strToSym1Col:{[domain:`S;tdir:`s;cname:`s;dname:`s]
  };
 
 // @brief Get all existing paths to a table within a database.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @return fileSymbols List of paths to table within database.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @return {fileSymbol[]} List of paths to table within database.
 allTablePaths:{[db:`s;tname:`s] paths where 0<(count key@) each paths:buildTablePaths[db;tname]};
 
 // @brief Build all paths to a table within a database.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @return fileSymbols List of paths to table within database.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @return {fileSymbol[]} List of paths to table within database.
 buildTablePaths:{[db:`s;tname:`s]
     if[0=count files:key db; :`$()];
     if[any files like "par.txt"; :raze .z.s[;tname] each hsym `$read0 .Q.dd[db;`par.txt]];
@@ -455,40 +594,41 @@ buildTablePaths:{[db:`s;tname:`s]
  };
 
 // @brief Get the name of the domain used by the given column.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @param cname symbol Column name.
-// @return symbol Domain name.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @param cname {symbol} Column name.
+// @return {symbol} Domain name.
 colDomainName:{[db;tname;cname] $[20h=type vals:get mostRecentTdir[db;tname],cname;key vals;`]};
 
 // @brief Get the type of each column in a table.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @return dict Mapping of column name to type (as a short).
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @return {dict} Mapping of column name to type (as a short).
 colTypes:{[db;tname] type each .Q.V mostRecentTdir[db;tname]};
 
 // @brief Enumerate symbol values.
-// @param db fileSymbol Path to database root.
-// @param domain symbol Sym file (domain) name.
-// @param vals any Values to enumerate (simply returned if not symbols).
+// @param db {fileSymbol} Path to database root.
+// @param domain {symbol} Sym file (domain) name.
+// @param vals {any} Values to enumerate.
+// @return {any} Enumerated `vals` (if symbols) otherwise, `vals` unchanged. 
 enum:{[db:`s;domain:`s;vals] $[11h=abs type vals; .Q.dd[db;domain]?vals; vals]};
 
 // @brief Get all column names from a splayed table.
-// @param tdir fileSymbol Table directory.
-// @return symbols Column names (empty if tdir does not exist).
+// @param tdir {fileSymbol} Table directory.
+// @return {symbol[]} Column names (empty if tdir does not exist).
 getColNames:{[tdir:`s] $[fs.isfile .Q.dd[tdir;`.d]; get tdir,`.d; `$()]};
 
 // @brief Check whether a given name is valid (adheres to proper naming rules).
-// @param name symbol Name to check.
-// @return bool 1b if valid, 0b otherwise.
+// @param name {symbol} Name to check.
+// @return {boolean} `1b` if valid, `0b` otherwise.
 isValidName:{[name:`s] (name=.Q.id name) and not name in .Q.res,key`.q};
 
 // @brief Get the table directory from the most recent partition.
-// @param db fileSymbol Path to database root.
-// @param tname symbol Table name.
-// @return fileSymbol Table directory.
+// @param db {fileSymbol} Path to database root.
+// @param tname {symbol} Table name.
+// @return {fileSymbol} Table directory.
 mostRecentTdir:{[db;tname] last asc allTablePaths[db;tname]};
 
 // @brief Check whether a given name is valid (adheres to proper naming rules). Signal error if not.
-// @param name symbol Name to validate.
+// @param name {symbol} Name to validate.
 validateName:{[name:`s] if[not isValidName name; '"Invalid name: ",string name]};

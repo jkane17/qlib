@@ -77,9 +77,18 @@ QTEST=false
 CTEST=false
 DOCTEST=false
 
-GREEN="\033[0;32m"
-RED="\033[0;31m"
-RESET="\033[0m"
+# Only use colour when writing to a terminal and it has not been disabled (https://no-color.org)
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+    COLOR=true
+    GREEN="\033[0;32m"
+    RED="\033[0;31m"
+    RESET="\033[0m"
+else
+    COLOR=false
+    GREEN=""
+    RED=""
+    RESET=""
+fi
 
 # Test results, each of the form <file>:<line>:<test>:<PASS|FAIL>[:<message>]
 pass_results=()
@@ -272,19 +281,38 @@ check_headers() {
     done
 }
 
+# Run the Q unit tests. Exits if they could not be run. Returns non-zero if any test failed.
 run_q_tests() {
+    local status
     CMD=(q "${Q_TEST_DIR}/run.q" -modulePath "${BUILD_DIR}")
+
+    if ${COLOR}; then
+        CMD+=(-color)
+    fi
 
     if ${ITEST}; then
         CMD+=(-itest -p "${INTERACTIVE_PORT}")
+        "${CMD[@]}"
+        status=$?
     else
         echo "Running Q unit tests.."
+        # q makes its stdin non-blocking. When stdin and stdout are the same terminal, this makes
+        # stdout non-blocking too, so a large write can be cut short when the terminal is slow to
+        # drain. Reading stdin from /dev/null and writing stdout to a pipe keeps q off the terminal.
+        "${CMD[@]}" < /dev/null | cat
+        status=${PIPESTATUS[0]}
     fi
 
-    "${CMD[@]}" || {
-        echo "Failed to run Q unit tests" >&2
+    # run.q exits with 3 if the tests ran but at least one failed (see run.q)
+    if (( status == 3 )); then
+        echo -e "Q unit tests: ${RED}FAIL${RESET}"
+        return 1
+    elif (( status != 0 )); then
+        echo "Failed to run Q unit tests (exit code ${status})" >&2
         exit 1
-    }
+    elif ! ${ITEST}; then
+        echo -e "Q unit tests: ${GREEN}PASS${RESET}"
+    fi
 }
 
 print_test_line() {
@@ -529,12 +557,13 @@ compile_cdk
 # compile_library "fstr"
 echo "Build complete"
 
+TEST_STATUS=0
+
 if ${TEST} || ${ITEST} || ${QTEST}; then
     echo
-    run_q_tests
+    run_q_tests || TEST_STATUS=1
 fi
 
-TEST_STATUS=0
 RUN_C_TESTS=false
 RUN_DOC_TESTS=false
 if ${TEST} || ${CTEST}; then
