@@ -169,6 +169,25 @@ copy_files() {
     cp "$@" || { echo "Error: Failed to copy files"; exit 1; }
 }
 
+# Copy the Q source files, including those in subdirectories, to the top level of the build directory
+copy_q_files() {
+    local files=() file duplicates
+
+    while IFS= read -r -d '' file; do
+        files+=("${file}")
+    done < <(find "${Q_SRC_DIR}" -type f -name '*.q' -print0)
+
+    # Files from different subdirectories would overwrite each other if they share a name
+    duplicates="$(for file in "${files[@]}"; do basename "${file}"; done | sort | uniq -d)"
+    if [ -n "${duplicates}" ]; then
+        echo "Error: Duplicate Q source file names under ${Q_SRC_DIR}:" >&2
+        echo "${duplicates}" >&2
+        exit 1
+    fi
+
+    copy_files "${files[@]}" "${BUILD_QLIB_DIR}"
+}
+
 compile_cdk() {
     "${CC}" "${CFLAGS[@]}" -fPIC -shared -o "${CDK_SO}" "${C_CDK_DIR}"/*.c "${LFLAGS[@]}" || {
         echo "Compilation failed for ${CDK_SO}" >&2
@@ -550,7 +569,7 @@ echo "Building ${BUILD_DIR}/"
 create_dir "${BUILD_DIR}"
 clean_dir "${BUILD_DIR}"
 create_dir "${BUILD_QLIB_DIR}"
-copy_files "${Q_SRC_DIR}"/*.q "${BUILD_QLIB_DIR}"
+copy_q_files
 create_dir "${BUILD_INCLUDE_DIR}"
 copy_files "${C_CDK_DIR}"/*.h "${BUILD_INCLUDE_DIR}"
 compile_cdk

@@ -450,7 +450,7 @@ QObj *qNewTimeList(const QTime *values, QSize length);
  *
  * @note Returns a domain error if any item is null, in which case the other items are released.
  * `length` must not exceed INT32_MAX, otherwise a domain error is returned before any items are
- * read (so they are not released).
+ * read (so they are not released), as `length` cannot then match the number of arguments.
  */
 QObj *qNewMixedList(QSize length, ...);
 
@@ -551,15 +551,15 @@ QObj *qNewTableFromArray(QObj *header, QObj *const *columns, QSize count);
  * know the number of columns.
  *
  * @param header A pointer to a Q object containing a symbol list of column names (takes ownership).
- * @param args Q object pointers, each containing a single column (takes ownership). All columns
- * must have the same count. The number of columns read is the number of column names, so there
- * must be exactly one per column name.
+ * @param args Q object pointers, each containing a single column (takes ownership, see note). All
+ * columns must have the same count. The number of columns read is the number of column names, so
+ * there must be exactly one per column name.
  * @return A pointer to a Q object containing a table.
  *
  * @note Returns a domain error if `header` or any column is null, or a type error if `header` is
  * not a symbol list. Otherwise the columns are checked as for `qNewTableFromArray`. `header` is
- * released on error. The columns are also released, except when
- * `header` is null or not a symbol list, as the number of columns is then unknown.
+ * released on error. The columns are also released, except when `header` is null or not a symbol
+ * list, as the number of columns is then unknown.
  */
 QObj *qNewTableVar(QObj *header, va_list args);
 

@@ -22,17 +22,18 @@ extern QObj *xT(QObj *);
 // The values are copied with a single memcpy, which requires the value type and the list's storage
 // type to have the same representation. memcpy is skipped for an empty list, as values may then be
 // NULL (passing NULL to memcpy is undefined behaviour, even with a size of 0).
-#define Q_NEW_LIST_IMPL(funcName, qType, storageType, valueType)                                   \
-    static_assert(sizeof(storageType) == sizeof(valueType),                                        \
-                  #funcName ": value and storage types must have the same size");                  \
-    QObj *funcName(const valueType *values, QSize length) {                                        \
-        if (!values && length > 0)                                                                 \
-            return qNewError("domain");                                                            \
-                                                                                                   \
-        QObj *obj = qNewList(qType, length);                                                       \
-        if (obj && length > 0)                                                                     \
-            memcpy(obj->list, values, length * sizeof(storageType));                               \
-        return obj;                                                                                \
+#define Q_NEW_LIST_IMPL(funcName, qType, storageType, valueType)        \
+    static_assert(                                                      \
+        sizeof(storageType) == sizeof(valueType),                       \
+        #funcName ": value and storage types must have the same size"); \
+    QObj *funcName(const valueType *values, QSize length) {             \
+        if (!values && length > 0)                                      \
+            return qNewError("domain");                                 \
+                                                                        \
+        QObj *obj = qNewList(qType, length);                            \
+        if (obj && length > 0)                                          \
+            memcpy(obj->list, values, length * sizeof(storageType));    \
+        return obj;                                                     \
     }
 
 QObj *qNewBooleanList(const QBoolean *values, QSize length) {
@@ -145,7 +146,7 @@ QObj *qNewDict(QObj *keys, QObj *values) {
 }
 
 QObj *qNewTableFromArray(QObj *header, QObj *const *columns, QSize count) {
-    const QChar *error = NULL;
+    const QChar *error = nullptr;
     if (!header || (!columns && count > 0))
         error = "domain";
     else if (!qIsSymbolList(header))
