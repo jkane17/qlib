@@ -6,11 +6,9 @@
 
 #include <inttypes.h>
 #include <math.h>
-#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 
 #include "fmt.h"
@@ -38,77 +36,77 @@
 
 #define EPOCH_DIFF 946684800LL // seconds between 1970 and 2000
 
-#define WRITE_FIXED(buffer, size, width, fmt, ...)                                                 \
-    if (buffer == nullptr || size < (width) + 1)                                                   \
-        return Q_FMT_ERROR_SIZE;                                                                   \
-    int result = snprintf(buffer, size, fmt, ##__VA_ARGS__);                                       \
+#define WRITE_FIXED(buffer, size, width, fmt, ...)           \
+    if (buffer == nullptr || size < (width) + 1)             \
+        return Q_FMT_ERROR_SIZE;                             \
+    int result = snprintf(buffer, size, fmt, ##__VA_ARGS__); \
     return result < 0 ? Q_FMT_ERROR_PRINTF : result
 
-#define WRITE_DYNAMIC(buffer, size, fmt, ...)                                                      \
-    int width = snprintf(nullptr, 0, fmt, ##__VA_ARGS__);                                          \
-    if (width < 0)                                                                                 \
-        return Q_FMT_ERROR_PRINTF;                                                                 \
+#define WRITE_DYNAMIC(buffer, size, fmt, ...)             \
+    int width = snprintf(nullptr, 0, fmt, ##__VA_ARGS__); \
+    if (width < 0)                                        \
+        return Q_FMT_ERROR_PRINTF;                        \
     WRITE_FIXED(buffer, size, (QSize)width, fmt, ##__VA_ARGS__)
 
 // Item accessors for WRITE_LIST_AT: pass each item by value, or by address (for guids)
 #define ITEM_VALUE(list, i) ((list)[i])
 #define ITEM_ADDRESS(list, i) (&(list)[i])
 
-#define WRITE_LIST(buffer, size, func, list, length, spaced, result)                               \
+#define WRITE_LIST(buffer, size, func, list, length, spaced, result) \
     WRITE_LIST_AT(buffer, size, func, list, length, spaced, result, ITEM_VALUE)
 
-#define WRITE_LIST_AT(buffer, size, func, list, length, spaced, result, item)                      \
-    char *bufferPosition = buffer;                                                                 \
-                                                                                                   \
-    for (QSize i = 0; i < length; i++) {                                                           \
-        int nbytes = func(bufferPosition, size, item(list, i));                                    \
-        if (nbytes < 0)                                                                            \
-            return nbytes;                                                                         \
-                                                                                                   \
-        bufferPosition += nbytes;                                                                  \
-        result += nbytes;                                                                          \
-        size = saturatedSub(size, nbytes);                                                         \
-                                                                                                   \
-        if (spaced && i != length - 1) {                                                           \
-            if (size < 1)                                                                          \
-                return Q_FMT_ERROR_SIZE;                                                           \
-            *bufferPosition = ' ';                                                                 \
-            bufferPosition += 1;                                                                   \
-            result += 1;                                                                           \
-            size = saturatedSub(size, 1);                                                          \
-        }                                                                                          \
+#define WRITE_LIST_AT(buffer, size, func, list, length, spaced, result, item) \
+    char *bufferPosition = buffer;                                            \
+                                                                              \
+    for (QSize i = 0; i < length; i++) {                                      \
+        int nbytes = func(bufferPosition, size, item(list, i));               \
+        if (nbytes < 0)                                                       \
+            return nbytes;                                                    \
+                                                                              \
+        bufferPosition += nbytes;                                             \
+        result += nbytes;                                                     \
+        size = saturatedSub(size, nbytes);                                    \
+                                                                              \
+        if (spaced && i != length - 1) {                                      \
+            if (size < 1)                                                     \
+                return Q_FMT_ERROR_SIZE;                                      \
+            *bufferPosition = ' ';                                            \
+            bufferPosition += 1;                                              \
+            result += 1;                                                      \
+            size = saturatedSub(size, 1);                                     \
+        }                                                                     \
     }
 
-#define WRITE_PRECISION_LIST(buffer, size, func, list, length, spaced, result, precision)          \
-    char *bufferPosition = buffer;                                                                 \
-                                                                                                   \
-    for (QSize i = 0; i < length; i++) {                                                           \
-        int nbytes = func(bufferPosition, size, (list)[i], precision);                             \
-        if (nbytes < 0)                                                                            \
-            return nbytes;                                                                         \
-                                                                                                   \
-        bufferPosition += nbytes;                                                                  \
-        result += nbytes;                                                                          \
-        size = saturatedSub(size, nbytes);                                                         \
-                                                                                                   \
-        if (spaced && i != length - 1) {                                                           \
-            if (size < 1)                                                                          \
-                return Q_FMT_ERROR_SIZE;                                                           \
-            *bufferPosition = ' ';                                                                 \
-            bufferPosition += 1;                                                                   \
-            result += 1;                                                                           \
-            size = saturatedSub(size, 1);                                                          \
-        }                                                                                          \
+#define WRITE_PRECISION_LIST(buffer, size, func, list, length, spaced, result, precision) \
+    char *bufferPosition = buffer;                                                        \
+                                                                                          \
+    for (QSize i = 0; i < length; i++) {                                                  \
+        int nbytes = func(bufferPosition, size, (list)[i], precision);                    \
+        if (nbytes < 0)                                                                   \
+            return nbytes;                                                                \
+                                                                                          \
+        bufferPosition += nbytes;                                                         \
+        result += nbytes;                                                                 \
+        size = saturatedSub(size, nbytes);                                                \
+                                                                                          \
+        if (spaced && i != length - 1) {                                                  \
+            if (size < 1)                                                                 \
+                return Q_FMT_ERROR_SIZE;                                                  \
+            *bufferPosition = ' ';                                                        \
+            bufferPosition += 1;                                                          \
+            result += 1;                                                                  \
+            size = saturatedSub(size, 1);                                                 \
+        }                                                                                 \
     }
 
-#define WRITE_MONTH(buffer, size, month, width, fmt)                                               \
-    int32_t year = 2000 + month / 12;                                                              \
-    month %= 12;                                                                                   \
-    if (month < 0) {                                                                               \
-        month += 12;                                                                               \
-        year -= 1;                                                                                 \
-    }                                                                                              \
-    month += 1;                                                                                    \
+#define WRITE_MONTH(buffer, size, month, width, fmt) \
+    int32_t year = 2000 + month / 12;                \
+    month %= 12;                                     \
+    if (month < 0) {                                 \
+        month += 12;                                 \
+        year -= 1;                                   \
+    }                                                \
+    month += 1;                                      \
     WRITE_FIXED(buffer, size, width, fmt, year, month)
 
 static bool isLeap(int32_t year) {
@@ -139,8 +137,9 @@ static void splitHMSMS(int64_t total, int64_t *hours, int64_t *mins, int64_t *se
     *ms = total % MS_PER_SEC;
 }
 
-static void
-splitNS(int64_t total, int64_t *days, int64_t *hours, int64_t *mins, int64_t *secs, int64_t *ns) {
+static void splitNS(
+    int64_t total, int64_t *days, int64_t *hours, int64_t *mins, int64_t *secs, int64_t *ns
+) {
     int64_t s = total / NS_PER_SEC;
     *ns = total % NS_PER_SEC;
     splitDHMS(s, days, hours, mins, secs);
@@ -267,7 +266,8 @@ int qTimestampToStr(char *buffer, QSize size, QTimestamp timestamp) {
         tm.tm_hour,
         tm.tm_min,
         tm.tm_sec,
-        ns);
+        ns
+    );
 }
 
 int qTimestampToLiteral(char *buffer, QSize size, QTimestamp timestamp) {
@@ -289,7 +289,8 @@ int qDateToStr(char *buffer, QSize size, QDate date) {
     gmtime_r(&t, &tm);
 
     WRITE_FIXED(
-        buffer, size, DATE_WIDTH, "%04d.%02d.%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+        buffer, size, DATE_WIDTH, "%04d.%02d.%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday
+    );
 }
 
 int qDateToLiteral(char *buffer, QSize size, QDate date) {
@@ -387,7 +388,8 @@ int qDatetimeToStr(char *buffer, QSize size, QDatetime datetime) {
         hour,
         minute,
         second,
-        millis);
+        millis
+    );
 }
 
 int qDatetimeToLiteral(char *buffer, QSize size, QDatetime datetime) {
@@ -411,7 +413,8 @@ int qTimespanToStr(char *buffer, QSize size, QTimespan timespan) {
         hours,
         mins,
         secs,
-        ns);
+        ns
+    );
 }
 
 int qTimespanToLiteral(char *buffer, QSize size, QTimespan timespan) {
@@ -444,13 +447,8 @@ int qSecondToStr(char *buffer, QSize size, QSecond second) {
     splitHMS(total, &hours, &mins, &secs);
 
     WRITE_DYNAMIC(
-        buffer,
-        size,
-        "%s%02" PRId64 ":%02" PRId64 ":%02" PRId64,
-        neg ? "-" : "",
-        hours,
-        mins,
-        secs);
+        buffer, size, "%s%02" PRId64 ":%02" PRId64 ":%02" PRId64, neg ? "-" : "", hours, mins, secs
+    );
 }
 
 int qSecondToLiteral(char *buffer, QSize size, QSecond second) {
@@ -474,7 +472,8 @@ int qTimeToStr(char *buffer, QSize size, QTime time) {
         hours,
         mins,
         secs,
-        ms);
+        ms
+    );
 }
 
 int qTimeToLiteral(char *buffer, QSize size, QTime time) {
@@ -776,7 +775,8 @@ int qFloatListToStr(char *buffer, QSize size, const QFloat *floats, QSize length
 }
 
 int qFloatListToLiteral(
-    char *buffer, QSize size, const QFloat *floats, QSize length, int precision) {
+    char *buffer, QSize size, const QFloat *floats, QSize length, int precision
+) {
     if (length == 0)
         return 0;
 
@@ -999,7 +999,8 @@ int qTimeListToLiteral(char *buffer, QSize size, const QTime *time, QSize length
 }
 
 int qListToStr(
-    char *buffer, QSize size, const void *list, QSize length, QTypeCode type, int precision) {
+    char *buffer, QSize size, const void *list, QSize length, QTypeCode type, int precision
+) {
     switch (type) {
         case Q_TYPE_BOOLEAN:
             return qBooleanListToStr(buffer, size, (const QBoolean *)list, length);
@@ -1044,7 +1045,8 @@ int qListToStr(
 }
 
 int qListToLiteral(
-    char *buffer, QSize size, const void *list, QSize length, QTypeCode type, int precision) {
+    char *buffer, QSize size, const void *list, QSize length, QTypeCode type, int precision
+) {
     switch (type) {
         case Q_TYPE_BOOLEAN:
             return qBooleanListToLiteral(buffer, size, (const QBoolean *)list, length);

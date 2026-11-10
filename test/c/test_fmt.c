@@ -14,41 +14,98 @@
 #define SIZE 128
 char buffer[SIZE];
 
-#define ASSERT_LIST(func, list, length, fullStr, singleStr)                                        \
-    int result = func(buffer, SIZE, list, length);                                                 \
-    TEST_ASSERT_EQUAL_INT(strlen(fullStr), result);                                                \
-    TEST_ASSERT_EQUAL_STRING(fullStr, buffer);                                                     \
-                                                                                                   \
-    result = func(buffer, SIZE, list, 1);                                                          \
-    TEST_ASSERT_EQUAL_INT(strlen(singleStr), result);                                              \
-    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                                   \
-                                                                                                   \
-    result = func(buffer, SIZE, list, 0);                                                          \
-    TEST_ASSERT_EQUAL_INT(0, result);                                                              \
-                                                                                                   \
-    result = func(nullptr, SIZE, list, 3);                                                         \
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);                                               \
-                                                                                                   \
-    result = func(buffer, 0, list, 3);                                                             \
+#define ASSERT_LIST(func, list, length, fullStr, singleStr) \
+    int result = func(buffer, SIZE, list, length);          \
+    TEST_ASSERT_EQUAL_INT(strlen(fullStr), result);         \
+    TEST_ASSERT_EQUAL_STRING(fullStr, buffer);              \
+                                                            \
+    result = func(buffer, SIZE, list, 1);                   \
+    TEST_ASSERT_EQUAL_INT(strlen(singleStr), result);       \
+    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);            \
+                                                            \
+    result = func(buffer, SIZE, list, 0);                   \
+    TEST_ASSERT_EQUAL_INT(0, result);                       \
+                                                            \
+    result = func(nullptr, SIZE, list, 3);                  \
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);        \
+                                                            \
+    result = func(buffer, 0, list, 3);                      \
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result)
 
-#define ASSERT_PRECISON_LIST(func, list, length, precision, fullStr, singleStr)                    \
-    int result = func(buffer, SIZE, list, length, precision);                                      \
-    TEST_ASSERT_EQUAL_INT(strlen(fullStr), result);                                                \
-    TEST_ASSERT_EQUAL_STRING(fullStr, buffer);                                                     \
-                                                                                                   \
-    result = func(buffer, SIZE, list, 1, precision);                                               \
-    TEST_ASSERT_EQUAL_INT(strlen(singleStr), result);                                              \
-    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                                   \
-                                                                                                   \
-    result = func(buffer, SIZE, list, 0, precision);                                               \
-    TEST_ASSERT_EQUAL_INT(0, result);                                                              \
-                                                                                                   \
-    result = func(nullptr, SIZE, list, 3, precision);                                              \
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);                                               \
-                                                                                                   \
-    result = func(buffer, 0, list, 3, precision);                                                  \
+#define ASSERT_PRECISON_LIST(func, list, length, precision, fullStr, singleStr) \
+    int result = func(buffer, SIZE, list, length, precision);                   \
+    TEST_ASSERT_EQUAL_INT(strlen(fullStr), result);                             \
+    TEST_ASSERT_EQUAL_STRING(fullStr, buffer);                                  \
+                                                                                \
+    result = func(buffer, SIZE, list, 1, precision);                            \
+    TEST_ASSERT_EQUAL_INT(strlen(singleStr), result);                           \
+    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                \
+                                                                                \
+    result = func(buffer, SIZE, list, 0, precision);                            \
+    TEST_ASSERT_EQUAL_INT(0, result);                                           \
+                                                                                \
+    result = func(nullptr, SIZE, list, 3, precision);                           \
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);                            \
+                                                                                \
+    result = func(buffer, 0, list, 3, precision);                               \
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result)
+
+QGuid guids[] = {
+    {{
+        0x12,
+        0x34,
+        0x56,
+        0x78,
+        0x9A,
+        0xBC,
+        0xDE,
+        0xF0,
+        0x11,
+        0x22,
+        0x33,
+        0x44,
+        0x55,
+        0x66,
+        0x77,
+        0x88,
+    }},
+    {{
+        0x00,
+        0x11,
+        0x22,
+        0x33,
+        0x44,
+        0x55,
+        0x66,
+        0x77,
+        0x88,
+        0x99,
+        0xAA,
+        0xBB,
+        0xCC,
+        0xDD,
+        0xEE,
+        0xFF,
+    }},
+    {{
+        0xFF,
+        0xEE,
+        0xDD,
+        0xCC,
+        0xBB,
+        0xAA,
+        0x99,
+        0x88,
+        0x77,
+        0x66,
+        0x55,
+        0x44,
+        0x33,
+        0x22,
+        0x11,
+        0x00,
+    }},
+};
 
 void setUp() {
 }
@@ -92,22 +149,24 @@ void testBooleanToLiteral() {
 }
 
 void testGuidToStr() {
-    QGuid guid = {{0x12,
-                   0x34,
-                   0x56,
-                   0x78,
-                   0x9A,
-                   0xBC,
-                   0xDE,
-                   0xF0,
-                   0x11,
-                   0x22,
-                   0x33,
-                   0x44,
-                   0x55,
-                   0x66,
-                   0x77,
-                   0x88}};
+    QGuid guid = {
+        {0x12,
+         0x34,
+         0x56,
+         0x78,
+         0x9A,
+         0xBC,
+         0xDE,
+         0xF0,
+         0x11,
+         0x22,
+         0x33,
+         0x44,
+         0x55,
+         0x66,
+         0x77,
+         0x88}
+    };
 
     int result = qGuidToStr(buffer, SIZE, &guid);
     TEST_ASSERT_EQUAL_INT(36, result);
@@ -124,22 +183,26 @@ void testGuidToStr() {
 }
 
 void testGuidToLiteral() {
-    QGuid guid = {{0x12,
-                   0x34,
-                   0x56,
-                   0x78,
-                   0x9A,
-                   0xBC,
-                   0xDE,
-                   0xF0,
-                   0x11,
-                   0x22,
-                   0x33,
-                   0x44,
-                   0x55,
-                   0x66,
-                   0x77,
-                   0x88}};
+    QGuid guid = {
+        {
+            0x12,
+            0x34,
+            0x56,
+            0x78,
+            0x9A,
+            0xBC,
+            0xDE,
+            0xF0,
+            0x11,
+            0x22,
+            0x33,
+            0x44,
+            0x55,
+            0x66,
+            0x77,
+            0x88,
+        },
+    };
 
     int result = qGuidToLiteral(buffer, SIZE, &guid);
     TEST_ASSERT_EQUAL_INT(36, result);
@@ -967,22 +1030,24 @@ void testAtomToStr() {
     TEST_ASSERT_EQUAL_INT(1, result);
     TEST_ASSERT_EQUAL_STRING("1", buffer);
 
-    QGuid guid = {{0x12,
-                   0x34,
-                   0x56,
-                   0x78,
-                   0x9A,
-                   0xBC,
-                   0xDE,
-                   0xF0,
-                   0x11,
-                   0x22,
-                   0x33,
-                   0x44,
-                   0x55,
-                   0x66,
-                   0x77,
-                   0x88}};
+    QGuid guid = {
+        {0x12,
+         0x34,
+         0x56,
+         0x78,
+         0x9A,
+         0xBC,
+         0xDE,
+         0xF0,
+         0x11,
+         0x22,
+         0x33,
+         0x44,
+         0x55,
+         0x66,
+         0x77,
+         0x88}
+    };
     result = qAtomToStr(buffer, SIZE, &guid, Q_TYPE_GUID, 0);
     TEST_ASSERT_EQUAL_INT(36, result);
     TEST_ASSERT_EQUAL_STRING("12345678-9abc-def0-1122-334455667788", buffer);
@@ -1076,22 +1141,24 @@ void testAtomToLiteral() {
     TEST_ASSERT_EQUAL_INT(2, result);
     TEST_ASSERT_EQUAL_STRING("1b", buffer);
 
-    QGuid guid = {{0x12,
-                   0x34,
-                   0x56,
-                   0x78,
-                   0x9A,
-                   0xBC,
-                   0xDE,
-                   0xF0,
-                   0x11,
-                   0x22,
-                   0x33,
-                   0x44,
-                   0x55,
-                   0x66,
-                   0x77,
-                   0x88}};
+    QGuid guid = {
+        {0x12,
+         0x34,
+         0x56,
+         0x78,
+         0x9A,
+         0xBC,
+         0xDE,
+         0xF0,
+         0x11,
+         0x22,
+         0x33,
+         0x44,
+         0x55,
+         0x66,
+         0x77,
+         0x88}
+    };
     result = qAtomToLiteral(buffer, SIZE, &guid, Q_TYPE_GUID, 0);
     TEST_ASSERT_EQUAL_INT(36, result);
     TEST_ASSERT_EQUAL_STRING("12345678-9abc-def0-1122-334455667788", buffer);
@@ -1188,37 +1255,27 @@ void testBooleanListToLiteral() {
 }
 
 void testGuidListToStr() {
-    // Three different guids, so that items read from the wrong position would be detected
-    QGuid guids[] = {
-        {{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}},
-        {{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}},
-        {{0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00}},
-    };
-
-    ASSERT_LIST(qGuidListToStr,
-                guids,
-                3,
-                "12345678-9abc-def0-1122-334455667788 "
-                "00112233-4455-6677-8899-aabbccddeeff "
-                "ffeeddcc-bbaa-9988-7766-554433221100",
-                "12345678-9abc-def0-1122-334455667788");
+    ASSERT_LIST(
+        qGuidListToStr,
+        guids,
+        3,
+        "12345678-9abc-def0-1122-334455667788 "
+        "00112233-4455-6677-8899-aabbccddeeff "
+        "ffeeddcc-bbaa-9988-7766-554433221100",
+        "12345678-9abc-def0-1122-334455667788"
+    );
 }
 
 void testGuidListToLiteral() {
-    // Three different guids, so that items read from the wrong position would be detected
-    QGuid guids[] = {
-        {{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}},
-        {{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}},
-        {{0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00}},
-    };
-
-    ASSERT_LIST(qGuidListToLiteral,
-                guids,
-                3,
-                "12345678-9abc-def0-1122-334455667788 "
-                "00112233-4455-6677-8899-aabbccddeeff "
-                "ffeeddcc-bbaa-9988-7766-554433221100",
-                "12345678-9abc-def0-1122-334455667788");
+    ASSERT_LIST(
+        qGuidListToLiteral,
+        guids,
+        3,
+        "12345678-9abc-def0-1122-334455667788 "
+        "00112233-4455-6677-8899-aabbccddeeff "
+        "ffeeddcc-bbaa-9988-7766-554433221100",
+        "12345678-9abc-def0-1122-334455667788"
+    );
 }
 
 void testByteListToStr() {
@@ -1308,7 +1365,8 @@ void testTimestampListToStr() {
         timestamps,
         3,
         "2026.01.17D15:10:17.123456789 2000.01.01D00:00:00.000000000 1996.01.17D15:10:17.123456789",
-        "2026.01.17D15:10:17.123456789");
+        "2026.01.17D15:10:17.123456789"
+    );
 }
 
 void testTimestampListToLiteral() {
@@ -1318,7 +1376,8 @@ void testTimestampListToLiteral() {
         timestamps,
         3,
         "2026.01.17D15:10:17.123456789 2000.01.01D00:00:00.000000000 1996.01.17D15:10:17.123456789",
-        "2026.01.17D15:10:17.123456789");
+        "2026.01.17D15:10:17.123456789"
+    );
 }
 
 void testMonthListToStr() {
@@ -1343,38 +1402,46 @@ void testDateListToLiteral() {
 
 void testDatetimeListToStr() {
     QDatetime datetimes[] = {9513.6321426273153, 0, -1444.3678573726852};
-    ASSERT_LIST(qDatetimeListToStr,
-                datetimes,
-                3,
-                "2026.01.17T15:10:17.123 2000.01.01T00:00:00.000 1996.01.17T15:10:17.123",
-                "2026.01.17T15:10:17.123");
+    ASSERT_LIST(
+        qDatetimeListToStr,
+        datetimes,
+        3,
+        "2026.01.17T15:10:17.123 2000.01.01T00:00:00.000 1996.01.17T15:10:17.123",
+        "2026.01.17T15:10:17.123"
+    );
 }
 
 void testDatetimeListToLiteral() {
     QDatetime datetimes[] = {9513.6321426273153, 0, -1444.3678573726852};
-    ASSERT_LIST(qDatetimeListToLiteral,
-                datetimes,
-                3,
-                "2026.01.17T15:10:17.123 2000.01.01T00:00:00.000 1996.01.17T15:10:17.123",
-                "2026.01.17T15:10:17.123");
+    ASSERT_LIST(
+        qDatetimeListToLiteral,
+        datetimes,
+        3,
+        "2026.01.17T15:10:17.123 2000.01.01T00:00:00.000 1996.01.17T15:10:17.123",
+        "2026.01.17T15:10:17.123"
+    );
 }
 
 void testTimespanListToStr() {
     QTimespan timespans[] = {1473576123456789, 0, -1473576123456789};
-    ASSERT_LIST(qTimespanListToStr,
-                timespans,
-                3,
-                "17D01:19:36.123456789 0D00:00:00.000000000 -17D01:19:36.123456789",
-                "17D01:19:36.123456789");
+    ASSERT_LIST(
+        qTimespanListToStr,
+        timespans,
+        3,
+        "17D01:19:36.123456789 0D00:00:00.000000000 -17D01:19:36.123456789",
+        "17D01:19:36.123456789"
+    );
 }
 
 void testTimespanListToLiteral() {
     QTimespan timespans[] = {1473576123456789, 0, -1473576123456789};
-    ASSERT_LIST(qTimespanListToLiteral,
-                timespans,
-                3,
-                "17D01:19:36.123456789 0D00:00:00.000000000 -17D01:19:36.123456789",
-                "17D01:19:36.123456789");
+    ASSERT_LIST(
+        qTimespanListToLiteral,
+        timespans,
+        3,
+        "17D01:19:36.123456789 0D00:00:00.000000000 -17D01:19:36.123456789",
+        "17D01:19:36.123456789"
+    );
 }
 
 void testMinuteListToStr() {
@@ -1400,28 +1467,66 @@ void testSecondListToLiteral() {
 void testTimeListToStr() {
     QTime times[] = {58817123, 0, -58817123};
     ASSERT_LIST(
-        qTimeListToStr, times, 3, "16:20:17.123 00:00:00.000 -16:20:17.123", "16:20:17.123");
+        qTimeListToStr, times, 3, "16:20:17.123 00:00:00.000 -16:20:17.123", "16:20:17.123"
+    );
 }
 
 void testTimeListToLiteral() {
     QTime times[] = {58817123, 0, -58817123};
     ASSERT_LIST(
-        qTimeListToLiteral, times, 3, "16:20:17.123 00:00:00.000 -16:20:17.123", "16:20:17.123");
+        qTimeListToLiteral, times, 3, "16:20:17.123 00:00:00.000 -16:20:17.123", "16:20:17.123"
+    );
 }
 
 void testGuidListFromQObject() {
     // The items of a Q guid list are stored contiguously and can be formatted directly
     QGuid values[] = {
-        {{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}},
-        {{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}},
+        {{
+            0x12,
+            0x34,
+            0x56,
+            0x78,
+            0x9A,
+            0xBC,
+            0xDE,
+            0xF0,
+            0x11,
+            0x22,
+            0x33,
+            0x44,
+            0x55,
+            0x66,
+            0x77,
+            0x88,
+        }},
+        {{
+            0x00,
+            0x11,
+            0x22,
+            0x33,
+            0x44,
+            0x55,
+            0x66,
+            0x77,
+            0x88,
+            0x99,
+            0xAA,
+            0xBB,
+            0xCC,
+            0xDD,
+            0xEE,
+            0xFF,
+        }},
     };
     QObj *list = qNewGuidList(values, 2);
 
     int result = qListToStr(buffer, SIZE, list->list, list->length, Q_TYPE_GUID, 0);
     TEST_ASSERT_EQUAL_INT(73, result);
-    TEST_ASSERT_EQUAL_STRING("12345678-9abc-def0-1122-334455667788 "
-                             "00112233-4455-6677-8899-aabbccddeeff",
-                             buffer);
+    TEST_ASSERT_EQUAL_STRING(
+        "12345678-9abc-def0-1122-334455667788 "
+        "00112233-4455-6677-8899-aabbccddeeff",
+        buffer
+    );
 
     result = qGuidListToLiteral(buffer, SIZE, (const QGuid *)list->list, list->length);
     TEST_ASSERT_EQUAL_INT(73, result);
@@ -1471,18 +1576,14 @@ void testListToStr() {
     TEST_ASSERT_EQUAL_INT(5, result);
     TEST_ASSERT_EQUAL_STRING("1 0 1", buffer);
 
-    // Three different guids, so that items read from the wrong position would be detected
-    QGuid guids[] = {
-        {{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}},
-        {{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}},
-        {{0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00}},
-    };
     result = qListToStr(buffer, SIZE, guids, 3, Q_TYPE_GUID, 0);
     TEST_ASSERT_EQUAL_INT(110, result);
-    TEST_ASSERT_EQUAL_STRING("12345678-9abc-def0-1122-334455667788 "
-                             "00112233-4455-6677-8899-aabbccddeeff "
-                             "ffeeddcc-bbaa-9988-7766-554433221100",
-                             buffer);
+    TEST_ASSERT_EQUAL_STRING(
+        "12345678-9abc-def0-1122-334455667788 "
+        "00112233-4455-6677-8899-aabbccddeeff "
+        "ffeeddcc-bbaa-9988-7766-554433221100",
+        buffer
+    );
 
     QByte bytes[] = {1, 123, 255};
     result = qListToStr(buffer, SIZE, bytes, 3, Q_TYPE_BYTE, 0);
