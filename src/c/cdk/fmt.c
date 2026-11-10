@@ -630,6 +630,7 @@ int qByteListToLiteral(char *buffer, QSize size, const QByte *bytes, QSize lengt
     int headResult = qByteToLiteral(buffer, size, bytes[0]);
     if (headResult < 0)
         return headResult;
+    size = saturatedSub(size, headResult);
 
     int result = 0;
 

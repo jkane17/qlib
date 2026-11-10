@@ -1288,6 +1288,34 @@ void testByteListToLiteral() {
     ASSERT_LIST(qByteListToLiteral, bytes, 3, "0x017bff", "0x01");
 }
 
+void testByteListToLiteralBufferBounds() {
+    const QByte bytes[] = {1, 123, 255};
+    const char *expected[] = {"0x01", "0x017b", "0x017bff"};
+
+    for (QSize length = 1; length <= 3; length++) {
+        QSize required = strlen(expected[length - 1]) + 1;
+        for (QSize capacity = 0; capacity <= required; capacity++) {
+            unsigned char guarded[16];
+            memset(guarded, 0xA5, sizeof(guarded));
+            char *destination = (char *)&guarded[1];
+
+            int result = qByteListToLiteral(destination, capacity, bytes, length);
+
+            TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[0]);
+            for (QSize i = capacity + 1; i < sizeof(guarded); i++) {
+                TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[i]);
+            }
+
+            if (capacity < required) {
+                TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+            } else {
+                TEST_ASSERT_EQUAL_INT(required - 1, result);
+                TEST_ASSERT_EQUAL_STRING(expected[length - 1], destination);
+            }
+        }
+    }
+}
+
 void testShortListToStr() {
     QShort shorts[] = {1, -234, 567};
     ASSERT_LIST(qShortListToStr, shorts, 3, "1 -234 567", "1");
@@ -1714,6 +1742,7 @@ int main() {
     RUN_TEST(testGuidListToLiteral);
     RUN_TEST(testByteListToStr);
     RUN_TEST(testByteListToLiteral);
+    RUN_TEST(testByteListToLiteralBufferBounds);
     RUN_TEST(testShortListToStr);
     RUN_TEST(testShortListToLiteral);
     RUN_TEST(testIntListToStr);
