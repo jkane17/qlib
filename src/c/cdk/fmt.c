@@ -810,7 +810,6 @@ int qCharListToLiteral(char *buffer, QSize size, const QChar *chars, QSize lengt
     WRITE_LIST(buffer + headResult, size, qCharToStr, chars, length, false, result);
     if (result < 0)
         return result;
-    size = saturatedSub(size, result);
 
     // Closing quote
     int tailResult = qCharToStr(buffer + headResult + result, size, '"');

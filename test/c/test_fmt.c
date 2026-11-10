@@ -1376,6 +1376,34 @@ void testCharListToLiteral() {
     ASSERT_LIST(qCharListToLiteral, chars, 3, "\"abc\"", "\"a\"");
 }
 
+void testCharListToLiteralBufferBounds() {
+    const QChar chars[] = {'a', 'b', 'c'};
+    const char *expected[] = {"\"a\"", "\"ab\"", "\"abc\""};
+
+    for (QSize length = 1; length <= 3; length++) {
+        QSize required = strlen(expected[length - 1]) + 1;
+        for (QSize capacity = 0; capacity <= required; capacity++) {
+            unsigned char guarded[16];
+            memset(guarded, 0xA5, sizeof(guarded));
+            char *destination = (char *)&guarded[1];
+
+            int result = qCharListToLiteral(destination, capacity, chars, length);
+
+            TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[0]);
+            for (QSize i = capacity + 1; i < sizeof(guarded); i++) {
+                TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[i]);
+            }
+
+            if (capacity < required) {
+                TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+            } else {
+                TEST_ASSERT_EQUAL_INT(required - 1, result);
+                TEST_ASSERT_EQUAL_STRING(expected[length - 1], destination);
+            }
+        }
+    }
+}
+
 void testSymbolListToStr() {
     QSymbol symbols[] = {"abc", "def", "ghi"};
     ASSERT_LIST(qSymbolListToStr, symbols, 3, "abc def ghi", "abc");
@@ -1755,6 +1783,7 @@ int main() {
     RUN_TEST(testFloatListToLiteral);
     RUN_TEST(testCharListToStr);
     RUN_TEST(testCharListToLiteral);
+    RUN_TEST(testCharListToLiteralBufferBounds);
     RUN_TEST(testSymbolListToStr);
     RUN_TEST(testSymbolListToLiteral);
     RUN_TEST(testTimestampListToStr);
