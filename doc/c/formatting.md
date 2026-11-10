@@ -50,13 +50,16 @@ Many types have a fixed width, which makes the required size easy to work out:
 | boolean   | 1 (string), 2 (literal)                |
 | guid      | 36                                     |
 | byte      | 2 (string), 4 (literal)                |
-| month     | 7 (string), 8 (literal)                |
-| date      | 10                                     |
+| month     | 7 (string), 8 (literal), for four-digit years |
+| date      | 10 for four-digit years                 |
 | minute    | 5                                      |
 | second    | 8                                      |
 | time      | 12 (13 if negative)                    |
-| datetime  | 23                                     |
+| datetime  | 23 for four-digit years                 |
 | timestamp | 29                                     |
+
+Month, date, and datetime formatting measures the actual output size. Years with more digits
+or a sign can require additional space; an insufficient buffer returns `Q_FMT_ERROR_SIZE`.
 
 A long needs at most 20 characters, and a literal adds at most one suffix character. For lists, allow for each item plus a separating space. When the size is hard to predict (for example, floats or symbols), retry with a larger buffer on `Q_FMT_ERROR_SIZE`.
 

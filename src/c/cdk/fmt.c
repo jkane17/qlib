@@ -21,9 +21,6 @@
 #define BYTE_WIDTH 2
 #define CHAR_WIDTH 1
 #define TIMESTAMP_WIDTH 29
-#define MONTH_WIDTH 7
-#define DATE_WIDTH 10
-#define DATETIME_WIDTH 23
 #define MINUTE_WIDTH 5
 
 #define SECS_PER_DAY 86400
@@ -40,7 +37,9 @@
     if (buffer == nullptr || size < (width) + 1)             \
         return Q_FMT_ERROR_SIZE;                             \
     int result = snprintf(buffer, size, fmt, ##__VA_ARGS__); \
-    return result < 0 ? Q_FMT_ERROR_PRINTF : result
+    if (result < 0)                                          \
+        return Q_FMT_ERROR_PRINTF;                           \
+    return (QSize)result >= size ? Q_FMT_ERROR_SIZE : result
 
 #define WRITE_DYNAMIC(buffer, size, fmt, ...)             \
     int width = snprintf(nullptr, 0, fmt, ##__VA_ARGS__); \
@@ -99,15 +98,15 @@
         }                                                                                 \
     }
 
-#define WRITE_MONTH(buffer, size, month, width, fmt) \
-    int32_t year = 2000 + month / 12;                \
-    month %= 12;                                     \
-    if (month < 0) {                                 \
-        month += 12;                                 \
-        year -= 1;                                   \
-    }                                                \
-    month += 1;                                      \
-    WRITE_FIXED(buffer, size, width, fmt, year, month)
+#define WRITE_MONTH(buffer, size, month, fmt) \
+    int32_t year = 2000 + month / 12;         \
+    month %= 12;                              \
+    if (month < 0) {                          \
+        month += 12;                          \
+        year -= 1;                            \
+    }                                         \
+    month += 1;                               \
+    WRITE_DYNAMIC(buffer, size, fmt, year, month)
 
 static bool isLeap(int32_t year) {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
@@ -275,11 +274,11 @@ int qTimestampToLiteral(char *buffer, QSize size, QTimestamp timestamp) {
 }
 
 int qMonthToStr(char *buffer, QSize size, QMonth month) {
-    WRITE_MONTH(buffer, size, month, MONTH_WIDTH, "%04d.%02d");
+    WRITE_MONTH(buffer, size, month, "%04d.%02d");
 }
 
 int qMonthToLiteral(char *buffer, QSize size, QMonth month) {
-    WRITE_MONTH(buffer, size, month, MONTH_WIDTH + 1, "%04d.%02dm");
+    WRITE_MONTH(buffer, size, month, "%04d.%02dm");
 }
 
 int qDateToStr(char *buffer, QSize size, QDate date) {
@@ -288,9 +287,7 @@ int qDateToStr(char *buffer, QSize size, QDate date) {
     struct tm tm;
     gmtime_r(&t, &tm);
 
-    WRITE_FIXED(
-        buffer, size, DATE_WIDTH, "%04d.%02d.%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday
-    );
+    WRITE_DYNAMIC(buffer, size, "%04d.%02d.%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
 }
 
 int qDateToLiteral(char *buffer, QSize size, QDate date) {
@@ -377,10 +374,9 @@ int qDatetimeToStr(char *buffer, QSize size, QDatetime datetime) {
         }
     }
 
-    WRITE_FIXED(
+    WRITE_DYNAMIC(
         buffer,
         size,
-        DATETIME_WIDTH,
         "%04d.%02d.%02dT%02d:%02d:%02d.%03d",
         year,
         month + 1,

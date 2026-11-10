@@ -1722,6 +1722,70 @@ void testListToStr() {
     // TEST_ASSERT_EQUAL_STRING("16:20:17.123", buffer);
 }
 
+void testYearFormattingBufferBounds() {
+    const QMonth months[] = {96000, -36000};               // January in years 10000 and -1000
+    const QDatetime datetimes[] = {2921940.0, -1095727.0}; // January 1 in the same years
+    const QDate date = 0;
+    const struct {
+        const void *values;
+        QTypeCode type;
+        QSize length; // Zero selects an atom; otherwise format a list
+        const char *string;
+        const char *literal;
+    } cases[] = {
+        {months, Q_TYPE_MONTH, 0, "10000.01", "10000.01m"},
+        {months + 1, Q_TYPE_MONTH, 0, "-1000.01", "-1000.01m"},
+        {datetimes, Q_TYPE_DATETIME, 0, "10000.01.01T00:00:00.000", "10000.01.01T00:00:00.000"},
+        {datetimes + 1, Q_TYPE_DATETIME, 0, "-1000.01.01T00:00:00.000", "-1000.01.01T00:00:00.000"},
+        {&date, Q_TYPE_DATE, 0, "2000.01.01", "2000.01.01"},
+        {months, Q_TYPE_MONTH, 2, "10000.01 -1000.01", "10000.01 -1000.01m"},
+        {datetimes,
+         Q_TYPE_DATETIME,
+         2,
+         "10000.01.01T00:00:00.000 -1000.01.01T00:00:00.000",
+         "10000.01.01T00:00:00.000 -1000.01.01T00:00:00.000"},
+    };
+
+    for (QSize c = 0; c < sizeof(cases) / sizeof(cases[0]); c++) {
+        for (int literal = 0; literal <= 1; literal++) {
+            const char *expected = literal ? cases[c].literal : cases[c].string;
+            QSize required = strlen(expected) + 1;
+            for (QSize capacity = 0; capacity <= required; capacity++) {
+                unsigned char guarded[SIZE];
+                memset(guarded, 0xA5, sizeof(guarded));
+                char *destination = (char *)&guarded[1];
+                int result;
+                if (cases[c].length == 0) {
+                    result = (literal ? qAtomToLiteral : qAtomToStr)(
+                        destination, capacity, cases[c].values, cases[c].type, 0
+                    );
+                } else {
+                    result = (literal ? qListToLiteral : qListToStr)(
+                        destination, capacity, cases[c].values, cases[c].length, cases[c].type, 0
+                    );
+                }
+
+                TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[0]);
+                for (QSize i = capacity + 1; i < sizeof(guarded); i++) {
+                    TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[i]);
+                }
+                if (capacity < required) {
+                    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+                    // Atom sizing must reject insufficient capacity before writing any output.
+                    if (cases[c].length == 0) {
+                        for (QSize i = 1; i <= capacity; i++) {
+                            TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[i]);
+                        }
+                    }
+                } else {
+                    TEST_ASSERT_EQUAL_INT(required - 1, result);
+                    TEST_ASSERT_EQUAL_STRING(expected, destination);
+                }
+            }
+        }
+    }
+}
+
 int main() {
     UNITY_BEGIN();
 
@@ -1753,6 +1817,7 @@ int main() {
     RUN_TEST(testDateToLiteral);
     RUN_TEST(testDatetimeToStr);
     RUN_TEST(testDatetimeToLiteral);
+    RUN_TEST(testYearFormattingBufferBounds);
     RUN_TEST(testTimespanToStr);
     RUN_TEST(testTimespanToLiteral);
     RUN_TEST(testMinuteToStr);
