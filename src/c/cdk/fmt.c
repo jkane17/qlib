@@ -145,10 +145,11 @@ static void splitHMSMS(int64_t total, int64_t *hours, int64_t *mins, int64_t *se
 }
 
 static void splitNS(
-    int64_t total, int64_t *days, int64_t *hours, int64_t *mins, int64_t *secs, int64_t *ns
+    uint64_t total, int64_t *days, int64_t *hours, int64_t *mins, int64_t *secs, int64_t *ns
 ) {
-    int64_t s = total / NS_PER_SEC;
-    *ns = total % NS_PER_SEC;
+    // Both the quotient and remainder fit in int64_t, even for UINT64_MAX nanoseconds.
+    int64_t s = (int64_t)(total / NS_PER_SEC);
+    *ns = (int64_t)(total % NS_PER_SEC);
     splitDHMS(s, days, hours, mins, secs);
 }
 
@@ -402,7 +403,8 @@ int qDatetimeToLiteral(char *buffer, QSize size, QDatetime datetime) {
 
 int qTimespanToStr(char *buffer, QSize size, QTimespan timespan) {
     bool neg = timespan < 0;
-    int64_t total = llabs(timespan);
+    // Unsigned subtraction also represents the magnitude of INT64_MIN without overflow.
+    uint64_t total = neg ? UINT64_C(0) - (uint64_t)timespan : (uint64_t)timespan;
 
     int64_t days, hours, mins, secs, ns;
     splitNS(total, &days, &hours, &mins, &secs, &ns);

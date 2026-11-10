@@ -860,6 +860,44 @@ void testTimespanToLiteral() {
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
+void testTimespanExtremes() {
+    const struct {
+        QTimespan value;
+        const char *expected;
+    } cases[] = {
+        {INT64_MIN, "-106751D23:47:16.854775808"},
+        {INT64_MIN + 1, "-106751D23:47:16.854775807"},
+        {INT64_MIN + 2, "-106751D23:47:16.854775806"},
+        {INT64_MAX - 1, "106751D23:47:16.854775806"},
+        {INT64_MAX, "106751D23:47:16.854775807"},
+        {-1, "-0D00:00:00.000000001"},
+    };
+    int (*formatters[])(char *, QSize, QTimespan) = {qTimespanToStr, qTimespanToLiteral};
+
+    for (QSize f = 0; f < sizeof(formatters) / sizeof(formatters[0]); f++) {
+        for (QSize c = 0; c < sizeof(cases) / sizeof(cases[0]); c++) {
+            QSize required = strlen(cases[c].expected) + 1;
+            for (QSize capacity = 0; capacity <= required; capacity++) {
+                unsigned char guarded[SIZE];
+                memset(guarded, 0xA5, sizeof(guarded));
+                char *destination = (char *)&guarded[1];
+                int result = formatters[f](destination, capacity, cases[c].value);
+
+                TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[0]);
+                for (QSize i = capacity + 1; i < sizeof(guarded); i++) {
+                    TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[i]);
+                }
+                if (capacity < required) {
+                    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+                } else {
+                    TEST_ASSERT_EQUAL_INT(required - 1, result);
+                    TEST_ASSERT_EQUAL_STRING(cases[c].expected, destination);
+                }
+            }
+        }
+    }
+}
+
 void testMinuteToStr() {
     QMinute minute = 980;
     int result = qMinuteToStr(buffer, SIZE, minute);
@@ -1500,6 +1538,18 @@ void testTimespanListToLiteral() {
     );
 }
 
+void testTimespanListExtremes() {
+    const QTimespan values[] = {INT64_MIN, INT64_MIN + 2, INT64_MAX - 1};
+    const char *expected = "-106751D23:47:16.854775808 -106751D23:47:16.854775806 "
+                           "106751D23:47:16.854775806";
+    int result = qTimespanListToStr(buffer, SIZE, values, 3);
+    TEST_ASSERT_EQUAL_INT(strlen(expected), result);
+    TEST_ASSERT_EQUAL_STRING(expected, buffer);
+    result = qTimespanListToLiteral(buffer, SIZE, values, 3);
+    TEST_ASSERT_EQUAL_INT(strlen(expected), result);
+    TEST_ASSERT_EQUAL_STRING(expected, buffer);
+}
+
 void testMinuteListToStr() {
     QMinute minutes[] = {980, 0, -980};
     ASSERT_LIST(qMinuteListToStr, minutes, 3, "16:20 00:00 -16:20", "16:20");
@@ -1869,6 +1919,7 @@ int main() {
     RUN_TEST(testTimestampRangeAndNegativeFraction);
     RUN_TEST(testTimespanToStr);
     RUN_TEST(testTimespanToLiteral);
+    RUN_TEST(testTimespanExtremes);
     RUN_TEST(testMinuteToStr);
     RUN_TEST(testMinuteToLiteral);
     RUN_TEST(testSecondToStr);
@@ -1910,6 +1961,7 @@ int main() {
     RUN_TEST(testDatetimeListToLiteral);
     RUN_TEST(testTimespanListToStr);
     RUN_TEST(testTimespanListToLiteral);
+    RUN_TEST(testTimespanListExtremes);
     RUN_TEST(testMinuteListToStr);
     RUN_TEST(testMinuteListToLiteral);
     RUN_TEST(testSecondListToStr);

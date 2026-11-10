@@ -154,6 +154,7 @@ Only the primitive types (`Q_TYPE_BOOLEAN` to `Q_TYPE_TIME`) are supported; any 
 The formatting functions write the raw value of each type. They do not currently handle the following, which should be taken into account when the output must match Q or be parsed back by Q:
 
 - **Nulls and infinities are not recognised.** They are written as ordinary values: a long null as `-9223372036854775808` rather than `0N`, a float null as `nan` rather than `0n`, and a float infinity as `inf` rather than `0w`. Temporal special values are not reliably formatted as Q nulls or infinities. Check for [special values](/doc/c/type.md#special-values) before formatting.
+- **Timespans use the full signed 64-bit raw value range.** For example, `INT64_MIN` (the timespan null sentinel) is formatted as `-106751D23:47:16.854775808`, not as a Q null.
 - **Char literals are not escaped.** A `"` is written as `"""` rather than `"\""`, and backslashes and control characters (such as a newline) are written as they are.
 - **Symbols are not quoted.** A symbol containing a space, such as `a b`, is written as `` `a b ``, which Q parses as two tokens.
 - **A float literal can lose its type.** With a precision of `0`, the float `1.0` is written as `1`, which Q parses as a long.
