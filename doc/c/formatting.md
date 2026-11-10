@@ -36,6 +36,11 @@ On failure, it returns one of the negative `QFmtError` values:
 | `Q_FMT_ERROR_PRINTF` |  `-1` | The underlying `printf`-family function failed                 |
 | `Q_FMT_ERROR_SIZE`   |  `-2` | `buffer` is `NULL`, or `size` is too small for the whole result |
 | `Q_FMT_ERROR_TYPE`   |  `-3` | The type code is not supported (generic functions only)        |
+| `Q_FMT_ERROR_RANGE`  |  `-4` | Date/timestamp conversion exceeds the platform's calendar-time range or fails |
+
+Date and timestamp formatting uses UTC. The supported range depends on the platform's
+`time_t` and `gmtime_r`; an atom conversion failure returns `Q_FMT_ERROR_RANGE` without
+writing to the buffer. List functions propagate this error but may already have written earlier items.
 
 ### Buffer Size
 
@@ -148,7 +153,7 @@ Only the primitive types (`Q_TYPE_BOOLEAN` to `Q_TYPE_TIME`) are supported; any 
 
 The formatting functions write the raw value of each type. They do not currently handle the following, which should be taken into account when the output must match Q or be parsed back by Q:
 
-- **Nulls and infinities are not recognised.** They are written as ordinary values: a long null as `-9223372036854775808` rather than `0N`, a float null as `nan` rather than `0n`, and a float infinity as `inf` rather than `0w`. A temporal null is written as an incorrect value; for example, a date null is written as `2000.01.01`. Check for [special values](/doc/c/type.md#special-values) before formatting.
+- **Nulls and infinities are not recognised.** They are written as ordinary values: a long null as `-9223372036854775808` rather than `0N`, a float null as `nan` rather than `0n`, and a float infinity as `inf` rather than `0w`. Temporal special values are not reliably formatted as Q nulls or infinities. Check for [special values](/doc/c/type.md#special-values) before formatting.
 - **Char literals are not escaped.** A `"` is written as `"""` rather than `"\""`, and backslashes and control characters (such as a newline) are written as they are.
 - **Symbols are not quoted.** A symbol containing a space, such as `a b`, is written as `` `a b ``, which Q parses as two tokens.
 - **A float literal can lose its type.** With a precision of `0`, the float `1.0` is written as `1`, which Q parses as a long.

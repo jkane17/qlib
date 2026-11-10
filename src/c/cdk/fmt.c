@@ -108,6 +108,14 @@
     month += 1;                               \
     WRITE_DYNAMIC(buffer, size, fmt, year, month)
 
+// Reject a narrowing or unsigned time_t conversion before using the calendar result.
+static bool tryConvertSecondsToUtcCalendar(int64_t seconds, struct tm *calendar) {
+    time_t t = (time_t)seconds;
+    if ((seconds < 0 && t > 0) || (int64_t)t != seconds)
+        return false;
+    return gmtime_r(&t, calendar) != nullptr;
+}
+
 static bool isLeap(int32_t year) {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
 }
@@ -250,9 +258,9 @@ int qTimestampToStr(char *buffer, QSize size, QTimestamp timestamp) {
         sec--;
     }
 
-    time_t t = (time_t)(sec + EPOCH_DIFF);
     struct tm tm;
-    gmtime_r(&t, &tm);
+    if (!tryConvertSecondsToUtcCalendar(sec + EPOCH_DIFF, &tm))
+        return Q_FMT_ERROR_RANGE;
 
     WRITE_FIXED(
         buffer,
@@ -282,10 +290,10 @@ int qMonthToLiteral(char *buffer, QSize size, QMonth month) {
 }
 
 int qDateToStr(char *buffer, QSize size, QDate date) {
-    time_t t = (time_t)(date * SECS_PER_DAY + EPOCH_DIFF);
-
+    int64_t seconds = (int64_t)date * SECS_PER_DAY + EPOCH_DIFF;
     struct tm tm;
-    gmtime_r(&t, &tm);
+    if (!tryConvertSecondsToUtcCalendar(seconds, &tm))
+        return Q_FMT_ERROR_RANGE;
 
     WRITE_DYNAMIC(buffer, size, "%04d.%02d.%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
 }

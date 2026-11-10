@@ -10,6 +10,7 @@
 #include "type.h"
 
 typedef enum : signed int {
+    Q_FMT_ERROR_RANGE = -4, // Value cannot be converted to a calendar time on this platform
     Q_FMT_ERROR_TYPE = -3,   // Invalid/unsupported type
     Q_FMT_ERROR_SIZE = -2,   // Buffer not large enough
     Q_FMT_ERROR_PRINTF = -1, // printf (family) function had an error
@@ -245,6 +246,9 @@ int qSymbolToLiteral(char *buffer, QSize size, QSymbol symbol);
 
 /**
  * @brief Format a timestamp value into string form.
+ *
+ * @note Uses UTC. Returns Q_FMT_ERROR_RANGE without writing output if the platform
+ * cannot convert the value to calendar time.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -256,6 +260,9 @@ int qTimestampToStr(char *buffer, QSize size, QTimestamp timestamp);
 
 /**
  * @brief Format a timestamp value into literal form.
+ *
+ * @note Uses UTC. Returns Q_FMT_ERROR_RANGE without writing output if the platform
+ * cannot convert the value to calendar time.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -289,6 +296,9 @@ int qMonthToLiteral(char *buffer, QSize size, QMonth month);
 
 /**
  * @brief Format a date value into string form.
+ *
+ * @note Uses UTC. Returns Q_FMT_ERROR_RANGE without writing output if the platform
+ * cannot convert the value to calendar time.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -300,6 +310,9 @@ int qDateToStr(char *buffer, QSize size, QDate date);
 
 /**
  * @brief Format a date value into literal form.
+ *
+ * @note Uses UTC. Returns Q_FMT_ERROR_RANGE without writing output if the platform
+ * cannot convert the value to calendar time.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).

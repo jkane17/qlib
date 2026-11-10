@@ -1726,6 +1726,7 @@ void testYearFormattingBufferBounds() {
     const QMonth months[] = {96000, -36000};               // January in years 10000 and -1000
     const QDatetime datetimes[] = {2921940.0, -1095727.0}; // January 1 in the same years
     const QDate date = 0;
+    const QDate dates[] = {2921940, -1095727}; // January 1 in years 10000 and -1000
     const struct {
         const void *values;
         QTypeCode type;
@@ -1738,6 +1739,9 @@ void testYearFormattingBufferBounds() {
         {datetimes, Q_TYPE_DATETIME, 0, "10000.01.01T00:00:00.000", "10000.01.01T00:00:00.000"},
         {datetimes + 1, Q_TYPE_DATETIME, 0, "-1000.01.01T00:00:00.000", "-1000.01.01T00:00:00.000"},
         {&date, Q_TYPE_DATE, 0, "2000.01.01", "2000.01.01"},
+        {dates, Q_TYPE_DATE, 0, "10000.01.01", "10000.01.01"},
+        {dates + 1, Q_TYPE_DATE, 0, "-1000.01.01", "-1000.01.01"},
+        {dates, Q_TYPE_DATE, 2, "10000.01.01 -1000.01.01", "10000.01.01 -1000.01.01"},
         {months, Q_TYPE_MONTH, 2, "10000.01 -1000.01", "10000.01 -1000.01m"},
         {datetimes,
          Q_TYPE_DATETIME,
@@ -1786,6 +1790,49 @@ void testYearFormattingBufferBounds() {
     }
 }
 
+void testDateArithmeticBoundaries() {
+    const struct {
+        QDate value;
+        const char *expected;
+    } cases[] = {
+        {-24856, "1931.12.13"},
+        {-24855, "1931.12.14"},
+        {24855, "2068.01.19"},
+        {24856, "2068.01.20"},
+        {-2147483646, "-5877611.06.24"},
+        {2147483646, "5881610.07.10"},
+    };
+
+    for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        int result = qDateToStr(buffer, SIZE, cases[i].value);
+        TEST_ASSERT_EQUAL_INT(strlen(cases[i].expected), result);
+        TEST_ASSERT_EQUAL_STRING(cases[i].expected, buffer);
+        result = qDateToLiteral(buffer, SIZE, cases[i].value);
+        TEST_ASSERT_EQUAL_INT(strlen(cases[i].expected), result);
+        TEST_ASSERT_EQUAL_STRING(cases[i].expected, buffer);
+    }
+}
+
+void testTimestampRangeAndNegativeFraction() {
+    const struct {
+        QTimestamp value;
+        const char *expected;
+    } cases[] = {
+        {-9223372036854775806LL, "1707.09.22D00:12:43.145224194"},
+        {9223372036854775806LL, "2292.04.10D23:47:16.854775806"},
+        {-1, "1999.12.31D23:59:59.999999999"},
+    };
+
+    for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        int result = qTimestampToStr(buffer, SIZE, cases[i].value);
+        TEST_ASSERT_EQUAL_INT(strlen(cases[i].expected), result);
+        TEST_ASSERT_EQUAL_STRING(cases[i].expected, buffer);
+        result = qTimestampToLiteral(buffer, SIZE, cases[i].value);
+        TEST_ASSERT_EQUAL_INT(strlen(cases[i].expected), result);
+        TEST_ASSERT_EQUAL_STRING(cases[i].expected, buffer);
+    }
+}
+
 int main() {
     UNITY_BEGIN();
 
@@ -1818,6 +1865,8 @@ int main() {
     RUN_TEST(testDatetimeToStr);
     RUN_TEST(testDatetimeToLiteral);
     RUN_TEST(testYearFormattingBufferBounds);
+    RUN_TEST(testDateArithmeticBoundaries);
+    RUN_TEST(testTimestampRangeAndNegativeFraction);
     RUN_TEST(testTimespanToStr);
     RUN_TEST(testTimespanToLiteral);
     RUN_TEST(testMinuteToStr);
