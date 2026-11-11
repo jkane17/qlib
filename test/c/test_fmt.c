@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "fmt.h"
+#include "internal/fmt_count.h"
 #include "q.h"
 #include "type.h"
 #include "unity.h"
@@ -1950,8 +1951,32 @@ void testTimestampRangeAndNegativeFraction() {
     }
 }
 
+void testFormattedCountLimits() {
+    QSize count = 0;
+    TEST_ASSERT_TRUE(tryAddFormattedCount(&count, INT_MAX));
+    TEST_ASSERT_EQUAL_UINT64(INT_MAX, count);
+    TEST_ASSERT_TRUE(tryAddFormattedCount(&count, 0));
+    TEST_ASSERT_FALSE(tryAddFormattedCount(&count, 1));
+    TEST_ASSERT_EQUAL_UINT64(INT_MAX, count);
+
+    count = (QSize)INT_MAX - 3;
+    TEST_ASSERT_TRUE(tryAddFormattedCount(&count, 2));
+    TEST_ASSERT_FALSE(tryAddFormattedCount(&count, 2));
+    TEST_ASSERT_EQUAL_UINT64((QSize)INT_MAX - 1, count);
+    TEST_ASSERT_TRUE(tryAddFormattedCount(&count, 1));
+    TEST_ASSERT_EQUAL_UINT64(INT_MAX, count);
+
+    count = 1;
+    TEST_ASSERT_FALSE(tryAddFormattedCount(&count, UINT64_MAX));
+    TEST_ASSERT_EQUAL_UINT64(1, count);
+    count = (QSize)INT_MAX + 1;
+    TEST_ASSERT_FALSE(tryAddFormattedCount(&count, 0));
+    TEST_ASSERT_EQUAL_UINT64((QSize)INT_MAX + 1, count);
+}
+
 int main() {
     UNITY_BEGIN();
+    RUN_TEST(testFormattedCountLimits);
 
     RUN_TEST(testBooleanToStr);
     RUN_TEST(testBooleanToLiteral);

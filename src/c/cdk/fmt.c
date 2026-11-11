@@ -12,6 +12,7 @@
 #include <time.h>
 
 #include "fmt.h"
+#include "internal/fmt_count.h"
 #include "type.h"
 #include "util.h"
 
@@ -19,7 +20,7 @@
 #define BOOLEAN_WIDTH 1
 #define GUID_WIDTH 36
 #define BYTE_WIDTH 2
-#define CHAR_WIDTH 1
+#define CHAR_TEXT_WIDTH 1
 #define TIMESTAMP_WIDTH 29
 #define MINUTE_WIDTH 5
 
@@ -62,16 +63,18 @@
         if (nbytes < 0)                                                       \
             return nbytes;                                                    \
                                                                               \
+        if (!tryAddFormattedCount(&result, (QSize)nbytes))                    \
+            return Q_FMT_ERROR_RANGE;                                         \
         bufferPosition += nbytes;                                             \
-        result += nbytes;                                                     \
         size = saturatedSub(size, nbytes);                                    \
                                                                               \
         if (spaced && i != length - 1) {                                      \
             if (size < 1)                                                     \
                 return Q_FMT_ERROR_SIZE;                                      \
+            if (!tryAddFormattedCount(&result, 1))                            \
+                return Q_FMT_ERROR_RANGE;                                     \
             *bufferPosition = ' ';                                            \
             bufferPosition += 1;                                              \
-            result += 1;                                                      \
             size = saturatedSub(size, 1);                                     \
         }                                                                     \
     }
@@ -84,16 +87,18 @@
         if (nbytes < 0)                                                                   \
             return nbytes;                                                                \
                                                                                           \
+        if (!tryAddFormattedCount(&result, (QSize)nbytes))                                \
+            return Q_FMT_ERROR_RANGE;                                                     \
         bufferPosition += nbytes;                                                         \
-        result += nbytes;                                                                 \
         size = saturatedSub(size, nbytes);                                                \
                                                                                           \
         if (spaced && i != length - 1) {                                                  \
             if (size < 1)                                                                 \
                 return Q_FMT_ERROR_SIZE;                                                  \
+            if (!tryAddFormattedCount(&result, 1))                                        \
+                return Q_FMT_ERROR_RANGE;                                                 \
             *bufferPosition = ' ';                                                        \
             bufferPosition += 1;                                                          \
-            result += 1;                                                                  \
             size = saturatedSub(size, 1);                                                 \
         }                                                                                 \
     }
@@ -235,11 +240,11 @@ int qFloatToLiteral(char *buffer, QSize size, QFloat float_, int precision) {
 }
 
 int qCharToStr(char *buffer, QSize size, QChar char_) {
-    WRITE_FIXED(buffer, size, CHAR_WIDTH, "%c", char_);
+    WRITE_FIXED(buffer, size, CHAR_TEXT_WIDTH, "%c", char_);
 }
 
 int qCharToLiteral(char *buffer, QSize size, QChar char_) {
-    WRITE_FIXED(buffer, size, CHAR_WIDTH + 2, "\"%c\"", char_);
+    WRITE_FIXED(buffer, size, CHAR_TEXT_WIDTH + 2, "\"%c\"", char_);
 }
 
 int qSymbolToStr(char *buffer, QSize size, QSymbol symbol) {
@@ -550,55 +555,55 @@ int qBooleanListToStr(char *buffer, QSize size, const QBoolean *booleans, QSize 
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qBooleanToStr, booleans, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qBooleanListToLiteral(char *buffer, QSize size, const QBoolean *booleans, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
 
     if (length > 1) {
         WRITE_LIST(buffer, size, qBooleanToStr, booleans, length - 1, false, result);
-        if (result < 0)
-            return result;
     }
 
     int tailResult = qBooleanToLiteral(buffer + result, size, booleans[length - 1]);
     if (tailResult < 0)
         return tailResult;
 
-    return result + tailResult;
+    if (!tryAddFormattedCount(&result, (QSize)tailResult))
+        return Q_FMT_ERROR_RANGE;
+    return (int)result;
 }
 
 int qGuidListToStr(char *buffer, QSize size, const QGuid *guids, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST_AT(buffer, size, qGuidToStr, guids, length, true, result, ITEM_ADDRESS);
-    return result;
+    return (int)result;
 }
 
 int qGuidListToLiteral(char *buffer, QSize size, const QGuid *guids, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST_AT(buffer, size, qGuidToLiteral, guids, length, true, result, ITEM_ADDRESS);
-    return result;
+    return (int)result;
 }
 
 int qByteListToStr(char *buffer, QSize size, const QByte *bytes, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qByteToStr, bytes, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qByteListToLiteral(char *buffer, QSize size, const QByte *bytes, QSize length) {
@@ -610,42 +615,39 @@ int qByteListToLiteral(char *buffer, QSize size, const QByte *bytes, QSize lengt
         return headResult;
     size = saturatedSub(size, headResult);
 
-    int result = 0;
+    QSize result = (QSize)headResult;
 
     if (length > 1) {
         WRITE_LIST(buffer + headResult, size, qByteToStr, bytes + 1, length - 1, false, result);
-        if (result < 0)
-            return result;
     }
 
-    return headResult + result;
+    return (int)result;
 }
 
 int qShortListToStr(char *buffer, QSize size, const QShort *shorts, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qShortToStr, shorts, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qShortListToLiteral(char *buffer, QSize size, const QShort *shorts, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
 
     if (length > 1) {
         WRITE_LIST(buffer, size, qShortToStr, shorts, length - 1, true, result);
-        if (result < 0)
-            return result;
 
         // Append a space before the final value is appended
         if (size < 1)
             return Q_FMT_ERROR_SIZE;
-        buffer[result] = ' ';
-        result += 1;
+        if (!tryAddFormattedCount(&result, 1))
+            return Q_FMT_ERROR_RANGE;
+        buffer[result - 1] = ' ';
         size = saturatedSub(size, 1);
     }
 
@@ -653,34 +655,35 @@ int qShortListToLiteral(char *buffer, QSize size, const QShort *shorts, QSize le
     if (tailResult < 0)
         return tailResult;
 
-    return result + tailResult;
+    if (!tryAddFormattedCount(&result, (QSize)tailResult))
+        return Q_FMT_ERROR_RANGE;
+    return (int)result;
 }
 
 int qIntListToStr(char *buffer, QSize size, const QInt *ints, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qIntToStr, ints, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qIntListToLiteral(char *buffer, QSize size, const QInt *ints, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
 
     if (length > 1) {
         WRITE_LIST(buffer, size, qIntToStr, ints, length - 1, true, result);
-        if (result < 0)
-            return result;
 
         // Append a space before the final value is appended
         if (size < 1)
             return Q_FMT_ERROR_SIZE;
-        buffer[result] = ' ';
-        result += 1;
+        if (!tryAddFormattedCount(&result, 1))
+            return Q_FMT_ERROR_RANGE;
+        buffer[result - 1] = ' ';
         size = saturatedSub(size, 1);
     }
 
@@ -688,52 +691,53 @@ int qIntListToLiteral(char *buffer, QSize size, const QInt *ints, QSize length) 
     if (tailResult < 0)
         return tailResult;
 
-    return result + tailResult;
+    if (!tryAddFormattedCount(&result, (QSize)tailResult))
+        return Q_FMT_ERROR_RANGE;
+    return (int)result;
 }
 
 int qLongListToStr(char *buffer, QSize size, const QLong *longs, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qLongToStr, longs, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qLongListToLiteral(char *buffer, QSize size, const QLong *longs, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qLongToLiteral, longs, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qRealListToStr(char *buffer, QSize size, const QReal *reals, QSize length, int precision) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_PRECISION_LIST(buffer, size, qRealToStr, reals, length, true, result, precision);
-    return result;
+    return (int)result;
 }
 
 int qRealListToLiteral(char *buffer, QSize size, const QReal *reals, QSize length, int precision) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
 
     if (length > 1) {
         WRITE_PRECISION_LIST(buffer, size, qRealToStr, reals, length - 1, true, result, precision);
-        if (result < 0)
-            return result;
 
         // Append a space before the final value is appended
         if (size < 1)
             return Q_FMT_ERROR_SIZE;
-        buffer[result] = ' ';
-        result += 1;
+        if (!tryAddFormattedCount(&result, 1))
+            return Q_FMT_ERROR_RANGE;
+        buffer[result - 1] = ' ';
         size = saturatedSub(size, 1);
     }
 
@@ -741,16 +745,18 @@ int qRealListToLiteral(char *buffer, QSize size, const QReal *reals, QSize lengt
     if (tailResult < 0)
         return tailResult;
 
-    return result + tailResult;
+    if (!tryAddFormattedCount(&result, (QSize)tailResult))
+        return Q_FMT_ERROR_RANGE;
+    return (int)result;
 }
 
 int qFloatListToStr(char *buffer, QSize size, const QFloat *floats, QSize length, int precision) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_PRECISION_LIST(buffer, size, qFloatToStr, floats, length, true, result, precision);
-    return result;
+    return (int)result;
 }
 
 int qFloatListToLiteral(
@@ -759,18 +765,18 @@ int qFloatListToLiteral(
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_PRECISION_LIST(buffer, size, qFloatToLiteral, floats, length, true, result, precision);
-    return result;
+    return (int)result;
 }
 
 int qCharListToStr(char *buffer, QSize size, const QChar *chars, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qCharToStr, chars, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qCharListToLiteral(char *buffer, QSize size, const QChar *chars, QSize length) {
@@ -783,81 +789,80 @@ int qCharListToLiteral(char *buffer, QSize size, const QChar *chars, QSize lengt
         return headResult;
     size = saturatedSub(size, headResult);
 
-    // Characters
-    int result = 0;
+    // Characters (the count includes the opening quote)
+    QSize result = (QSize)headResult;
     WRITE_LIST(buffer + headResult, size, qCharToStr, chars, length, false, result);
-    if (result < 0)
-        return result;
 
     // Closing quote
-    int tailResult = qCharToStr(buffer + headResult + result, size, '"');
+    int tailResult = qCharToStr(buffer + result, size, '"');
     if (tailResult < 0)
         return tailResult;
 
-    return headResult + result + tailResult;
+    if (!tryAddFormattedCount(&result, (QSize)tailResult))
+        return Q_FMT_ERROR_RANGE;
+    return (int)result;
 }
 
 int qSymbolListToStr(char *buffer, QSize size, const QSymbol *symbols, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qSymbolToStr, symbols, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qSymbolListToLiteral(char *buffer, QSize size, const QSymbol *symbols, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qSymbolToLiteral, symbols, length, false, result);
-    return result;
+    return (int)result;
 }
 
 int qTimestampListToStr(char *buffer, QSize size, const QTimestamp *timestamps, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qTimestampToStr, timestamps, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qTimestampListToLiteral(char *buffer, QSize size, const QTimestamp *timestamps, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qTimestampToLiteral, timestamps, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qMonthListToStr(char *buffer, QSize size, const QMonth *months, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qMonthToStr, months, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qMonthListToLiteral(char *buffer, QSize size, const QMonth *months, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
 
     if (length > 1) {
         WRITE_LIST(buffer, size, qMonthToStr, months, length - 1, true, result);
-        if (result < 0)
-            return result;
 
         // Append a space before the final value is appended
         if (size < 1)
             return Q_FMT_ERROR_SIZE;
-        buffer[result] = ' ';
-        result += 1;
+        if (!tryAddFormattedCount(&result, 1))
+            return Q_FMT_ERROR_RANGE;
+        buffer[result - 1] = ' ';
         size = saturatedSub(size, 1);
     }
 
@@ -865,115 +870,117 @@ int qMonthListToLiteral(char *buffer, QSize size, const QMonth *months, QSize le
     if (tailResult < 0)
         return tailResult;
 
-    return result + tailResult;
+    if (!tryAddFormattedCount(&result, (QSize)tailResult))
+        return Q_FMT_ERROR_RANGE;
+    return (int)result;
 }
 
 int qDateListToStr(char *buffer, QSize size, const QDate *dates, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qDateToStr, dates, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qDateListToLiteral(char *buffer, QSize size, const QDate *dates, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qDateToLiteral, dates, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qDatetimeListToStr(char *buffer, QSize size, const QDatetime *datetimes, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qDatetimeToStr, datetimes, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qDatetimeListToLiteral(char *buffer, QSize size, const QDatetime *datetimes, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qDatetimeToLiteral, datetimes, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qTimespanListToStr(char *buffer, QSize size, const QTimespan *timespans, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qTimespanToStr, timespans, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qTimespanListToLiteral(char *buffer, QSize size, const QTimespan *timespans, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qTimespanToLiteral, timespans, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qMinuteListToStr(char *buffer, QSize size, const QMinute *minutes, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qMinuteToStr, minutes, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qMinuteListToLiteral(char *buffer, QSize size, const QMinute *minutes, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qMinuteToLiteral, minutes, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qSecondListToStr(char *buffer, QSize size, const QSecond *seconds, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qSecondToStr, seconds, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qSecondListToLiteral(char *buffer, QSize size, const QSecond *seconds, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qSecondToLiteral, seconds, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qTimeListToStr(char *buffer, QSize size, const QTime *time, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qTimeToStr, time, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qTimeListToLiteral(char *buffer, QSize size, const QTime *time, QSize length) {
     if (length == 0)
         return 0;
 
-    int result = 0;
+    QSize result = 0;
     WRITE_LIST(buffer, size, qTimeToLiteral, time, length, true, result);
-    return result;
+    return (int)result;
 }
 
 int qListToStr(

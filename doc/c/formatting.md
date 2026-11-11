@@ -29,6 +29,11 @@ For example, the int `42` is `42` as a string and `42i` as a literal, while the 
 
 On success, a function returns the number of characters written, not including the terminating null character. The terminating null character is written in every case except an empty list, which writes nothing at all (see [Lists](#lists)).
 
+Successful output counts are limited to `INT_MAX` characters (excluding the terminator),
+even though `QSize` can represent larger buffers. List functions check accumulated
+lengths, including prefixes, separators, and suffixes, and return `Q_FMT_ERROR_RANGE`
+if the count would exceed that limit. Partial output may already have been written.
+
 On failure, it returns one of the negative `QFmtError` values:
 
 | Constant             | Value | Cause                                                          |
@@ -36,7 +41,7 @@ On failure, it returns one of the negative `QFmtError` values:
 | `Q_FMT_ERROR_PRINTF` |  `-1` | The underlying `printf`-family function failed                 |
 | `Q_FMT_ERROR_SIZE`   |  `-2` | `buffer` is `NULL`, or `size` is too small for the whole result |
 | `Q_FMT_ERROR_TYPE`   |  `-3` | The type code is not supported (generic functions only)        |
-| `Q_FMT_ERROR_RANGE`  |  `-4` | Value exceeds the supported range, is a non-finite datetime, or calendar conversion fails |
+| `Q_FMT_ERROR_RANGE`  |  `-4` | Value or accumulated list output length exceeds the supported range, or calendar conversion fails |
 
 Date and timestamp formatting uses UTC. The supported range depends on the platform's
 `time_t` and `gmtime_r`; an atom conversion failure returns `Q_FMT_ERROR_RANGE` without

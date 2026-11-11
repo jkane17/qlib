@@ -2,6 +2,10 @@
 /**
  * @file fmt.h
  * @brief String formatting.
+ *
+ * Successful output counts exclude the terminating null and cannot exceed INT_MAX.
+ * List accumulation beyond that limit returns Q_FMT_ERROR_RANGE; partial output may
+ * already have been written.
  */
 
 #ifndef QLIB_FMT_H
