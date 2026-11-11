@@ -3,9 +3,20 @@
  * @file fmt.h
  * @brief String formatting.
  *
- * Successful output counts exclude the terminating null and cannot exceed INT_MAX.
- * List accumulation beyond that limit returns Q_FMT_ERROR_RANGE; partial output may
- * already have been written.
+ * Buffer sizes are byte capacities, including room for the final null terminator.
+ * Successful output counts exclude that terminator and cannot exceed INT_MAX.
+ * Successful atoms and nonempty lists write a final terminator; empty lists write
+ * nothing. An empty symbol string returns zero but does write a terminator. Embedded
+ * null character data counts toward the result, which can therefore exceed strlen.
+ *
+ * Insufficient capacity returns Q_FMT_ERROR_SIZE, never successful truncation. There
+ * is no sizing-query mode. After an error, output may be partial and need not be
+ * null-terminated; do not read it as a string. List accumulation beyond INT_MAX
+ * returns Q_FMT_ERROR_RANGE. Individual functions may specify stronger guarantees.
+ *
+ * Temporal widths can grow with the year, day count, hour count, or sign. Allow one
+ * additional byte beyond the formatted width for the terminator; see the width
+ * table in doc/c/formatting.md for maximum atom widths.
  *
  * Required null input pointers return Q_FMT_ERROR_ARGUMENT. Nonempty lists require
  * a non-null list pointer; symbol elements must be non-null, terminated strings.

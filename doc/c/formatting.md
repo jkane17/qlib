@@ -28,7 +28,15 @@ For example, the int `42` is `42` as a string and `42i` as a literal, while the 
 
 ### Return Values
 
-On success, a function returns the number of characters written, not including the terminating null character. The terminating null character is written in every case except an empty list, which writes nothing at all (see [Lists](#lists)).
+On success, a function returns the number of bytes written, excluding the final null
+terminator. Atom functions and nonempty list functions write that terminator on
+success. An empty list instead returns `0` and leaves the buffer unchanged (see
+[Lists](#lists)). Formatting an empty symbol as a string also returns `0`, but writes
+`buffer[0] = '\0'`. A null GUID pointer is an argument error, not a successful no-op.
+
+Character data can contain embedded null bytes. Those bytes count toward the return
+value, so `strlen(buffer)` need not equal it. For example, formatting the character
+`'\0'` as a string returns `1` and writes the character followed by the terminator.
 
 Successful output counts are limited to `INT_MAX` characters (excluding the terminator),
 even though `QSize` can represent larger buffers. List functions check accumulated
@@ -61,27 +69,55 @@ the available time-of-day resolution for dates far from the epoch.
 
 `size` is the size of `buffer` in bytes, including space for the terminating null character.
 
-Unlike `snprintf`, the functions do not truncate: if the result does not fit, they return `Q_FMT_ERROR_SIZE`. They also cannot be used to measure the required size (passing a `NULL` buffer is an error). After an error, the contents of the buffer are unspecified; a list function may already have written some of its items, without a terminating null character.
+These functions never report truncated output as success: if the whole result does
+not fit, they return `Q_FMT_ERROR_SIZE`. A failed call can still have modified the
+buffer. In particular, a list may have written earlier items or a separator without
+a final null terminator. Do not use the buffer as a string after an error. Individual
+functions may document stronger guarantees for particular errors.
 
-Many types have a fixed width, which makes the required size easy to work out:
+There is no sizing-query mode: a null output buffer is an error for otherwise valid
+atom or nonempty-list inputs. The empty-list no-op is the exception, not a sizing
+query. When the size is hard to predict, retry with a larger buffer after
+`Q_FMT_ERROR_SIZE`.
 
-| Type      | Width (characters)                     |
-| --------- | -------------------------------------- |
-| boolean   | 1 (string), 2 (literal)                |
-| guid      | 36                                     |
-| byte      | 2 (string), 4 (literal)                |
-| month     | 7 (string), 8 (literal), for four-digit years |
-| date      | 10 for four-digit years                 |
-| minute    | 5                                      |
-| second    | 8                                      |
-| time      | 12 (13 if negative)                    |
-| datetime  | 23 for four-digit years                 |
-| timestamp | 29                                     |
+The following widths exclude the final terminator. **Add one byte** when allocating
+an atom buffer. Maxima cover the underlying numeric ranges, including raw special
+values, where conversion succeeds; date/timestamp platform limits and datetime's
+supported year range still apply.
 
-Month, date, and datetime formatting measures the actual output size. Years with more digits
-or a sign can require additional space; an insufficient buffer returns `Q_FMT_ERROR_SIZE`.
+| Type | Width rule | Maximum string / literal width |
+| ---- | ---------- | ------------------------------ |
+| boolean | Fixed for valid values `0` and `1` | 1 / 2 |
+| guid | Fixed | 36 / 36 |
+| byte | Fixed | 2 / 4 |
+| short | Decimal digits, optional sign; literal adds `h` | 6 / 7 |
+| int | Decimal digits, optional sign; literal adds `i` | 11 / 12 |
+| long | Decimal digits and optional sign; no literal suffix | 20 / 20 |
+| char | One raw byte; literal adds two quotes | 1 / 3 |
+| month | 7 / 8 with a four-digit nonnegative year; larger or negative years may need more | 13 / 14 |
+| date | 10 with a four-digit nonnegative year; larger or negative years may need more | 14 / 14 |
+| datetime | 23 with a four-digit nonnegative year; larger or negative years may need more | 30 / 30 |
+| timestamp | Fixed when conversion succeeds | 29 / 29 |
+| timespan | Variable day count and optional sign | 26 / 26 |
+| minute | At least 5; sign and hours above 99 increase the width | 12 / 12 |
+| second | At least 8; sign and hours above 99 increase the width | 13 / 13 |
+| time | At least 12; sign and hours above 99 increase the width | 14 / 14 |
+| symbol | String byte length; literal adds a backtick | Input-dependent |
+| real / float | Depends on value, precision, and numeric locale; real literal adds `e` | Input-dependent |
 
-A long needs at most 20 characters, and a literal adds at most one suffix character. For lists, allow for each item plus a separating space. When the size is hard to predict (for example, floats or symbols), retry with a larger buffer on `Q_FMT_ERROR_SIZE`.
+Month, date, and datetime formatting measures the actual output size rather than
+assuming a four-digit year. Minute, second, time, and timespan widths also vary with
+the value. For example, `100:00` needs seven bytes including the terminator, and
+`-100:00` needs eight.
+
+For a nonempty list's string form, add the actual string widths of the items,
+`length - 1` separating spaces, and one final terminator. Literal forms have their
+own rules: a byte list needs `2 + 2 * length + 1` bytes (`0x`, hexadecimal digits,
+terminator), while an unescaped character-list literal needs `length + 2 + 1`
+bytes (characters, quotes, terminator). Do not generally sum atom-literal widths:
+list suffixes may appear only once. Check sizing arithmetic for overflow and respect
+the `INT_MAX` output-count limit. Empty lists need no output storage because they
+write nothing.
 
 ### Pointer Requirements
 
@@ -196,7 +232,7 @@ Only the primitive types (`Q_TYPE_BOOLEAN` to `Q_TYPE_TIME`) are supported; any 
 
 The formatting functions write the raw value of each type. They do not currently handle the following, which should be taken into account when the output must match Q or be parsed back by Q:
 
-- **Nulls and infinities are not recognised.** They are written as ordinary values: a long null as `-9223372036854775808` rather than `0N`, a float null as `nan` rather than `0n`, and a float infinity as `inf` rather than `0w`. Temporal special values are not reliably formatted as Q nulls or infinities. Check for [special values](/doc/c/type.md#special-values) before formatting.
+- **Nulls and infinities are not recognised.** They are written as ordinary values: a long null as `-9223372036854775808` rather than `0N`, a float null as `nan` rather than `0n`, and a float infinity as `inf` rather than `0w`. Temporal special values are not formatted as Q nulls or infinities: non-finite datetimes return `Q_FMT_ERROR_RANGE`, and other temporal types format their underlying value where supported. Check for [special values](/doc/c/type.md#special-values) before formatting.
 - **Timespans use the full signed 64-bit raw value range.** For example, `INT64_MIN` (the timespan null sentinel) is formatted as `-106751D23:47:16.854775808`, not as a Q null.
 - **Char literals are not escaped.** A `"` is written as `"""` rather than `"\""`, and backslashes and control characters (such as a newline) are written as they are.
 - **Symbols are not quoted.** A symbol containing a space, such as `a b`, is written as `` `a b ``, which Q parses as two tokens.
