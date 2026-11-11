@@ -36,11 +36,19 @@ On failure, it returns one of the negative `QFmtError` values:
 | `Q_FMT_ERROR_PRINTF` |  `-1` | The underlying `printf`-family function failed                 |
 | `Q_FMT_ERROR_SIZE`   |  `-2` | `buffer` is `NULL`, or `size` is too small for the whole result |
 | `Q_FMT_ERROR_TYPE`   |  `-3` | The type code is not supported (generic functions only)        |
-| `Q_FMT_ERROR_RANGE`  |  `-4` | Date/timestamp conversion exceeds the platform's calendar-time range or fails |
+| `Q_FMT_ERROR_RANGE`  |  `-4` | Value exceeds the supported range, is a non-finite datetime, or calendar conversion fails |
 
 Date and timestamp formatting uses UTC. The supported range depends on the platform's
 `time_t` and `gmtime_r`; an atom conversion failure returns `Q_FMT_ERROR_RANGE` without
 writing to the buffer. List functions propagate this error but may already have written earlier items.
+
+Datetime formatting uses the proleptic Gregorian calendar, independently of `time_t`,
+with years from `INT32_MIN` through `INT32_MAX` (inclusive). NaN, infinities, and values
+outside that range return `Q_FMT_ERROR_RANGE` without writing output. The fractional
+day is rounded to the nearest millisecond, with halfway values rounding toward the
+later time; rounding across midnight advances the date. A rounded result outside the
+supported year range also returns `Q_FMT_ERROR_RANGE`. Floating-point precision limits
+the available time-of-day resolution for dates far from the epoch.
 
 ### Buffer Size
 

@@ -10,7 +10,7 @@
 #include "type.h"
 
 typedef enum : signed int {
-    Q_FMT_ERROR_RANGE = -4, // Value cannot be converted to a calendar time on this platform
+    Q_FMT_ERROR_RANGE = -4, // Value outside the supported range, or calendar conversion failed
     Q_FMT_ERROR_TYPE = -3,   // Invalid/unsupported type
     Q_FMT_ERROR_SIZE = -2,   // Buffer not large enough
     Q_FMT_ERROR_PRINTF = -1, // printf (family) function had an error
@@ -324,6 +324,10 @@ int qDateToLiteral(char *buffer, QSize size, QDate date);
 
 /**
  * @brief Format a datetime value into string form.
+ *
+ * @note Uses the proleptic Gregorian calendar with years INT32_MIN through INT32_MAX.
+ * Rounds to the nearest millisecond; halfway values round toward the later time.
+ * Non-finite or out-of-range values return Q_FMT_ERROR_RANGE without writing output.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -335,6 +339,10 @@ int qDatetimeToStr(char *buffer, QSize size, QDatetime datetime);
 
 /**
  * @brief Format a datetime value into literal form.
+ *
+ * @note Uses the proleptic Gregorian calendar with years INT32_MIN through INT32_MAX.
+ * Rounds to the nearest millisecond; halfway values round toward the later time.
+ * Non-finite or out-of-range values return Q_FMT_ERROR_RANGE without writing output.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).

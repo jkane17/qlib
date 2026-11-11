@@ -116,7 +116,7 @@ static bool tryConvertSecondsToUtcCalendar(int64_t seconds, struct tm *calendar)
     return gmtime_r(&t, calendar) != nullptr;
 }
 
-static bool isLeap(int32_t year) {
+static bool isLeap(int64_t year) {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
 }
 
@@ -303,97 +303,69 @@ int qDateToLiteral(char *buffer, QSize size, QDate date) {
     return qDateToStr(buffer, size, date);
 }
 
+// The Gregorian calendar repeats every 400 years (146097 days). Start each cycle
+// at a year divisible by 400, so conversion needs at most 399 year steps.
+static void splitGregorianDays(int64_t days, int32_t *year, int32_t *month, int32_t *day) {
+    int64_t cycles = days / 146097;
+    days %= 146097;
+    if (days < 0) {
+        days += 146097;
+        cycles--;
+    }
+    int64_t y = 2000 + cycles * 400;
+    while (days >= (isLeap(y) ? 366 : 365)) {
+        days -= isLeap(y) ? 366 : 365;
+        y++;
+    }
+
+    const int monthDays[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int m = 0;
+    while (true) {
+        int length = monthDays[m] + (m == 1 && isLeap(y));
+        if (days < length)
+            break;
+        days -= length;
+        m++;
+    }
+    *year = (int32_t)y;
+    *month = m + 1;
+    *day = (int32_t)days + 1;
+}
+
 int qDatetimeToStr(char *buffer, QSize size, QDatetime datetime) {
-    int64_t days = (int64_t)floor(datetime);
-    double frac = datetime - days;
-    int32_t year = 2000;
+    // Days since 2000-01-01 spanning years INT32_MIN through INT32_MAX.
+    const int64_t firstDay = -784353026790LL; // INT32_MIN-01-01
+    const int64_t endDay = 784351565820LL;    // (INT32_MAX + 1)-01-01, exclusive
+    const int64_t msPerDay = (int64_t)SECS_PER_DAY * MS_PER_SEC;
+    if (!isfinite(datetime) || datetime < firstDay || datetime >= endDay)
+        return Q_FMT_ERROR_RANGE;
 
-    if (days >= 0) {
-        while (true) {
-            int32_t dy = isLeap(year) ? 366 : 365;
-            if (days >= dy) {
-                days -= dy;
-                year++;
-            } else {
-                break;
-            }
-        }
-    } else {
-        while (days < 0) {
-            year--;
-            days += isLeap(year) ? 366 : 365;
-        }
-    }
-
-    int32_t mdays[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    if (isLeap(year)) {
-        mdays[1] = 29;
-    }
-
-    int32_t month = 0;
-    while (days >= mdays[month]) {
-        days -= mdays[month];
-        month++;
-    }
-
-    int32_t day = (int32_t)days + 1;
-
-    double total_seconds = frac * SECS_PER_DAY;
-
-    int32_t hour = (int32_t)(total_seconds / SECS_PER_HOUR);
-    total_seconds -= hour * SECS_PER_HOUR;
-
-    int32_t minute = (int32_t)(total_seconds / SECS_PER_MIN);
-    total_seconds -= minute * SECS_PER_MIN;
-
-    int32_t second = (int32_t)total_seconds;
-    double rem = total_seconds - second;
-
-    int32_t millis = (int32_t)round(rem * 1000.0);
-
-    if (millis == 1000) {
+    double wholeDays = floor(datetime);
+    int64_t days = (int64_t)wholeDays;
+    int64_t millis = (int64_t)round((datetime - wholeDays) * msPerDay);
+    if (millis == msPerDay) {
         millis = 0;
-        second++;
-
-        if (second == 60) {
-            second = 0;
-            minute++;
-
-            if (minute == 60) {
-                minute = 0;
-                hour++;
-
-                if (hour == 24) {
-                    hour = 0;
-                    day++;
-
-                    if (day > mdays[month]) {
-                        day = 1;
-                        month++;
-
-                        if (month == 12) {
-                            month = 0;
-                            year++;
-
-                            mdays[1] = isLeap(year) ? 29 : 28;
-                        }
-                    }
-                }
-            }
-        }
+        days++;
+        if (days == endDay)
+            return Q_FMT_ERROR_RANGE;
     }
 
+    int32_t year, month, day;
+    splitGregorianDays(days, &year, &month, &day);
+    int64_t hours, mins, secs, ms;
+    splitHMSMS(millis, &hours, &mins, &secs, &ms);
     WRITE_DYNAMIC(
         buffer,
         size,
-        "%04d.%02d.%02dT%02d:%02d:%02d.%03d",
+        "%04" PRId32 ".%02" PRId32 ".%02" PRId32 "T%02" PRId64 ":%02" PRId64 ":%02" PRId64
+        ".%03" PRId64,
         year,
-        month + 1,
+        month,
         day,
-        hour,
-        minute,
-        second,
-        millis
+        hours,
+        mins,
+        secs,
+        ms
     );
 }
 

@@ -4,6 +4,8 @@
  * @brief Unit tests for fmt.h and fmt.c.
  */
 
+#include <float.h>
+#include <math.h>
 #include <string.h>
 
 #include "fmt.h"
@@ -814,6 +816,71 @@ void testDatetimeToLiteral() {
 
     result = qDatetimeToLiteral(buffer, 0, datetime);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+}
+
+void testDatetimeInvalidRange() {
+    const QDatetime values[] = {
+        NAN,
+        INFINITY,
+        -INFINITY,
+        DBL_MAX,
+        -DBL_MAX,
+        784351565820.0,
+        nextafter(-784353026790.0, -INFINITY),
+    };
+    for (QSize i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
+        strcpy(buffer, "unchanged");
+        TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_RANGE, qDatetimeToStr(buffer, SIZE, values[i]));
+        TEST_ASSERT_EQUAL_STRING("unchanged", buffer);
+        TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_RANGE, qDatetimeToLiteral(buffer, SIZE, values[i]));
+        TEST_ASSERT_EQUAL_STRING("unchanged", buffer);
+        const QDatetime list[] = {0, values[i]};
+        TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_RANGE, qDatetimeListToStr(buffer, SIZE, list, 2));
+        TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_RANGE, qDatetimeListToLiteral(buffer, SIZE, list, 2));
+    }
+}
+
+void testDatetimeCalendarAndRounding() {
+    const double msPerDay = 86400000.0;
+    const struct {
+        QDatetime value;
+        const char *expected;
+    } cases[] = {
+        {-784353026790.0, "-2147483648.01.01T00:00:00.000"},
+        {784351565819.0, "2147483647.12.31T00:00:00.000"},
+        {-784353026790.0 + 0.5, "-2147483648.01.01T12:00:00.000"},
+        {0.0, "2000.01.01T00:00:00.000"},
+        {-0.0, "2000.01.01T00:00:00.000"},
+        {0.0004 / 86400.0, "2000.01.01T00:00:00.000"},
+        {0.0006 / 86400.0, "2000.01.01T00:00:00.001"},
+        {-0.0004 / 86400.0, "2000.01.01T00:00:00.000"},
+        {-0.0006 / 86400.0, "1999.12.31T23:59:59.999"},
+        {0.5 / msPerDay, "2000.01.01T00:00:00.001"},
+        {59999.6 / msPerDay, "2000.01.01T00:01:00.000"},
+        {3599999.6 / msPerDay, "2000.01.01T01:00:00.000"},
+        {1.0 - 0.4 / msPerDay, "2000.01.02T00:00:00.000"},
+        {31.0 - 0.4 / msPerDay, "2000.02.01T00:00:00.000"},
+        {59.0 - 0.4 / msPerDay, "2000.02.29T00:00:00.000"},
+        {60.0 - 0.4 / msPerDay, "2000.03.01T00:00:00.000"},
+        {366.0 - 0.4 / msPerDay, "2001.01.01T00:00:00.000"},
+        {-36466.0, "1900.02.28T00:00:00.000"},
+        {-36465.0, "1900.03.01T00:00:00.000"},
+        {36583.0, "2100.02.28T00:00:00.000"},
+        {36584.0, "2100.03.01T00:00:00.000"},
+        {146156.0, "2400.02.29T00:00:00.000"},
+    };
+    for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        QSize required = strlen(cases[i].expected) + 1;
+        int result = qDatetimeToStr(buffer, required, cases[i].value);
+        TEST_ASSERT_EQUAL_INT(required - 1, result);
+        TEST_ASSERT_EQUAL_STRING(cases[i].expected, buffer);
+        result = qDatetimeToLiteral(buffer, required, cases[i].value);
+        TEST_ASSERT_EQUAL_INT(required - 1, result);
+        TEST_ASSERT_EQUAL_STRING(cases[i].expected, buffer);
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_SIZE, qDatetimeToStr(buffer, required - 1, cases[i].value)
+        );
+    }
 }
 
 void testTimespanToStr() {
@@ -1914,6 +1981,8 @@ int main() {
     RUN_TEST(testDateToLiteral);
     RUN_TEST(testDatetimeToStr);
     RUN_TEST(testDatetimeToLiteral);
+    RUN_TEST(testDatetimeInvalidRange);
+    RUN_TEST(testDatetimeCalendarAndRounding);
     RUN_TEST(testYearFormattingBufferBounds);
     RUN_TEST(testDateArithmeticBoundaries);
     RUN_TEST(testTimestampRangeAndNegativeFraction);
