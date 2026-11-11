@@ -146,11 +146,37 @@ int qLongToStr(char *buffer, QSize size, QLong long_);
 int qLongToLiteral(char *buffer, QSize size, QLong long_);
 ```
 
-The real and float functions take an additional `precision`, the number of decimal places written (only the first 6 are accurate for a real):
+The real and float functions take an additional `precision`, the number of fractional digits to write for finite values:
 
 ```c
 int qFloatToStr(char *buffer, QSize size, QFloat float_, int precision);
 ```
+
+`precision` must be between `0` and `Q_FMT_MAX_PRECISION` (`1074`), inclusive.
+Negative values do not request the `printf` default precision: they return
+`Q_FMT_ERROR_RANGE`, as do values above the limit, before any output is written.
+The same rule applies to nonempty real/float lists and generic dispatch, including
+when a value is NaN or infinity. Empty lists remain no-ops regardless of precision;
+generic functions ignore precision for other types.
+
+The limit allows the complete fractional decimal expansion of an IEEE binary64
+value while bounding formatting work per value. It is an output-formatting limit,
+not a claim about numeric accuracy. A buffer must still accommodate the integer
+part, decimal point, requested fractional digits, sign, any literal suffix, and
+final terminator. NaN and infinity retain the underlying `printf` spelling rather
+than receiving fractional digits.
+
+Fractional digits and significant digits are different. `QReal` uses C `float`,
+whose decimal precision is `FLT_DIG` (typically 6 significant digits); `QFloat`
+uses C `double`, with `DBL_DIG` (typically 15). These describe decimal precision
+of the stored value, not a guaranteed number of accurate places after the decimal
+point. More output digits may reveal the binary approximation or add trailing zeros;
+they do not restore information lost when the value was stored.
+
+Formatting uses `printf` rounding and the current numeric locale. For example,
+`1.25` with precision `4` becomes `1.2500`, while precision `0` omits the decimal
+point and fractional digits. The real literal still adds `e`; float literals at
+precision `0` can lose their Q type (see [Limitations](#limitations)).
 
 The guid functions take a `const QGuid *`.
 

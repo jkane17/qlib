@@ -224,14 +224,20 @@ int qLongToLiteral(char *buffer, QSize size, QLong long_) {
 }
 
 int qRealToStr(char *buffer, QSize size, QReal real, int precision) {
+    if (precision < 0 || precision > Q_FMT_MAX_PRECISION)
+        return Q_FMT_ERROR_RANGE;
     WRITE_DYNAMIC(buffer, size, "%.*f", precision, (QFloat)real);
 }
 
 int qRealToLiteral(char *buffer, QSize size, QReal real, int precision) {
+    if (precision < 0 || precision > Q_FMT_MAX_PRECISION)
+        return Q_FMT_ERROR_RANGE;
     WRITE_DYNAMIC(buffer, size, "%.*fe", precision, (QFloat)real);
 }
 
 int qFloatToStr(char *buffer, QSize size, QFloat float_, int precision) {
+    if (precision < 0 || precision > Q_FMT_MAX_PRECISION)
+        return Q_FMT_ERROR_RANGE;
     WRITE_DYNAMIC(buffer, size, "%.*f", precision, float_);
 }
 

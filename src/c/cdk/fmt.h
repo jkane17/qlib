@@ -14,6 +14,12 @@
  * null-terminated; do not read it as a string. List accumulation beyond INT_MAX
  * returns Q_FMT_ERROR_RANGE. Individual functions may specify stronger guarantees.
  *
+ * Real/float precision selects fractional digits, not significant digits. The
+ * underlying QReal and QFloat types have FLT_DIG and DBL_DIG decimal precision
+ * (typically 6 and 15 significant digits). More output digits do not add accuracy.
+ * Invalid precision returns Q_FMT_ERROR_RANGE before formatting; empty lists still
+ * return zero without inspecting precision.
+ *
  * Temporal widths can grow with the year, day count, hour count, or sign. Allow one
  * additional byte beyond the formatted width for the terminator; see the width
  * table in doc/c/formatting.md for maximum atom widths.
@@ -32,6 +38,10 @@
 #define QLIB_FMT_H
 
 #include "type.h"
+
+// Maximum fractional digits accepted by real/float formatting (inclusive).
+// This covers the complete fractional expansion of an IEEE binary64 value.
+#define Q_FMT_MAX_PRECISION 1074
 
 typedef enum : signed int {
     Q_FMT_ERROR_ARGUMENT = -5, // Required input pointer is null
@@ -183,7 +193,8 @@ int qLongToLiteral(char *buffer, QSize size, QLong long_);
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
  * @param real The real value to format.
- * @param precision Number of decimal places shown (only first 6 are guaranteed to be accurate).
+ * @param precision Fractional digits, from 0 through Q_FMT_MAX_PRECISION.
+ * Out-of-range precision returns Q_FMT_ERROR_RANGE.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -195,7 +206,8 @@ int qRealToStr(char *buffer, QSize size, QReal real, int precision);
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
  * @param real The real value to format.
- * @param precision Number of decimal places shown (only first 6 are guaranteed to be accurate).
+ * @param precision Fractional digits, from 0 through Q_FMT_MAX_PRECISION.
+ * Out-of-range precision returns Q_FMT_ERROR_RANGE.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -207,7 +219,8 @@ int qRealToLiteral(char *buffer, QSize size, QReal real, int precision);
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
  * @param float_ The float value to format.
- * @param precision Number of decimal places shown (only first 15 are guaranteed to be accurate).
+ * @param precision Fractional digits, from 0 through Q_FMT_MAX_PRECISION.
+ * Out-of-range precision returns Q_FMT_ERROR_RANGE.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -219,7 +232,8 @@ int qFloatToStr(char *buffer, QSize size, QFloat float_, int precision);
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
  * @param float_ The float value to format.
- * @param precision Number of decimal places shown (only first 15 are guaranteed to be accurate).
+ * @param precision Fractional digits, from 0 through Q_FMT_MAX_PRECISION.
+ * Out-of-range precision returns Q_FMT_ERROR_RANGE.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -497,7 +511,8 @@ int qTimeToLiteral(char *buffer, QSize size, QTime time);
  * @param atom Address of the atom value, except symbols: pass the string pointer itself
  * (symbol), not its address (&symbol). Must not be null.
  * @param type Atom type code.
- * @param precision Number of decimal places shown for real and float values.
+ * @param precision Fractional digits, from 0 through Q_FMT_MAX_PRECISION, for real/float
+ * values; ignored for other types and empty lists.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -511,7 +526,8 @@ int qAtomToStr(char *buffer, QSize size, const void *atom, QTypeCode type, int p
  * @param atom Address of the atom value, except symbols: pass the string pointer itself
  * (symbol), not its address (&symbol). Must not be null.
  * @param type Atom type code.
- * @param precision Number of decimal places shown for real and float values.
+ * @param precision Fractional digits, from 0 through Q_FMT_MAX_PRECISION, for real/float
+ * values; ignored for other types and empty lists.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -669,7 +685,8 @@ int qLongListToLiteral(char *buffer, QSize size, const QLong *longs, QSize lengt
  * @param size Size of buffer (number of bytes).
  * @param reals The list of real values to format.
  * @param length Length of the real list.
- * @param precision Number of decimal places shown (only first 6 are guaranteed to be accurate).
+ * @param precision Fractional digits, from 0 through Q_FMT_MAX_PRECISION.
+ * Out-of-range precision returns Q_FMT_ERROR_RANGE.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -682,7 +699,8 @@ int qRealListToStr(char *buffer, QSize size, const QReal *reals, QSize length, i
  * @param size Size of buffer (number of bytes).
  * @param reals The list of real values to format.
  * @param length Length of the real list.
- * @param precision Number of decimal places shown (only first 6 are guaranteed to be accurate).
+ * @param precision Fractional digits, from 0 through Q_FMT_MAX_PRECISION.
+ * Out-of-range precision returns Q_FMT_ERROR_RANGE.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -695,7 +713,8 @@ int qRealListToLiteral(char *buffer, QSize size, const QReal *reals, QSize lengt
  * @param size Size of buffer (number of bytes).
  * @param floats The list of float values to format.
  * @param length Length of the float list.
- * @param precision Number of decimal places shown (only first 6 are guaranteed to be accurate).
+ * @param precision Fractional digits, from 0 through Q_FMT_MAX_PRECISION.
+ * Out-of-range precision returns Q_FMT_ERROR_RANGE.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -708,7 +727,8 @@ int qFloatListToStr(char *buffer, QSize size, const QFloat *floats, QSize length
  * @param size Size of buffer (number of bytes).
  * @param floats The list of float values to format.
  * @param length Length of the float list.
- * @param precision Number of decimal places shown (only first 6 are guaranteed to be accurate).
+ * @param precision Fractional digits, from 0 through Q_FMT_MAX_PRECISION.
+ * Out-of-range precision returns Q_FMT_ERROR_RANGE.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -968,7 +988,8 @@ int qTimeListToLiteral(char *buffer, QSize size, const QTime *time, QSize length
  * @param list The list to format.
  * @param length Length of the list.
  * @param type List type code.
- * @param precision Number of decimal places shown for real and float values.
+ * @param precision Fractional digits, from 0 through Q_FMT_MAX_PRECISION, for real/float
+ * values; ignored for other types and empty lists.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -989,7 +1010,8 @@ int qListToStr(
  * @param list The list to format.
  * @param length Length of the list.
  * @param type List type code.
- * @param precision Number of decimal places shown for real and float values.
+ * @param precision Fractional digits, from 0 through Q_FMT_MAX_PRECISION, for real/float
+ * values; ignored for other types and empty lists.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
