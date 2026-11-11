@@ -6,6 +6,15 @@
  * Successful output counts exclude the terminating null and cannot exceed INT_MAX.
  * List accumulation beyond that limit returns Q_FMT_ERROR_RANGE; partial output may
  * already have been written.
+ *
+ * Required null input pointers return Q_FMT_ERROR_ARGUMENT. Nonempty lists require
+ * a non-null list pointer; symbol elements must be non-null, terminated strings.
+ * Empty lists return zero without writing, even with null input/output pointers.
+ * A null output buffer otherwise returns Q_FMT_ERROR_SIZE for valid inputs.
+ * Callers must supply valid, correctly aligned input storage of the declared type
+ * and length, and writable output storage of at least size bytes. Input and output
+ * must not overlap. Dangling pointers, insufficient storage, and misalignment are
+ * caller errors and are not detected.
  */
 
 #ifndef QLIB_FMT_H
@@ -14,6 +23,7 @@
 #include "type.h"
 
 typedef enum : signed int {
+    Q_FMT_ERROR_ARGUMENT = -5, // Required input pointer is null
     Q_FMT_ERROR_RANGE = -4, // Value outside the supported range, or calendar conversion failed
     Q_FMT_ERROR_TYPE = -3,   // Invalid/unsupported type
     Q_FMT_ERROR_SIZE = -2,   // Buffer not large enough
@@ -51,7 +61,7 @@ int qBooleanToLiteral(char *buffer, QSize size, QBoolean boolean);
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
- * @param guid A pointer to the guid value to format.
+ * @param guid A non-null pointer to the guid value to format.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -62,7 +72,7 @@ int qGuidToStr(char *buffer, QSize size, const QGuid *guid);
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
- * @param guid A pointer to the guid value to format.
+ * @param guid A non-null pointer to the guid value to format.
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -231,7 +241,7 @@ int qCharToLiteral(char *buffer, QSize size, QChar char_);
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
- * @param symbol The symbol value to format.
+ * @param symbol A non-null, null-terminated symbol string (an empty string is valid).
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -242,7 +252,7 @@ int qSymbolToStr(char *buffer, QSize size, QSymbol symbol);
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
- * @param symbol The symbol value to format.
+ * @param symbol A non-null, null-terminated symbol string (an empty string is valid).
  * @return The number of characters written to the buffer (not including the terminating null 
  * character), or a negative value if an error occurred (see QFmtError).
  */
@@ -473,7 +483,8 @@ int qTimeToLiteral(char *buffer, QSize size, QTime time);
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
- * @param atom The atom value to format.
+ * @param atom Address of the atom value, except symbols: pass the string pointer itself
+ * (symbol), not its address (&symbol). Must not be null.
  * @param type Atom type code.
  * @param precision Number of decimal places shown for real and float values.
  * @return The number of characters written to the buffer (not including the terminating null 
@@ -486,7 +497,8 @@ int qAtomToStr(char *buffer, QSize size, const void *atom, QTypeCode type, int p
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
- * @param atom The atom value to format.
+ * @param atom Address of the atom value, except symbols: pass the string pointer itself
+ * (symbol), not its address (&symbol). Must not be null.
  * @param type Atom type code.
  * @param precision Number of decimal places shown for real and float values.
  * @return The number of characters written to the buffer (not including the terminating null 

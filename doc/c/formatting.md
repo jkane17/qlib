@@ -8,6 +8,7 @@ This document describes the formatting functions from [`fmt.h`](/src/c/cdk/fmt.h
     - [String and Literal Forms](#string-and-literal-forms)
     - [Return Values](#return-values)
     - [Buffer Size](#buffer-size)
+    - [Pointer Requirements](#pointer-requirements)
 - [Atoms](#atoms)
 - [Lists](#lists)
 - [Generic Functions](#generic-functions)
@@ -42,6 +43,7 @@ On failure, it returns one of the negative `QFmtError` values:
 | `Q_FMT_ERROR_SIZE`   |  `-2` | `buffer` is `NULL`, or `size` is too small for the whole result |
 | `Q_FMT_ERROR_TYPE`   |  `-3` | The type code is not supported (generic functions only)        |
 | `Q_FMT_ERROR_RANGE`  |  `-4` | Value or accumulated list output length exceeds the supported range, or calendar conversion fails |
+| `Q_FMT_ERROR_ARGUMENT` | `-5` | A required input pointer is null |
 
 Date and timestamp formatting uses UTC. The supported range depends on the platform's
 `time_t` and `gmtime_r`; an atom conversion failure returns `Q_FMT_ERROR_RANGE` without
@@ -80,6 +82,24 @@ Month, date, and datetime formatting measures the actual output size. Years with
 or a sign can require additional space; an insufficient buffer returns `Q_FMT_ERROR_SIZE`.
 
 A long needs at most 20 characters, and a literal adds at most one suffix character. For lists, allow for each item plus a separating space. When the size is hard to predict (for example, floats or symbols), retry with a larger buffer on `Q_FMT_ERROR_SIZE`.
+
+### Pointer Requirements
+
+Required input pointers must not be null. A null GUID, symbol string, generic atom,
+or nonempty list pointer returns `Q_FMT_ERROR_ARGUMENT`. A null string inside a
+symbol list also returns this error when reached; earlier items may already have
+been written. An empty symbol (`""`) is valid and distinct from a null pointer.
+
+An empty list returns `0` and writes nothing, even when its input and output pointers
+are null. For nonempty output with valid inputs, a null output buffer continues to
+return `Q_FMT_ERROR_SIZE`. Generic functions check the type first: unsupported type
+codes return `Q_FMT_ERROR_TYPE`, including for null inputs or empty lists.
+
+Callers must provide live, correctly aligned input storage matching the declared
+type and list length, null-terminated symbol strings, and writable output storage
+of at least `size` bytes. Input and output storage must not overlap. Dangling
+pointers, insufficient storage, misalignment, and overlap are caller errors; these
+functions cannot reliably detect them.
 
 ## Atoms
 
@@ -157,8 +177,18 @@ int qListToLiteral(char *buffer, QSize size, const void *list, QSize length, QTy
 ```
 
 - `type` is the positive type code of the value (e.g. `Q_TYPE_LONG` for both a long atom and a long list).
-- `atom` points to the atom value (e.g. a `QLong *`), and `list` to the first item of the list.
+- `atom` points to the atom value (e.g. a `QLong *`), **except for symbols**, where it is the string pointer itself. Pass `symbol`, not `&symbol`.
+- `list` points to the first item. A symbol list is an array of string pointers (`QSymbol[]`).
 - `precision` is used for real and float values and ignored otherwise.
+
+For example, the generic atom calls use different pointer levels for a long and a symbol:
+
+```c
+QLong value = 42;
+QSymbol symbol = "abc";
+qAtomToStr(buffer, sizeof(buffer), &value, Q_TYPE_LONG, 0);
+qAtomToStr(buffer, sizeof(buffer), symbol, Q_TYPE_SYMBOL, 0);
+```
 
 Only the primitive types (`Q_TYPE_BOOLEAN` to `Q_TYPE_TIME`) are supported; any other type code (including `Q_TYPE_MIXED`, tables, and dictionaries) returns `Q_FMT_ERROR_TYPE`.
 

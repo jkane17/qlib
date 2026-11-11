@@ -28,6 +28,14 @@ char buffer[SIZE];
                                                             \
     result = func(buffer, SIZE, list, 0);                   \
     TEST_ASSERT_EQUAL_INT(0, result);                       \
+    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);            \
+    result = func(buffer, SIZE, nullptr, length);           \
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, result);    \
+    result = func(buffer, SIZE, nullptr, 0);                \
+    TEST_ASSERT_EQUAL_INT(0, result);                       \
+    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);            \
+    result = func(nullptr, 0, nullptr, 0);                  \
+    TEST_ASSERT_EQUAL_INT(0, result);                       \
                                                             \
     result = func(nullptr, SIZE, list, 3);                  \
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);        \
@@ -45,6 +53,14 @@ char buffer[SIZE];
     TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                \
                                                                                 \
     result = func(buffer, SIZE, list, 0, precision);                            \
+    TEST_ASSERT_EQUAL_INT(0, result);                                           \
+    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                \
+    result = func(buffer, SIZE, nullptr, length, precision);                    \
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, result);                        \
+    result = func(buffer, SIZE, nullptr, 0, precision);                         \
+    TEST_ASSERT_EQUAL_INT(0, result);                                           \
+    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                \
+    result = func(nullptr, 0, nullptr, 0, precision);                           \
     TEST_ASSERT_EQUAL_INT(0, result);                                           \
                                                                                 \
     result = func(nullptr, SIZE, list, 3, precision);                           \
@@ -176,7 +192,7 @@ void testGuidToStr() {
     TEST_ASSERT_EQUAL_STRING("12345678-9abc-def0-1122-334455667788", buffer);
 
     result = qGuidToStr(buffer, SIZE, nullptr);
-    TEST_ASSERT_EQUAL_INT(0, result);
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, result);
 
     result = qGuidToStr(nullptr, SIZE, &guid);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
@@ -212,7 +228,7 @@ void testGuidToLiteral() {
     TEST_ASSERT_EQUAL_STRING("12345678-9abc-def0-1122-334455667788", buffer);
 
     result = qGuidToLiteral(buffer, SIZE, nullptr);
-    TEST_ASSERT_EQUAL_INT(0, result);
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, result);
 
     result = qGuidToLiteral(nullptr, SIZE, &guid);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
@@ -1974,8 +1990,89 @@ void testFormattedCountLimits() {
     TEST_ASSERT_EQUAL_UINT64((QSize)INT_MAX + 1, count);
 }
 
+void testGenericNullInputs() {
+    const QTypeCode types[] = {
+        Q_TYPE_BOOLEAN,
+        Q_TYPE_GUID,
+        Q_TYPE_BYTE,
+        Q_TYPE_SHORT,
+        Q_TYPE_INT,
+        Q_TYPE_LONG,
+        Q_TYPE_REAL,
+        Q_TYPE_FLOAT,
+        Q_TYPE_CHAR,
+        Q_TYPE_SYMBOL,
+        Q_TYPE_TIMESTAMP,
+        Q_TYPE_MONTH,
+        Q_TYPE_DATE,
+        Q_TYPE_DATETIME,
+        Q_TYPE_TIMESPAN,
+        Q_TYPE_MINUTE,
+        Q_TYPE_SECOND,
+        Q_TYPE_TIME,
+    };
+    for (QSize i = 0; i < sizeof(types) / sizeof(types[0]); i++) {
+        strcpy(buffer, "unchanged");
+        TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, qAtomToStr(buffer, SIZE, nullptr, types[i], 2));
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_ARGUMENT, qAtomToLiteral(buffer, SIZE, nullptr, types[i], 2)
+        );
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_ARGUMENT, qListToStr(buffer, SIZE, nullptr, 1, types[i], 2)
+        );
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_ARGUMENT, qListToLiteral(buffer, SIZE, nullptr, 1, types[i], 2)
+        );
+        TEST_ASSERT_EQUAL_INT(0, qListToStr(buffer, SIZE, nullptr, 0, types[i], 2));
+        TEST_ASSERT_EQUAL_INT(0, qListToLiteral(buffer, SIZE, nullptr, 0, types[i], 2));
+        TEST_ASSERT_EQUAL_STRING("unchanged", buffer);
+        TEST_ASSERT_EQUAL_INT(0, qListToStr(nullptr, 0, nullptr, 0, types[i], 2));
+        TEST_ASSERT_EQUAL_INT(0, qListToLiteral(nullptr, 0, nullptr, 0, types[i], 2));
+    }
+
+    const QTypeCode unsupported[] = {Q_TYPE_MIXED, 3, 20, -Q_TYPE_LONG, Q_TYPE_TABLE};
+    for (QSize i = 0; i < sizeof(unsupported) / sizeof(unsupported[0]); i++) {
+        TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_TYPE, qAtomToStr(nullptr, 0, nullptr, unsupported[i], 0));
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_TYPE, qAtomToLiteral(nullptr, 0, nullptr, unsupported[i], 0)
+        );
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_TYPE, qListToStr(nullptr, 0, nullptr, 0, unsupported[i], 0)
+        );
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_TYPE, qListToLiteral(nullptr, 0, nullptr, 0, unsupported[i], 0)
+        );
+    }
+}
+
+void testNullSymbolInputs() {
+    strcpy(buffer, "unchanged");
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, qSymbolToStr(buffer, SIZE, nullptr));
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, qSymbolToLiteral(buffer, SIZE, nullptr));
+    TEST_ASSERT_EQUAL_STRING("unchanged", buffer);
+    const QSymbol symbols[] = {"valid", nullptr};
+    for (QSize start = 0; start < 2; start++) {
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_ARGUMENT, qSymbolListToStr(buffer, SIZE, symbols + start, 2 - start)
+        );
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_ARGUMENT, qSymbolListToLiteral(buffer, SIZE, symbols + start, 2 - start)
+        );
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_ARGUMENT,
+            qListToStr(buffer, SIZE, symbols + start, 2 - start, Q_TYPE_SYMBOL, 0)
+        );
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_ARGUMENT,
+            qListToLiteral(buffer, SIZE, symbols + start, 2 - start, Q_TYPE_SYMBOL, 0)
+        );
+    }
+}
+
 int main() {
     UNITY_BEGIN();
+    RUN_TEST(testGenericNullInputs);
+    RUN_TEST(testNullSymbolInputs);
     RUN_TEST(testFormattedCountLimits);
 
     RUN_TEST(testBooleanToStr);

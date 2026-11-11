@@ -170,7 +170,7 @@ int qGuidToStr(char *buffer, QSize size, const QGuid *guid) {
     static const char hex[] = "0123456789abcdef";
 
     if (guid == nullptr)
-        return 0; // Nothing to write
+        return Q_FMT_ERROR_ARGUMENT;
     if (buffer == nullptr || size < GUID_WIDTH + 1)
         return Q_FMT_ERROR_SIZE;
 
@@ -248,10 +248,14 @@ int qCharToLiteral(char *buffer, QSize size, QChar char_) {
 }
 
 int qSymbolToStr(char *buffer, QSize size, QSymbol symbol) {
+    if (symbol == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
     WRITE_DYNAMIC(buffer, size, "%s", symbol);
 }
 
 int qSymbolToLiteral(char *buffer, QSize size, QSymbol symbol) {
+    if (symbol == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
     WRITE_DYNAMIC(buffer, size, "`%s", symbol);
 }
 
@@ -463,7 +467,17 @@ int qTimeToLiteral(char *buffer, QSize size, QTime time) {
     return qTimeToStr(buffer, size, time);
 }
 
+// Primitive type codes are contiguous except for the unused code between GUID and byte.
+static bool isFormattingTypeSupported(QTypeCode type) {
+    return type == Q_TYPE_BOOLEAN || type == Q_TYPE_GUID ||
+           (type >= Q_TYPE_BYTE && type <= Q_TYPE_TIME);
+}
+
 int qAtomToStr(char *buffer, QSize size, const void *atom, QTypeCode type, int precision) {
+    if (!isFormattingTypeSupported(type))
+        return Q_FMT_ERROR_TYPE;
+    if (atom == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
     switch (type) {
         case Q_TYPE_BOOLEAN:
             return qBooleanToStr(buffer, size, *(const QBoolean *)atom);
@@ -508,6 +522,10 @@ int qAtomToStr(char *buffer, QSize size, const void *atom, QTypeCode type, int p
 }
 
 int qAtomToLiteral(char *buffer, QSize size, const void *atom, QTypeCode type, int precision) {
+    if (!isFormattingTypeSupported(type))
+        return Q_FMT_ERROR_TYPE;
+    if (atom == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
     switch (type) {
         case Q_TYPE_BOOLEAN:
             return qBooleanToLiteral(buffer, size, *(const QBoolean *)atom);
@@ -554,6 +572,10 @@ int qAtomToLiteral(char *buffer, QSize size, const void *atom, QTypeCode type, i
 int qBooleanListToStr(char *buffer, QSize size, const QBoolean *booleans, QSize length) {
     if (length == 0)
         return 0;
+    if (booleans == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qBooleanToStr, booleans, length, true, result);
@@ -563,6 +585,10 @@ int qBooleanListToStr(char *buffer, QSize size, const QBoolean *booleans, QSize 
 int qBooleanListToLiteral(char *buffer, QSize size, const QBoolean *booleans, QSize length) {
     if (length == 0)
         return 0;
+    if (booleans == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
 
@@ -582,6 +608,10 @@ int qBooleanListToLiteral(char *buffer, QSize size, const QBoolean *booleans, QS
 int qGuidListToStr(char *buffer, QSize size, const QGuid *guids, QSize length) {
     if (length == 0)
         return 0;
+    if (guids == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST_AT(buffer, size, qGuidToStr, guids, length, true, result, ITEM_ADDRESS);
@@ -591,6 +621,10 @@ int qGuidListToStr(char *buffer, QSize size, const QGuid *guids, QSize length) {
 int qGuidListToLiteral(char *buffer, QSize size, const QGuid *guids, QSize length) {
     if (length == 0)
         return 0;
+    if (guids == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST_AT(buffer, size, qGuidToLiteral, guids, length, true, result, ITEM_ADDRESS);
@@ -600,6 +634,10 @@ int qGuidListToLiteral(char *buffer, QSize size, const QGuid *guids, QSize lengt
 int qByteListToStr(char *buffer, QSize size, const QByte *bytes, QSize length) {
     if (length == 0)
         return 0;
+    if (bytes == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qByteToStr, bytes, length, true, result);
@@ -609,6 +647,10 @@ int qByteListToStr(char *buffer, QSize size, const QByte *bytes, QSize length) {
 int qByteListToLiteral(char *buffer, QSize size, const QByte *bytes, QSize length) {
     if (length == 0)
         return 0;
+    if (bytes == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     int headResult = qByteToLiteral(buffer, size, bytes[0]);
     if (headResult < 0)
@@ -627,6 +669,10 @@ int qByteListToLiteral(char *buffer, QSize size, const QByte *bytes, QSize lengt
 int qShortListToStr(char *buffer, QSize size, const QShort *shorts, QSize length) {
     if (length == 0)
         return 0;
+    if (shorts == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qShortToStr, shorts, length, true, result);
@@ -636,6 +682,10 @@ int qShortListToStr(char *buffer, QSize size, const QShort *shorts, QSize length
 int qShortListToLiteral(char *buffer, QSize size, const QShort *shorts, QSize length) {
     if (length == 0)
         return 0;
+    if (shorts == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
 
@@ -663,6 +713,10 @@ int qShortListToLiteral(char *buffer, QSize size, const QShort *shorts, QSize le
 int qIntListToStr(char *buffer, QSize size, const QInt *ints, QSize length) {
     if (length == 0)
         return 0;
+    if (ints == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qIntToStr, ints, length, true, result);
@@ -672,6 +726,10 @@ int qIntListToStr(char *buffer, QSize size, const QInt *ints, QSize length) {
 int qIntListToLiteral(char *buffer, QSize size, const QInt *ints, QSize length) {
     if (length == 0)
         return 0;
+    if (ints == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
 
@@ -699,6 +757,10 @@ int qIntListToLiteral(char *buffer, QSize size, const QInt *ints, QSize length) 
 int qLongListToStr(char *buffer, QSize size, const QLong *longs, QSize length) {
     if (length == 0)
         return 0;
+    if (longs == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qLongToStr, longs, length, true, result);
@@ -708,6 +770,10 @@ int qLongListToStr(char *buffer, QSize size, const QLong *longs, QSize length) {
 int qLongListToLiteral(char *buffer, QSize size, const QLong *longs, QSize length) {
     if (length == 0)
         return 0;
+    if (longs == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qLongToLiteral, longs, length, true, result);
@@ -717,6 +783,10 @@ int qLongListToLiteral(char *buffer, QSize size, const QLong *longs, QSize lengt
 int qRealListToStr(char *buffer, QSize size, const QReal *reals, QSize length, int precision) {
     if (length == 0)
         return 0;
+    if (reals == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_PRECISION_LIST(buffer, size, qRealToStr, reals, length, true, result, precision);
@@ -726,6 +796,10 @@ int qRealListToStr(char *buffer, QSize size, const QReal *reals, QSize length, i
 int qRealListToLiteral(char *buffer, QSize size, const QReal *reals, QSize length, int precision) {
     if (length == 0)
         return 0;
+    if (reals == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
 
@@ -753,6 +827,10 @@ int qRealListToLiteral(char *buffer, QSize size, const QReal *reals, QSize lengt
 int qFloatListToStr(char *buffer, QSize size, const QFloat *floats, QSize length, int precision) {
     if (length == 0)
         return 0;
+    if (floats == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_PRECISION_LIST(buffer, size, qFloatToStr, floats, length, true, result, precision);
@@ -764,6 +842,10 @@ int qFloatListToLiteral(
 ) {
     if (length == 0)
         return 0;
+    if (floats == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_PRECISION_LIST(buffer, size, qFloatToLiteral, floats, length, true, result, precision);
@@ -773,6 +855,10 @@ int qFloatListToLiteral(
 int qCharListToStr(char *buffer, QSize size, const QChar *chars, QSize length) {
     if (length == 0)
         return 0;
+    if (chars == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qCharToStr, chars, length, true, result);
@@ -782,6 +868,10 @@ int qCharListToStr(char *buffer, QSize size, const QChar *chars, QSize length) {
 int qCharListToLiteral(char *buffer, QSize size, const QChar *chars, QSize length) {
     if (length == 0)
         return 0;
+    if (chars == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     // Opening quote
     int headResult = qCharToStr(buffer, size, '"');
@@ -806,6 +896,10 @@ int qCharListToLiteral(char *buffer, QSize size, const QChar *chars, QSize lengt
 int qSymbolListToStr(char *buffer, QSize size, const QSymbol *symbols, QSize length) {
     if (length == 0)
         return 0;
+    if (symbols == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qSymbolToStr, symbols, length, true, result);
@@ -815,6 +909,10 @@ int qSymbolListToStr(char *buffer, QSize size, const QSymbol *symbols, QSize len
 int qSymbolListToLiteral(char *buffer, QSize size, const QSymbol *symbols, QSize length) {
     if (length == 0)
         return 0;
+    if (symbols == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qSymbolToLiteral, symbols, length, false, result);
@@ -824,6 +922,10 @@ int qSymbolListToLiteral(char *buffer, QSize size, const QSymbol *symbols, QSize
 int qTimestampListToStr(char *buffer, QSize size, const QTimestamp *timestamps, QSize length) {
     if (length == 0)
         return 0;
+    if (timestamps == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qTimestampToStr, timestamps, length, true, result);
@@ -833,6 +935,10 @@ int qTimestampListToStr(char *buffer, QSize size, const QTimestamp *timestamps, 
 int qTimestampListToLiteral(char *buffer, QSize size, const QTimestamp *timestamps, QSize length) {
     if (length == 0)
         return 0;
+    if (timestamps == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qTimestampToLiteral, timestamps, length, true, result);
@@ -842,6 +948,10 @@ int qTimestampListToLiteral(char *buffer, QSize size, const QTimestamp *timestam
 int qMonthListToStr(char *buffer, QSize size, const QMonth *months, QSize length) {
     if (length == 0)
         return 0;
+    if (months == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qMonthToStr, months, length, true, result);
@@ -851,6 +961,10 @@ int qMonthListToStr(char *buffer, QSize size, const QMonth *months, QSize length
 int qMonthListToLiteral(char *buffer, QSize size, const QMonth *months, QSize length) {
     if (length == 0)
         return 0;
+    if (months == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
 
@@ -878,6 +992,10 @@ int qMonthListToLiteral(char *buffer, QSize size, const QMonth *months, QSize le
 int qDateListToStr(char *buffer, QSize size, const QDate *dates, QSize length) {
     if (length == 0)
         return 0;
+    if (dates == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qDateToStr, dates, length, true, result);
@@ -887,6 +1005,10 @@ int qDateListToStr(char *buffer, QSize size, const QDate *dates, QSize length) {
 int qDateListToLiteral(char *buffer, QSize size, const QDate *dates, QSize length) {
     if (length == 0)
         return 0;
+    if (dates == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qDateToLiteral, dates, length, true, result);
@@ -896,6 +1018,10 @@ int qDateListToLiteral(char *buffer, QSize size, const QDate *dates, QSize lengt
 int qDatetimeListToStr(char *buffer, QSize size, const QDatetime *datetimes, QSize length) {
     if (length == 0)
         return 0;
+    if (datetimes == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qDatetimeToStr, datetimes, length, true, result);
@@ -905,6 +1031,10 @@ int qDatetimeListToStr(char *buffer, QSize size, const QDatetime *datetimes, QSi
 int qDatetimeListToLiteral(char *buffer, QSize size, const QDatetime *datetimes, QSize length) {
     if (length == 0)
         return 0;
+    if (datetimes == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qDatetimeToLiteral, datetimes, length, true, result);
@@ -914,6 +1044,10 @@ int qDatetimeListToLiteral(char *buffer, QSize size, const QDatetime *datetimes,
 int qTimespanListToStr(char *buffer, QSize size, const QTimespan *timespans, QSize length) {
     if (length == 0)
         return 0;
+    if (timespans == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qTimespanToStr, timespans, length, true, result);
@@ -923,6 +1057,10 @@ int qTimespanListToStr(char *buffer, QSize size, const QTimespan *timespans, QSi
 int qTimespanListToLiteral(char *buffer, QSize size, const QTimespan *timespans, QSize length) {
     if (length == 0)
         return 0;
+    if (timespans == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qTimespanToLiteral, timespans, length, true, result);
@@ -932,6 +1070,10 @@ int qTimespanListToLiteral(char *buffer, QSize size, const QTimespan *timespans,
 int qMinuteListToStr(char *buffer, QSize size, const QMinute *minutes, QSize length) {
     if (length == 0)
         return 0;
+    if (minutes == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qMinuteToStr, minutes, length, true, result);
@@ -941,6 +1083,10 @@ int qMinuteListToStr(char *buffer, QSize size, const QMinute *minutes, QSize len
 int qMinuteListToLiteral(char *buffer, QSize size, const QMinute *minutes, QSize length) {
     if (length == 0)
         return 0;
+    if (minutes == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qMinuteToLiteral, minutes, length, true, result);
@@ -950,6 +1096,10 @@ int qMinuteListToLiteral(char *buffer, QSize size, const QMinute *minutes, QSize
 int qSecondListToStr(char *buffer, QSize size, const QSecond *seconds, QSize length) {
     if (length == 0)
         return 0;
+    if (seconds == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qSecondToStr, seconds, length, true, result);
@@ -959,6 +1109,10 @@ int qSecondListToStr(char *buffer, QSize size, const QSecond *seconds, QSize len
 int qSecondListToLiteral(char *buffer, QSize size, const QSecond *seconds, QSize length) {
     if (length == 0)
         return 0;
+    if (seconds == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qSecondToLiteral, seconds, length, true, result);
@@ -968,6 +1122,10 @@ int qSecondListToLiteral(char *buffer, QSize size, const QSecond *seconds, QSize
 int qTimeListToStr(char *buffer, QSize size, const QTime *time, QSize length) {
     if (length == 0)
         return 0;
+    if (time == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qTimeToStr, time, length, true, result);
@@ -977,6 +1135,10 @@ int qTimeListToStr(char *buffer, QSize size, const QTime *time, QSize length) {
 int qTimeListToLiteral(char *buffer, QSize size, const QTime *time, QSize length) {
     if (length == 0)
         return 0;
+    if (time == nullptr)
+        return Q_FMT_ERROR_ARGUMENT;
+    if (buffer == nullptr)
+        return Q_FMT_ERROR_SIZE;
 
     QSize result = 0;
     WRITE_LIST(buffer, size, qTimeToLiteral, time, length, true, result);
