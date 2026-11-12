@@ -11,6 +11,7 @@
 #include "fmt.h"
 #include "get.h"
 #include "is.h"
+#include "list.h"
 #include "mem.h"
 #include "new.h"
 #include "obj.h"

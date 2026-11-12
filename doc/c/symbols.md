@@ -17,7 +17,7 @@ A Q symbol (`QSymbol`) is a pointer to an interned string. kdb+ keeps a single c
 - **Interned symbols are owned by kdb+.** They live for the rest of the process and must not be modified or freed. Symbols are not reference counted, so there is nothing to release.
 - **Interning copies the characters.** The string passed in remains the caller's, and changing it afterwards does not change the symbol.
 
-`qNewSymbol` and `qNewSymbolList` intern their arguments automatically. The functions in this document are needed when symbols are written into a list directly, for example into a symbol list allocated with [`qNewList`](/doc/c/creating.md#qnewlist). Every element of a symbol list must be an interned symbol: storing a pointer to an ordinary C string breaks comparisons with `==` and leaves the list pointing at memory kdb+ does not own.
+`qNewSymbol`, `qNewFixedSymbol` and `qNewSymbolList` (see [Creation](/doc/c/creating.md)), and `qAppendSymbol` and `qAppendFixedSymbol` (see [List Operations](/doc/c/list_operations.md)), intern their arguments automatically. The functions in this document are needed when symbols are written into a list directly, for example into a symbol list allocated with [`qNewList`](/doc/c/creating.md#qnewlist). Every element of a symbol list must be an interned symbol: storing a pointer to an ordinary C string breaks comparisons with `==` and leaves the list pointing at memory kdb+ does not own.
 
 When symbols may be interned from more than one thread, enable the symbol table lock with [`qToggleSymbolLock`](/doc/c/memory.md#qtogglesymbollock).
 

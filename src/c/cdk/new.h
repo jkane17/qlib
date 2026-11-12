@@ -14,6 +14,7 @@
 #include "is.h"
 #include "mem.h"
 #include "obj.h"
+#include "sym.h"
 #include "type.h"
 
 #ifdef __cplusplus
@@ -133,6 +134,26 @@ static inline QObj *qNewChar(QChar value) {
 static inline QObj *qNewSymbol(const QChar *value) {
     extern QObj *ks(const QChar *);
     return ks(value);
+}
+
+/**
+ * @brief Create a Q object containing a symbol atom from the first length characters of a string.
+ *
+ * Reads at most length characters, stopping early at a null character (see qInternFixedString).
+ *
+ * @param string String to create the symbol atom from (need not be null-terminated). May be NULL if
+ * length is 0.
+ * @param length Maximum number of characters to use.
+ * @return A pointer to a Q object containing a symbol atom.
+ *
+ * @note Returns a domain error if string is NULL and length is non-zero, or if length exceeds
+ * INT32_MAX.
+ */
+static inline QObj *qNewFixedSymbol(const QChar *string, QSize length) {
+    extern QObj *ks(const QChar *);
+    if (length > INT32_MAX || (!string && length > 0))
+        return qNewError("domain");
+    return ks(qInternFixedString(string, length));
 }
 
 /**

@@ -32,6 +32,7 @@ Debug builds check the arguments of the accessor functions with `assert`. Define
 | [Errors](errors.md)                 | `err.h`   | Signalling and retrieving errors                                |
 | [Memory](memory.md)                 | `mem.h`   | Reference counting and ownership                                |
 | [Symbols](symbols.md)               | `sym.h`   | Interning strings as symbols                                    |
+| [List Operations](list_operations.md) | `list.h` | Appending to lists                                            |
 | [Formatting](formatting.md)         | `fmt.h`   | Writing Q values as strings and Q literals                      |
 | [Utilities](utilities.md)           | `util.h`  | General-purpose helpers                                         |
 

@@ -1425,6 +1425,70 @@ static void checkDomainError(QObj *obj) {
     checkError(obj, "domain");
 }
 
+void testNewFixedSymbol() {
+    // Prefix of a longer string
+    QObj *prefix = qNewFixedSymbol("hello world", 5);
+    checkAtomType(prefix, Q_TYPE_SYMBOL);
+    TEST_ASSERT_EQUAL_STRING("hello", qGetSymbol(prefix));
+    TEST_ASSERT_EQUAL_PTR(qInternString("hello"), qGetSymbol(prefix));
+    qDecRef(prefix);
+
+    // String that is not null-terminated, copied into the symbol table
+    QChar buffer[] = {'a', 'b', 'c'};
+    QObj *unterminated = qNewFixedSymbol(buffer, 3);
+    TEST_ASSERT_EQUAL_PTR(qInternString("abc"), qGetSymbol(unterminated));
+    buffer[0] = 'x';
+    TEST_ASSERT_EQUAL_STRING("abc", qGetSymbol(unterminated));
+    qDecRef(unterminated);
+
+    // Whole string, same symbol as qNewSymbol
+    QObj *whole = qNewFixedSymbol("xyz", 3);
+    QObj *viaNewSymbol = qNewSymbol("xyz");
+    TEST_ASSERT_EQUAL_PTR(qGetSymbol(viaNewSymbol), qGetSymbol(whole));
+    qDecRef(viaNewSymbol);
+    qDecRef(whole);
+
+    // Stops at a null character
+    QObj *embeddedNull = qNewFixedSymbol("ab\0cd", 5);
+    TEST_ASSERT_EQUAL_PTR(qInternString("ab"), qGetSymbol(embeddedNull));
+    qDecRef(embeddedNull);
+
+    // Spaces and special characters
+    QObj *special = qNewFixedSymbol("with space@$`xyz", 13);
+    TEST_ASSERT_EQUAL_STRING("with space@$`", qGetSymbol(special));
+    qDecRef(special);
+}
+
+void testNewFixedSymbolEmpty() {
+    QSymbol empty = qInternString(Q_SYMBOL_NULL);
+
+    QObj *zeroLength = qNewFixedSymbol("xyz", 0);
+    checkAtomType(zeroLength, Q_TYPE_SYMBOL);
+    TEST_ASSERT_EQUAL_PTR(empty, qGetSymbol(zeroLength));
+    qDecRef(zeroLength);
+
+    QObj *nullString = qNewFixedSymbol(NULL, 0);
+    checkAtomType(nullString, Q_TYPE_SYMBOL);
+    TEST_ASSERT_EQUAL_PTR(empty, qGetSymbol(nullString));
+    qDecRef(nullString);
+
+    QObj *leadingNull = qNewFixedSymbol("\0abc", 4);
+    TEST_ASSERT_EQUAL_PTR(empty, qGetSymbol(leadingNull));
+    qDecRef(leadingNull);
+}
+
+void testNewFixedSymbolErrors() {
+    checkDomainError(qNewFixedSymbol(NULL, 1));
+    checkDomainError(qNewFixedSymbol("abc", (QSize)INT32_MAX + 1));
+    checkDomainError(qNewFixedSymbol("abc", Q_SIZE_MAX));
+    checkDomainError(qNewFixedSymbol(NULL, Q_SIZE_MAX));
+
+    // The largest supported length is accepted (reading stops at the null character)
+    QObj *maxLength = qNewFixedSymbol("abc", INT32_MAX);
+    TEST_ASSERT_EQUAL_PTR(qInternString("abc"), qGetSymbol(maxLength));
+    qDecRef(maxLength);
+}
+
 /**
  * @brief Check that a function taking ownership of obj released exactly one reference to it.
  *
@@ -2370,6 +2434,9 @@ int main() {
     RUN_TEST(testNewFloat);
     RUN_TEST(testNewChar);
     RUN_TEST(testNewSymbol);
+    RUN_TEST(testNewFixedSymbol);
+    RUN_TEST(testNewFixedSymbolEmpty);
+    RUN_TEST(testNewFixedSymbolErrors);
     RUN_TEST(testNewTimestamp);
     RUN_TEST(testNewMonth);
     RUN_TEST(testNewDate);

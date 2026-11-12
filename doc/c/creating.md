@@ -16,6 +16,7 @@ This document provides comprehensive documentation for Q object creation functio
     - [`qNewFloat`](#qnewfloat)
     - [`qNewChar`](#qnewchar)
     - [`qNewSymbol`](#qnewsymbol)
+    - [`qNewFixedSymbol`](#qnewfixedsymbol)
     - [`qNewTimestamp`](#qnewtimestamp)
     - [`qNewMonth`](#qnewmonth)
     - [`qNewDate`](#qnewdate)
@@ -564,6 +565,57 @@ Output:
 
 ```
 symbol = hello
+```
+
+### `qNewFixedSymbol`
+
+Create a Q object containing a `symbol` atom from the first `length` characters of a string.
+
+```c
+QObj *qNewFixedSymbol(const QChar *string, QSize length);
+```
+
+**Parameters**
+
+| Parameter | Description                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------- |
+| `string`  | String to create the `symbol` atom from (need not be null-terminated). May be `NULL` if `length` is `0` |
+| `length`  | Maximum number of characters to use                                                          |
+
+**Returns**
+
+A pointer to a Q object containing a `symbol` atom.
+
+> Note: Reads at most `length` characters, stopping early at a null character, in the same way as [`qInternFixedString`](/doc/c/symbols.md#qinternfixedstring). A `length` of `0` gives the null symbol. Returns a `domain` error if `string` is `NULL` and `length` is non-zero, or if `length` exceeds `INT32_MAX`.
+
+**Example**
+
+```c
+#include <stdio.h>
+#include "q.h"
+
+int main() {
+    const QChar *text = "hello world";
+
+    QObj *first = qNewFixedSymbol(text, 5);
+    QObj *second = qNewFixedSymbol(text + 6, 5);
+
+    printf("first = %s\n", qGetSymbol(first));
+    printf("second = %s\n", qGetSymbol(second));
+    printf("same as qNewSymbol: %d\n", qGetSymbol(first) == qInternString("hello"));
+
+    qDecRef(first);
+    qDecRef(second);
+    return 0;
+}
+```
+
+Output:
+
+```
+first = hello
+second = world
+same as qNewSymbol: 1
 ```
 
 ### `qNewTimestamp`
