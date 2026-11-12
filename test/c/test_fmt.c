@@ -17,56 +17,91 @@
 #define SIZE 128
 char buffer[SIZE];
 
-#define ASSERT_LIST(func, list, length, fullStr, singleStr) \
-    int result = func(buffer, SIZE, list, length);          \
-    TEST_ASSERT_EQUAL_INT(strlen(fullStr), result);         \
-    TEST_ASSERT_EQUAL_STRING(fullStr, buffer);              \
-                                                            \
-    result = func(buffer, SIZE, list, 1);                   \
-    TEST_ASSERT_EQUAL_INT(strlen(singleStr), result);       \
-    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);            \
-                                                            \
-    result = func(buffer, SIZE, list, 0);                   \
-    TEST_ASSERT_EQUAL_INT(0, result);                       \
-    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);            \
-    result = func(buffer, SIZE, nullptr, length);           \
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, result);    \
-    result = func(buffer, SIZE, nullptr, 0);                \
-    TEST_ASSERT_EQUAL_INT(0, result);                       \
-    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);            \
-    result = func(nullptr, 0, nullptr, 0);                  \
-    TEST_ASSERT_EQUAL_INT(0, result);                       \
-                                                            \
-    result = func(nullptr, SIZE, list, 3);                  \
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);        \
-                                                            \
-    result = func(buffer, 0, list, 3);                      \
+static void assertOutputBounds(
+    const unsigned char *guarded, QSize capacity, int result, const char *expected
+) {
+    TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[0]);
+    for (QSize i = capacity + 1; i < SIZE + 2; i++) {
+        TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[i]);
+    }
+    if (capacity <= strlen(expected)) {
+        TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    } else {
+        TEST_ASSERT_EQUAL_INT(strlen(expected), result);
+        TEST_ASSERT_EQUAL_STRING(expected, (const char *)guarded + 1);
+    }
+}
+
+#define ASSERT_LIST(func, list, length, fullStr, singleStr)                         \
+    int result = func(buffer, SIZE, list, length);                                  \
+    TEST_ASSERT_EQUAL_INT(strlen(fullStr), result);                                 \
+    TEST_ASSERT_EQUAL_STRING(fullStr, buffer);                                      \
+    {                                                                               \
+        QSize required = strlen(fullStr) + 1;                                       \
+        TEST_ASSERT_TRUE(required <= SIZE);                                         \
+        for (QSize capacity = 0; capacity <= required; capacity++) {                \
+            unsigned char guarded[SIZE + 2];                                        \
+            memset(guarded, 0xA5, sizeof(guarded));                                 \
+            int boundaryResult = func((char *)guarded + 1, capacity, list, length); \
+            assertOutputBounds(guarded, capacity, boundaryResult, fullStr);         \
+        }                                                                           \
+    }                                                                               \
+                                                                                    \
+    result = func(buffer, SIZE, list, 1);                                           \
+    TEST_ASSERT_EQUAL_INT(strlen(singleStr), result);                               \
+    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                    \
+                                                                                    \
+    result = func(buffer, SIZE, list, 0);                                           \
+    TEST_ASSERT_EQUAL_INT(0, result);                                               \
+    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                    \
+    result = func(buffer, SIZE, nullptr, length);                                   \
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, result);                            \
+    result = func(buffer, SIZE, nullptr, 0);                                        \
+    TEST_ASSERT_EQUAL_INT(0, result);                                               \
+    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                    \
+    result = func(nullptr, 0, nullptr, 0);                                          \
+    TEST_ASSERT_EQUAL_INT(0, result);                                               \
+                                                                                    \
+    result = func(nullptr, SIZE, list, 3);                                          \
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);                                \
+                                                                                    \
+    result = func(buffer, 0, list, 3);                                              \
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result)
 
-#define ASSERT_PRECISON_LIST(func, list, length, precision, fullStr, singleStr) \
-    int result = func(buffer, SIZE, list, length, precision);                   \
-    TEST_ASSERT_EQUAL_INT(strlen(fullStr), result);                             \
-    TEST_ASSERT_EQUAL_STRING(fullStr, buffer);                                  \
-                                                                                \
-    result = func(buffer, SIZE, list, 1, precision);                            \
-    TEST_ASSERT_EQUAL_INT(strlen(singleStr), result);                           \
-    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                \
-                                                                                \
-    result = func(buffer, SIZE, list, 0, precision);                            \
-    TEST_ASSERT_EQUAL_INT(0, result);                                           \
-    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                \
-    result = func(buffer, SIZE, nullptr, length, precision);                    \
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, result);                        \
-    result = func(buffer, SIZE, nullptr, 0, precision);                         \
-    TEST_ASSERT_EQUAL_INT(0, result);                                           \
-    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                \
-    result = func(nullptr, 0, nullptr, 0, precision);                           \
-    TEST_ASSERT_EQUAL_INT(0, result);                                           \
-                                                                                \
-    result = func(nullptr, SIZE, list, 3, precision);                           \
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);                            \
-                                                                                \
-    result = func(buffer, 0, list, 3, precision);                               \
+#define ASSERT_PRECISON_LIST(func, list, length, precision, fullStr, singleStr)                \
+    int result = func(buffer, SIZE, list, length, precision);                                  \
+    TEST_ASSERT_EQUAL_INT(strlen(fullStr), result);                                            \
+    TEST_ASSERT_EQUAL_STRING(fullStr, buffer);                                                 \
+    {                                                                                          \
+        QSize required = strlen(fullStr) + 1;                                                  \
+        TEST_ASSERT_TRUE(required <= SIZE);                                                    \
+        for (QSize capacity = 0; capacity <= required; capacity++) {                           \
+            unsigned char guarded[SIZE + 2];                                                   \
+            memset(guarded, 0xA5, sizeof(guarded));                                            \
+            int boundaryResult = func((char *)guarded + 1, capacity, list, length, precision); \
+            assertOutputBounds(guarded, capacity, boundaryResult, fullStr);                    \
+        }                                                                                      \
+    }                                                                                          \
+                                                                                               \
+    result = func(buffer, SIZE, list, 1, precision);                                           \
+    TEST_ASSERT_EQUAL_INT(strlen(singleStr), result);                                          \
+    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                               \
+                                                                                               \
+    result = func(buffer, SIZE, list, 0, precision);                                           \
+    TEST_ASSERT_EQUAL_INT(0, result);                                                          \
+    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                               \
+    result = func(buffer, SIZE, nullptr, length, precision);                                   \
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, result);                                       \
+    result = func(buffer, SIZE, nullptr, 0, precision);                                        \
+    TEST_ASSERT_EQUAL_INT(0, result);                                                          \
+    TEST_ASSERT_EQUAL_STRING(singleStr, buffer);                                               \
+    result = func(nullptr, 0, nullptr, 0, precision);                                          \
+    TEST_ASSERT_EQUAL_INT(0, result);                                                          \
+                                                                                               \
+    result = func(nullptr, SIZE, list, 3, precision);                                          \
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);                                           \
+                                                                                               \
+    result = func(buffer, 0, list, 3, precision);                                              \
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result)
 
 QGuid guids[] = {
@@ -2191,8 +2226,25 @@ void testPrecisionRounding() {
     }
 }
 
+void testCharListEmbeddedNull() {
+    const QChar chars[] = {'a', '\0', 'b'};
+    const char expectedString[] = {'a', ' ', '\0', ' ', 'b', '\0'};
+    const char expectedLiteral[] = {'"', 'a', '\0', 'b', '"', '\0'};
+    char output[7];
+    memset(output, 0x5A, sizeof(output));
+    int result = qCharListToStr(output, 6, chars, 3);
+    TEST_ASSERT_EQUAL_INT(5, result);
+    TEST_ASSERT_EQUAL_MEMORY(expectedString, output, 6);
+    TEST_ASSERT_EQUAL_HEX8(0x5A, output[6]);
+    result = qCharListToLiteral(output, 6, chars, 3);
+    TEST_ASSERT_EQUAL_INT(5, result);
+    TEST_ASSERT_EQUAL_MEMORY(expectedLiteral, output, 6);
+    TEST_ASSERT_EQUAL_HEX8(0x5A, output[6]);
+}
+
 int main() {
     UNITY_BEGIN();
+    RUN_TEST(testCharListEmbeddedNull);
     RUN_TEST(testPrecisionRange);
     RUN_TEST(testMaximumPrecision);
     RUN_TEST(testPrecisionRounding);
