@@ -42,10 +42,22 @@
         return Q_FMT_ERROR_PRINTF;                           \
     return (QSize)result >= size ? Q_FMT_ERROR_SIZE : result
 
-#define WRITE_DYNAMIC(buffer, size, fmt, ...)             \
-    int width = snprintf(nullptr, 0, fmt, ##__VA_ARGS__); \
-    if (width < 0)                                        \
-        return Q_FMT_ERROR_PRINTF;                        \
+// Format common values once into a small scratch buffer. Oversized values use a
+// second pass only after validating the caller's capacity, preserving no-write
+// size failures. The scratch capacity is an optimization, not an output limit.
+#define WRITE_DYNAMIC(buffer, size, fmt, ...)                               \
+    if (buffer == nullptr || size == 0)                                     \
+        return Q_FMT_ERROR_SIZE;                                            \
+    char formatted[128];                                                    \
+    int width = snprintf(formatted, sizeof(formatted), fmt, ##__VA_ARGS__); \
+    if (width < 0)                                                          \
+        return Q_FMT_ERROR_PRINTF;                                          \
+    if ((QSize)width >= size)                                               \
+        return Q_FMT_ERROR_SIZE;                                            \
+    if ((QSize)width < sizeof(formatted)) {                                 \
+        memcpy(buffer, formatted, (QSize)width + 1);                        \
+        return width;                                                       \
+    }                                                                       \
     WRITE_FIXED(buffer, size, (QSize)width, fmt, ##__VA_ARGS__)
 
 #define WRITE_MONTH(buffer, size, month, fmt) \

@@ -2242,8 +2242,75 @@ void testCharListEmbeddedNull() {
     TEST_ASSERT_EQUAL_HEX8(0x5A, output[6]);
 }
 
+static void assertDynamicAtomBounds(
+    const void *atom, QTypeCode type, int precision, bool literal, const char *expected
+) {
+    QSize width = strlen(expected);
+    const QSize capacities[] = {0, width, width + 1, width + 2};
+    int (*formatter)(char *, QSize, const void *, QTypeCode, int) =
+        literal ? qAtomToLiteral : qAtomToStr;
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, formatter(nullptr, width + 1, atom, type, precision));
+    for (QSize c = 0; c < sizeof(capacities) / sizeof(capacities[0]); c++) {
+        unsigned char guarded[Q_FMT_MAX_PRECISION + 8];
+        memset(guarded, 0xA5, sizeof(guarded));
+        QSize capacity = capacities[c];
+        TEST_ASSERT_TRUE(capacity + 1 < sizeof(guarded));
+        int result = formatter((char *)guarded + 1, capacity, atom, type, precision);
+        TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[0]);
+        for (QSize i = capacity + 1; i < sizeof(guarded); i++) {
+            TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[i]);
+        }
+        if (capacity <= width) {
+            TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+            // The scratch-buffer path and its fallback both check size before copying.
+            for (QSize i = 1; i <= capacity; i++) {
+                TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[i]);
+            }
+        } else {
+            TEST_ASSERT_EQUAL_INT(width, result);
+            TEST_ASSERT_EQUAL_STRING(expected, (const char *)guarded + 1);
+        }
+    }
+}
+
+void testDynamicSymbolBufferSizes() {
+    // Include both sides of the scratch-buffer boundary, including a literal prefix.
+    const QSize lengths[] = {0, 126, 127, 128, 129, 256};
+    char symbol[257];
+    char expected[258];
+    for (QSize i = 0; i < sizeof(lengths) / sizeof(lengths[0]); i++) {
+        memset(symbol, 'x', lengths[i]);
+        symbol[lengths[i]] = '\0';
+        assertDynamicAtomBounds(symbol, Q_TYPE_SYMBOL, 0, false, symbol);
+        expected[0] = '`';
+        memcpy(expected + 1, symbol, lengths[i] + 1);
+        assertDynamicAtomBounds(symbol, Q_TYPE_SYMBOL, 0, true, expected);
+    }
+}
+
+void testDynamicFloatBufferSizes() {
+    const int precisions[] = {124, 125, 126, 127, 256, Q_FMT_MAX_PRECISION};
+    const QReal real = 1.25f;
+    const QFloat float_ = 1.25;
+    char expected[Q_FMT_MAX_PRECISION + 4];
+    for (QSize i = 0; i < sizeof(precisions) / sizeof(precisions[0]); i++) {
+        int precision = precisions[i];
+        memcpy(expected, "1.25", 4);
+        memset(expected + 4, '0', precision - 2);
+        expected[precision + 2] = '\0';
+        assertDynamicAtomBounds(&float_, Q_TYPE_FLOAT, precision, false, expected);
+        assertDynamicAtomBounds(&float_, Q_TYPE_FLOAT, precision, true, expected);
+        assertDynamicAtomBounds(&real, Q_TYPE_REAL, precision, false, expected);
+        expected[precision + 2] = 'e';
+        expected[precision + 3] = '\0';
+        assertDynamicAtomBounds(&real, Q_TYPE_REAL, precision, true, expected);
+    }
+}
+
 int main() {
     UNITY_BEGIN();
+    RUN_TEST(testDynamicSymbolBufferSizes);
+    RUN_TEST(testDynamicFloatBufferSizes);
     RUN_TEST(testCharListEmbeddedNull);
     RUN_TEST(testPrecisionRange);
     RUN_TEST(testMaximumPrecision);
