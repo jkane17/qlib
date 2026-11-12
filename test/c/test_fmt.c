@@ -1760,136 +1760,141 @@ void testGuidListFromQObject() {
     qDecRef(list);
 }
 
-void testListToLiteral() {
-    int result;
-
-    QBoolean booleans[] = {1, 0, 1};
-    result = qListToLiteral(buffer, SIZE, booleans, 3, Q_TYPE_BOOLEAN, 0);
-    TEST_ASSERT_EQUAL_INT(4, result);
-    TEST_ASSERT_EQUAL_STRING("101b", buffer);
-
-    QByte bytes[] = {1, 123, 255};
-    result = qListToLiteral(buffer, SIZE, bytes, 3, Q_TYPE_BYTE, 0);
-    TEST_ASSERT_EQUAL_INT(8, result);
-    TEST_ASSERT_EQUAL_STRING("0x017bff", buffer);
-
-    QInt ints[] = {1, -2, 3};
-    result = qListToLiteral(buffer, SIZE, ints, 3, Q_TYPE_INT, 0);
-    TEST_ASSERT_EQUAL_STRING("1 -2 3i", buffer);
-
-    QReal reals[] = {1.5f, 2.25f};
-    result = qListToLiteral(buffer, SIZE, reals, 2, Q_TYPE_REAL, 2);
-    TEST_ASSERT_EQUAL_STRING("1.50 2.25e", buffer);
-
-    QChar chars[] = {'a', 'b'};
-    result = qListToLiteral(buffer, SIZE, chars, 2, Q_TYPE_CHAR, 0);
-    TEST_ASSERT_EQUAL_STRING("\"ab\"", buffer);
-
-    QSymbol symbols[] = {"a", "b"};
-    result = qListToLiteral(buffer, SIZE, symbols, 2, Q_TYPE_SYMBOL, 0);
-    TEST_ASSERT_EQUAL_STRING("`a`b", buffer);
-
-    // Unsupported type
-    result = qListToLiteral(buffer, SIZE, ints, 3, Q_TYPE_MIXED, 0);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_TYPE, result);
+static void assertGenericListFormatting(bool literal) {
+    const QBoolean booleans[] = {1, 0};
+    const QByte bytes[] = {1, 255};
+    const QShort shorts[] = {-123, 456};
+    const QInt ints[] = {-123456, 789012};
+    const QLong longs[] = {-1234567890123LL, 4567890123456LL};
+    const QReal reals[] = {1.25f, -2.5f};
+    const QFloat floats[] = {1.25, -2.5};
+    const QChar chars[] = {'a', 'z'};
+    const QSymbol symbols[] = {"abc", "xyz"};
+    const QTimestamp timestamps[] = {-1, 1};
+    const QMonth months[] = {-1, -13};
+    const QDate dates[] = {-1, 1};
+    const QDatetime datetimes[] = {-0.5, 1.5};
+    const QTimespan timespans[] = {-1, 1};
+    const QMinute minutes[] = {-1, 61};
+    const QSecond seconds[] = {-1, 3661};
+    const QTime times[] = {-1, 3661001};
+    const struct {
+        QTypeCode type;
+        const void *values;
+        const char *string;
+        const char *literal;
+    } cases[] = {
+        {Q_TYPE_BOOLEAN, booleans, "1 0", "10b"},
+        {Q_TYPE_GUID,
+         guids,
+         "12345678-9abc-def0-1122-334455667788 00112233-4455-6677-8899-aabbccddeeff",
+         "12345678-9abc-def0-1122-334455667788 00112233-4455-6677-8899-aabbccddeeff"},
+        {Q_TYPE_BYTE, bytes, "01 ff", "0x01ff"},
+        {Q_TYPE_SHORT, shorts, "-123 456", "-123 456h"},
+        {Q_TYPE_INT, ints, "-123456 789012", "-123456 789012i"},
+        {Q_TYPE_LONG, longs, "-1234567890123 4567890123456", "-1234567890123 4567890123456"},
+        {Q_TYPE_REAL, reals, "1.250 -2.500", "1.250 -2.500e"},
+        {Q_TYPE_FLOAT, floats, "1.250 -2.500", "1.250 -2.500"},
+        {Q_TYPE_CHAR, chars, "a z", "\"az\""},
+        {Q_TYPE_SYMBOL, symbols, "abc xyz", "`abc`xyz"},
+        {Q_TYPE_TIMESTAMP,
+         timestamps,
+         "1999.12.31D23:59:59.999999999 2000.01.01D00:00:00.000000001",
+         "1999.12.31D23:59:59.999999999 2000.01.01D00:00:00.000000001"},
+        {Q_TYPE_MONTH, months, "1999.12 1998.12", "1999.12 1998.12m"},
+        {Q_TYPE_DATE, dates, "1999.12.31 2000.01.02", "1999.12.31 2000.01.02"},
+        {Q_TYPE_DATETIME,
+         datetimes,
+         "1999.12.31T12:00:00.000 2000.01.02T12:00:00.000",
+         "1999.12.31T12:00:00.000 2000.01.02T12:00:00.000"},
+        {Q_TYPE_TIMESPAN,
+         timespans,
+         "-0D00:00:00.000000001 0D00:00:00.000000001",
+         "-0D00:00:00.000000001 0D00:00:00.000000001"},
+        {Q_TYPE_MINUTE, minutes, "-00:01 01:01", "-00:01 01:01"},
+        {Q_TYPE_SECOND, seconds, "-00:00:01 01:01:01", "-00:00:01 01:01:01"},
+        {Q_TYPE_TIME, times, "-00:00:00.001 01:01:01.001", "-00:00:00.001 01:01:01.001"},
+    };
+    int (*format)(char *, QSize, const void *, QSize, QTypeCode, int) =
+        literal ? qListToLiteral : qListToStr;
+    for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        const char *expected = literal ? cases[i].literal : cases[i].string;
+        QSize width = strlen(expected);
+        memset(buffer, 0xA5, SIZE);
+        int result = format(buffer, width + 1, cases[i].values, 2, cases[i].type, 3);
+        TEST_ASSERT_EQUAL_INT(width, result);
+        TEST_ASSERT_EQUAL_STRING(expected, buffer);
+        TEST_ASSERT_EQUAL_HEX8(0xA5, (unsigned char)buffer[width + 1]);
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_SIZE, format(buffer, width, cases[i].values, 2, cases[i].type, 3)
+        );
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_SIZE, format(nullptr, SIZE, cases[i].values, 2, cases[i].type, 3)
+        );
+    }
+    const QTypeCode unsupported[] = {Q_TYPE_MIXED, 3, 20, -Q_TYPE_LONG, Q_TYPE_TABLE};
+    for (QSize i = 0; i < sizeof(unsupported) / sizeof(unsupported[0]); i++) {
+        strcpy(buffer, "unchanged");
+        TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_TYPE, format(buffer, SIZE, ints, 2, unsupported[i], 3));
+        TEST_ASSERT_EQUAL_STRING("unchanged", buffer);
+    }
 }
 
 void testListToStr() {
-    int result;
+    assertGenericListFormatting(false);
+}
 
-    QBoolean booleans[] = {1, 0, 1};
-    result = qListToStr(buffer, SIZE, booleans, 3, Q_TYPE_BOOLEAN, 0);
-    TEST_ASSERT_EQUAL_INT(5, result);
-    TEST_ASSERT_EQUAL_STRING("1 0 1", buffer);
+void testListToLiteral() {
+    assertGenericListFormatting(true);
+}
 
-    result = qListToStr(buffer, SIZE, guids, 3, Q_TYPE_GUID, 0);
-    TEST_ASSERT_EQUAL_INT(110, result);
-    TEST_ASSERT_EQUAL_STRING(
-        "12345678-9abc-def0-1122-334455667788 "
-        "00112233-4455-6677-8899-aabbccddeeff "
-        "ffeeddcc-bbaa-9988-7766-554433221100",
-        buffer
-    );
+void testMonthBoundaries() {
+    const struct {
+        QMonth value;
+        const char *expected;
+    } cases[] = {
+        {-1, "1999.12"},
+        {-11, "1999.02"},
+        {-12, "1999.01"},
+        {-13, "1998.12"},
+        {INT32_MIN, "-178954971.05"},
+        {INT32_MAX, "178958970.08"},
+    };
+    for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        int result = qMonthToStr(buffer, SIZE, cases[i].value);
+        TEST_ASSERT_EQUAL_INT(strlen(cases[i].expected), result);
+        TEST_ASSERT_EQUAL_STRING(cases[i].expected, buffer);
+        char expected[32];
+        strcpy(expected, cases[i].expected);
+        strcat(expected, "m");
+        result = qMonthToLiteral(buffer, SIZE, cases[i].value);
+        TEST_ASSERT_EQUAL_INT(strlen(expected), result);
+        TEST_ASSERT_EQUAL_STRING(expected, buffer);
+    }
+}
 
-    QByte bytes[] = {1, 123, 255};
-    result = qListToStr(buffer, SIZE, bytes, 3, Q_TYPE_BYTE, 0);
-    TEST_ASSERT_EQUAL_INT(8, result);
-    TEST_ASSERT_EQUAL_STRING("01 7b ff", buffer);
-
-    QShort shorts[] = {1, -234, 567};
-    result = qListToStr(buffer, SIZE, shorts, 3, Q_TYPE_SHORT, 0);
-    TEST_ASSERT_EQUAL_INT(10, result);
-    TEST_ASSERT_EQUAL_STRING("1 -234 567", buffer);
-
-    QInt ints[] = {1, -234, 567};
-    result = qListToStr(buffer, SIZE, ints, 3, Q_TYPE_INT, 0);
-    TEST_ASSERT_EQUAL_INT(10, result);
-
-    QLong longs[] = {1, -234, 567};
-    result = qListToStr(buffer, SIZE, longs, 3, Q_TYPE_LONG, 0);
-    TEST_ASSERT_EQUAL_INT(10, result);
-
-    // TODO: Continue
-
-    // QReal real = 3.14159;
-    // result = qAtomToStr(buffer, SIZE, &real, Q_TYPE_REAL, 3);
-    // TEST_ASSERT_EQUAL_INT(5, result);
-    // TEST_ASSERT_EQUAL_STRING("3.142", buffer); // Precision rounding
-
-    // QFloat float_ = 3.14159;
-    // result = qAtomToStr(buffer, SIZE, &float_, Q_TYPE_FLOAT, 3);
-    // TEST_ASSERT_EQUAL_INT(5, result);
-    // TEST_ASSERT_EQUAL_STRING("3.142", buffer);
-
-    // QChar char_ = 'a';
-    // result = qAtomToStr(buffer, SIZE, &char_, Q_TYPE_CHAR, 0);
-    // TEST_ASSERT_EQUAL_INT(1, result);
-    // TEST_ASSERT_EQUAL_STRING("a", buffer);
-
-    // QSymbol symbol = "abc";
-    // result = qAtomToStr(buffer, SIZE, symbol, Q_TYPE_SYMBOL, 0);
-    // TEST_ASSERT_EQUAL_INT(3, result);
-    // TEST_ASSERT_EQUAL_STRING("abc", buffer);
-
-    // QTimestamp timestamp = 821977817123456789;
-    // result = qAtomToStr(buffer, SIZE, &timestamp, Q_TYPE_TIMESTAMP, 0);
-    // TEST_ASSERT_EQUAL_INT(29, result);
-    // TEST_ASSERT_EQUAL_STRING("2026.01.17D15:10:17.123456789", buffer);
-
-    // QMonth month = 312;
-    // result = qAtomToStr(buffer, SIZE, &month, Q_TYPE_MONTH, 0);
-    // TEST_ASSERT_EQUAL_INT(7, result);
-    // TEST_ASSERT_EQUAL_STRING("2026.01", buffer);
-
-    // QDate date = 9513;
-    // result = qAtomToStr(buffer, SIZE, &date, Q_TYPE_DATE, 0);
-    // TEST_ASSERT_EQUAL_INT(10, result);
-    // TEST_ASSERT_EQUAL_STRING("2026.01.17", buffer);
-
-    // QDatetime datetime = 9513.6321426273153;
-    // result = qAtomToStr(buffer, SIZE, &datetime, Q_TYPE_DATETIME, 0);
-    // TEST_ASSERT_EQUAL_INT(23, result);
-    // TEST_ASSERT_EQUAL_STRING("2026.01.17T15:10:17.123", buffer);
-
-    // QTimespan timespan = 1473576123456789;
-    // result = qAtomToStr(buffer, SIZE, &timespan, Q_TYPE_TIMESPAN, 0);
-    // TEST_ASSERT_EQUAL_INT(21, result);
-    // TEST_ASSERT_EQUAL_STRING("17D01:19:36.123456789", buffer);
-
-    // QMinute minute = 980;
-    // result = qAtomToStr(buffer, SIZE, &minute, Q_TYPE_MINUTE, 0);
-    // TEST_ASSERT_EQUAL_INT(5, result);
-    // TEST_ASSERT_EQUAL_STRING("16:20", buffer);
-
-    // QSecond second = 58817;
-    // result = qAtomToStr(buffer, SIZE, &second, Q_TYPE_SECOND, 0);
-    // TEST_ASSERT_EQUAL_INT(8, result);
-    // TEST_ASSERT_EQUAL_STRING("16:20:17", buffer);
-
-    // QTime time = 58817123;
-    // result = qAtomToStr(buffer, SIZE, &time, Q_TYPE_TIME, 0);
-    // TEST_ASSERT_EQUAL_INT(12, result);
-    // TEST_ASSERT_EQUAL_STRING("16:20:17.123", buffer);
+void testDurationIntegerExtremes() {
+    const struct {
+        QTypeCode type;
+        int32_t value;
+        const char *expected;
+    } cases[] = {
+        {Q_TYPE_MINUTE, INT32_MIN, "-35791394:08"},
+        {Q_TYPE_MINUTE, INT32_MAX, "35791394:07"},
+        {Q_TYPE_SECOND, INT32_MIN, "-596523:14:08"},
+        {Q_TYPE_SECOND, INT32_MAX, "596523:14:07"},
+        {Q_TYPE_TIME, INT32_MIN, "-596:31:23.648"},
+        {Q_TYPE_TIME, INT32_MAX, "596:31:23.647"},
+    };
+    for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        for (int literal = 0; literal <= 1; literal++) {
+            int result =
+                (literal ? qAtomToLiteral
+                         : qAtomToStr)(buffer, SIZE, &cases[i].value, cases[i].type, 0);
+            TEST_ASSERT_EQUAL_INT(strlen(cases[i].expected), result);
+            TEST_ASSERT_EQUAL_STRING(cases[i].expected, buffer);
+        }
+    }
 }
 
 void testYearFormattingBufferBounds() {
@@ -1969,6 +1974,15 @@ void testDateArithmeticBoundaries() {
         {-24855, "1931.12.14"},
         {24855, "2068.01.19"},
         {24856, "2068.01.20"},
+        {-1, "1999.12.31"},
+        {0, "2000.01.01"},
+        {-36466, "1900.02.28"},
+        {-36465, "1900.03.01"},
+        {59, "2000.02.29"},
+        {60, "2000.03.01"},
+        {36583, "2100.02.28"},
+        {36584, "2100.03.01"},
+        {146156, "2400.02.29"},
         {-2147483646, "-5877611.06.24"},
         {2147483646, "5881610.07.10"},
     };
@@ -2417,6 +2431,8 @@ int main() {
     RUN_TEST(testTimeListToLiteral);
     RUN_TEST(testListToStr);
     RUN_TEST(testListToLiteral);
+    RUN_TEST(testMonthBoundaries);
+    RUN_TEST(testDurationIntegerExtremes);
     RUN_TEST(testGuidListFromQObject);
 
     return UNITY_END();
