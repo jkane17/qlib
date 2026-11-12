@@ -15,7 +15,7 @@
 #include "unity.h"
 
 #define SIZE 128
-char buffer[SIZE];
+static char buffer[SIZE];
 
 static void assertOutputBounds(
     const unsigned char *guarded, QSize capacity, int result, const char *expected
@@ -105,7 +105,7 @@ static void assertOutputBounds(
     result = func(buffer, 0, list, length, precision);                              \
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result)
 
-QGuid guids[] = {
+static const QGuid guids[] = {
     {{
         0x12,
         0x34,
@@ -162,6 +162,13 @@ QGuid guids[] = {
     }},
 };
 
+static const char guidString[] = "12345678-9abc-def0-1122-334455667788";
+static const char guidPairString[] =
+    "12345678-9abc-def0-1122-334455667788 00112233-4455-6677-8899-aabbccddeeff";
+static const char guidListString[] =
+    "12345678-9abc-def0-1122-334455667788 00112233-4455-6677-8899-aabbccddeeff "
+    "ffeeddcc-bbaa-9988-7766-554433221100";
+
 void setUp() {
 }
 void tearDown() {
@@ -203,74 +210,27 @@ void testBooleanToLiteral() {
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
-void testGuidToStr() {
-    QGuid guid = {
-        {0x12,
-         0x34,
-         0x56,
-         0x78,
-         0x9A,
-         0xBC,
-         0xDE,
-         0xF0,
-         0x11,
-         0x22,
-         0x33,
-         0x44,
-         0x55,
-         0x66,
-         0x77,
-         0x88}
-    };
-
-    int result = qGuidToStr(buffer, SIZE, &guid);
+static void assertGuidFormatting(int (*format)(char *, QSize, const QGuid *)) {
+    int result = format(buffer, SIZE, &guids[0]);
     TEST_ASSERT_EQUAL_INT(36, result);
-    TEST_ASSERT_EQUAL_STRING("12345678-9abc-def0-1122-334455667788", buffer);
+    TEST_ASSERT_EQUAL_STRING(guidString, buffer);
 
-    result = qGuidToStr(buffer, SIZE, nullptr);
+    result = format(buffer, SIZE, nullptr);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, result);
 
-    result = qGuidToStr(nullptr, SIZE, &guid);
+    result = format(nullptr, SIZE, &guids[0]);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    result = qGuidToStr(buffer, 0, &guid);
+    result = format(buffer, 0, &guids[0]);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
+void testGuidToStr() {
+    assertGuidFormatting(qGuidToStr);
+}
+
 void testGuidToLiteral() {
-    QGuid guid = {
-        {
-            0x12,
-            0x34,
-            0x56,
-            0x78,
-            0x9A,
-            0xBC,
-            0xDE,
-            0xF0,
-            0x11,
-            0x22,
-            0x33,
-            0x44,
-            0x55,
-            0x66,
-            0x77,
-            0x88,
-        },
-    };
-
-    int result = qGuidToLiteral(buffer, SIZE, &guid);
-    TEST_ASSERT_EQUAL_INT(36, result);
-    TEST_ASSERT_EQUAL_STRING("12345678-9abc-def0-1122-334455667788", buffer);
-
-    result = qGuidToLiteral(buffer, SIZE, nullptr);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, result);
-
-    result = qGuidToLiteral(nullptr, SIZE, &guid);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qGuidToLiteral(buffer, 0, &guid);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    assertGuidFormatting(qGuidToLiteral);
 }
 
 void testByteToStr() {
@@ -433,66 +393,43 @@ void testIntToLiteral() {
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
-void testLongToStr() {
+static void assertLongFormatting(int (*format)(char *, QSize, QLong)) {
     QLong long_ = 1;
-    int result = qLongToStr(buffer, SIZE, long_);
+    int result = format(buffer, SIZE, long_);
     TEST_ASSERT_EQUAL_INT(1, result);
     TEST_ASSERT_EQUAL_STRING("1", buffer);
 
     long_ = 1234567890123456789;
-    result = qLongToStr(buffer, SIZE, long_);
+    result = format(buffer, SIZE, long_);
     TEST_ASSERT_EQUAL_INT(19, result);
     TEST_ASSERT_EQUAL_STRING("1234567890123456789", buffer);
 
     // Require size >= 20
-    result = qLongToStr(buffer, 19, long_);
+    result = format(buffer, 19, long_);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
     long_ = -1234567890123456789;
-    result = qLongToStr(buffer, SIZE, long_);
+    result = format(buffer, SIZE, long_);
     TEST_ASSERT_EQUAL_INT(20, result);
     TEST_ASSERT_EQUAL_STRING("-1234567890123456789", buffer);
 
     // Require size >= 21
-    result = qLongToStr(buffer, 20, long_);
+    result = format(buffer, 20, long_);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    result = qLongToStr(nullptr, SIZE, long_);
+    result = format(nullptr, SIZE, long_);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    result = qLongToStr(buffer, 0, long_);
+    result = format(buffer, 0, long_);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
+void testLongToStr() {
+    assertLongFormatting(qLongToStr);
+}
+
 void testLongToLiteral() {
-    QLong long_ = 1;
-    int result = qLongToLiteral(buffer, SIZE, long_);
-    TEST_ASSERT_EQUAL_INT(1, result);
-    TEST_ASSERT_EQUAL_STRING("1", buffer);
-
-    long_ = 1234567890123456789;
-    result = qLongToLiteral(buffer, SIZE, long_);
-    TEST_ASSERT_EQUAL_INT(19, result);
-    TEST_ASSERT_EQUAL_STRING("1234567890123456789", buffer);
-
-    // Require size >= 20
-    result = qLongToLiteral(buffer, 19, long_);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    long_ = -1234567890123456789;
-    result = qLongToLiteral(buffer, SIZE, long_);
-    TEST_ASSERT_EQUAL_INT(20, result);
-    TEST_ASSERT_EQUAL_STRING("-1234567890123456789", buffer);
-
-    // Require size >= 21
-    result = qLongToLiteral(buffer, 20, long_);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qLongToLiteral(nullptr, SIZE, long_);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qLongToLiteral(buffer, 0, long_);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    assertLongFormatting(qLongToLiteral);
 }
 
 void testRealToStr() {
@@ -559,68 +496,44 @@ void testRealToLiteral() {
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
-void testFloatToStr() {
+static void assertFloatFormatting(int (*format)(char *, QSize, QFloat, int)) {
     QFloat float_ = 3.14;
-    int result = qFloatToStr(buffer, SIZE, float_, 2);
+    int result = format(buffer, SIZE, float_, 2);
     TEST_ASSERT_EQUAL_INT(4, result);
     TEST_ASSERT_EQUAL_STRING("3.14", buffer);
 
-    result = qFloatToStr(buffer, SIZE, float_, 4);
+    result = format(buffer, SIZE, float_, 4);
     TEST_ASSERT_EQUAL_INT(6, result);
     TEST_ASSERT_EQUAL_STRING("3.1400", buffer);
 
     // An exactly representable fraction can be padded beyond the significant-digit precision.
     float_ = 1.25;
-    result = qFloatToStr(buffer, SIZE, float_, 21);
+    result = format(buffer, SIZE, float_, 21);
     TEST_ASSERT_EQUAL_INT(23, result);
     TEST_ASSERT_EQUAL_STRING("1.250000000000000000000", buffer);
 
     float_ = -3.14;
-    result = qFloatToStr(buffer, SIZE, float_, 2);
+    result = format(buffer, SIZE, float_, 2);
     TEST_ASSERT_EQUAL_INT(5, result);
     TEST_ASSERT_EQUAL_STRING("-3.14", buffer);
 
     // Require size >= 6
-    result = qFloatToStr(buffer, 5, float_, 2);
+    result = format(buffer, 5, float_, 2);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    result = qFloatToStr(nullptr, SIZE, float_, 2);
+    result = format(nullptr, SIZE, float_, 2);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    result = qFloatToStr(buffer, 0, float_, 2);
+    result = format(buffer, 0, float_, 2);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
+void testFloatToStr() {
+    assertFloatFormatting(qFloatToStr);
+}
+
 void testFloatToLiteral() {
-    QFloat float_ = 3.14;
-    int result = qFloatToLiteral(buffer, SIZE, float_, 2);
-    TEST_ASSERT_EQUAL_INT(4, result);
-    TEST_ASSERT_EQUAL_STRING("3.14", buffer);
-
-    result = qFloatToLiteral(buffer, SIZE, float_, 4);
-    TEST_ASSERT_EQUAL_INT(6, result);
-    TEST_ASSERT_EQUAL_STRING("3.1400", buffer);
-
-    // An exactly representable fraction can be padded beyond the significant-digit precision.
-    float_ = 1.25;
-    result = qFloatToLiteral(buffer, SIZE, float_, 21);
-    TEST_ASSERT_EQUAL_INT(23, result);
-    TEST_ASSERT_EQUAL_STRING("1.250000000000000000000", buffer);
-
-    float_ = -3.14;
-    result = qFloatToLiteral(buffer, SIZE, float_, 2);
-    TEST_ASSERT_EQUAL_INT(5, result);
-    TEST_ASSERT_EQUAL_STRING("-3.14", buffer);
-
-    // Require size >= 6
-    result = qFloatToLiteral(buffer, 5, float_, 2);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qFloatToLiteral(nullptr, SIZE, float_, 2);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qFloatToLiteral(buffer, 0, float_, 2);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    assertFloatFormatting(qFloatToLiteral);
 }
 
 void testCharToStr() {
@@ -695,48 +608,34 @@ void testSymbolToLiteral() {
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
-void testTimestampToStr() {
+static void assertTimestampFormatting(int (*format)(char *, QSize, QTimestamp)) {
     QTimestamp timestamp = 821977817123456789;
-    int result = qTimestampToStr(buffer, SIZE, timestamp);
+    int result = format(buffer, SIZE, timestamp);
     TEST_ASSERT_EQUAL_INT(29, result);
     TEST_ASSERT_EQUAL_STRING("2026.01.17D15:10:17.123456789", buffer);
 
     // Require size >= 30
-    result = qTimestampToStr(buffer, 29, timestamp);
+    result = format(buffer, 29, timestamp);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
     timestamp = -124793382876543211;
-    result = qTimestampToStr(buffer, SIZE, timestamp);
+    result = format(buffer, SIZE, timestamp);
     TEST_ASSERT_EQUAL_INT(29, result);
     TEST_ASSERT_EQUAL_STRING("1996.01.17D15:10:17.123456789", buffer);
 
-    result = qTimestampToStr(nullptr, SIZE, timestamp);
+    result = format(nullptr, SIZE, timestamp);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    result = qTimestampToStr(buffer, 0, timestamp);
+    result = format(buffer, 0, timestamp);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
+void testTimestampToStr() {
+    assertTimestampFormatting(qTimestampToStr);
+}
+
 void testTimestampToLiteral() {
-    QTimestamp timestamp = 821977817123456789;
-    int result = qTimestampToLiteral(buffer, SIZE, timestamp);
-    TEST_ASSERT_EQUAL_INT(29, result);
-    TEST_ASSERT_EQUAL_STRING("2026.01.17D15:10:17.123456789", buffer);
-
-    // Require size >= 30
-    result = qTimestampToLiteral(buffer, 29, timestamp);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    timestamp = -124793382876543211;
-    result = qTimestampToLiteral(buffer, SIZE, timestamp);
-    TEST_ASSERT_EQUAL_INT(29, result);
-    TEST_ASSERT_EQUAL_STRING("1996.01.17D15:10:17.123456789", buffer);
-
-    result = qTimestampToLiteral(nullptr, SIZE, timestamp);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qTimestampToLiteral(buffer, 0, timestamp);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    assertTimestampFormatting(qTimestampToLiteral);
 }
 
 void testMonthToStr() {
@@ -783,92 +682,64 @@ void testMonthToLiteral() {
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
-void testDateToStr() {
+static void assertDateFormatting(int (*format)(char *, QSize, QDate)) {
     QDate date = 9513;
-    int result = qDateToStr(buffer, SIZE, date);
+    int result = format(buffer, SIZE, date);
     TEST_ASSERT_EQUAL_INT(10, result);
     TEST_ASSERT_EQUAL_STRING("2026.01.17", buffer);
 
     // Require size >= 11
-    result = qDateToStr(buffer, 10, date);
+    result = format(buffer, 10, date);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
     date = -1445;
-    result = qDateToStr(buffer, SIZE, date);
+    result = format(buffer, SIZE, date);
     TEST_ASSERT_EQUAL_INT(10, result);
     TEST_ASSERT_EQUAL_STRING("1996.01.17", buffer);
 
-    result = qDateToStr(nullptr, SIZE, date);
+    result = format(nullptr, SIZE, date);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    result = qDateToStr(buffer, 0, date);
+    result = format(buffer, 0, date);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
+void testDateToStr() {
+    assertDateFormatting(qDateToStr);
+}
+
 void testDateToLiteral() {
-    QDate date = 9513;
-    int result = qDateToLiteral(buffer, SIZE, date);
-    TEST_ASSERT_EQUAL_INT(10, result);
-    TEST_ASSERT_EQUAL_STRING("2026.01.17", buffer);
+    assertDateFormatting(qDateToLiteral);
+}
 
-    // Require size >= 11
-    result = qDateToLiteral(buffer, 10, date);
+static void assertDatetimeFormatting(int (*format)(char *, QSize, QDatetime)) {
+    QDatetime datetime = 9513.6321426273153;
+    int result = format(buffer, SIZE, datetime);
+    TEST_ASSERT_EQUAL_INT(23, result);
+    TEST_ASSERT_EQUAL_STRING("2026.01.17T15:10:17.123", buffer);
+
+    // Require size >= 24
+    result = format(buffer, 23, datetime);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    date = -1445;
-    result = qDateToLiteral(buffer, SIZE, date);
-    TEST_ASSERT_EQUAL_INT(10, result);
-    TEST_ASSERT_EQUAL_STRING("1996.01.17", buffer);
+    datetime = -1444.3678573726852;
+    result = format(buffer, SIZE, datetime);
+    TEST_ASSERT_EQUAL_INT(23, result);
+    TEST_ASSERT_EQUAL_STRING("1996.01.17T15:10:17.123", buffer);
 
-    result = qDateToLiteral(nullptr, SIZE, date);
+    result = format(nullptr, SIZE, datetime);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    result = qDateToLiteral(buffer, 0, date);
+    result = format(buffer, 0, datetime);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
 void testDatetimeToStr() {
-    QDatetime datetime = 9513.6321426273153;
-    int result = qDatetimeToStr(buffer, SIZE, datetime);
-    TEST_ASSERT_EQUAL_INT(23, result);
-    TEST_ASSERT_EQUAL_STRING("2026.01.17T15:10:17.123", buffer);
-
-    // Require size >= 24
-    result = qDatetimeToStr(buffer, 23, datetime);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    datetime = -1444.3678573726852;
-    result = qDatetimeToStr(buffer, SIZE, datetime);
-    TEST_ASSERT_EQUAL_INT(23, result);
-    TEST_ASSERT_EQUAL_STRING("1996.01.17T15:10:17.123", buffer);
-
-    result = qDatetimeToStr(nullptr, SIZE, datetime);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qDatetimeToStr(buffer, 0, datetime);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    assertDatetimeFormatting(qDatetimeToStr);
 }
 
 void testDatetimeToLiteral() {
-    QDatetime datetime = 9513.6321426273153;
-    int result = qDatetimeToLiteral(buffer, SIZE, datetime);
-    TEST_ASSERT_EQUAL_INT(23, result);
-    TEST_ASSERT_EQUAL_STRING("2026.01.17T15:10:17.123", buffer);
-
-    // Require size >= 24
-    result = qDatetimeToLiteral(buffer, 23, datetime);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    datetime = -1444.3678573726852;
-    result = qDatetimeToLiteral(buffer, SIZE, datetime);
-    TEST_ASSERT_EQUAL_INT(23, result);
-    TEST_ASSERT_EQUAL_STRING("1996.01.17T15:10:17.123", buffer);
-
-    result = qDatetimeToLiteral(nullptr, SIZE, datetime);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qDatetimeToLiteral(buffer, 0, datetime);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    assertDatetimeFormatting(qDatetimeToLiteral);
 }
 
 void testDatetimeInvalidRange() {
@@ -936,48 +807,34 @@ void testDatetimeCalendarAndRounding() {
     }
 }
 
-void testTimespanToStr() {
+static void assertTimespanFormatting(int (*format)(char *, QSize, QTimespan)) {
     QTimespan timespan = 1473576123456789;
-    int result = qTimespanToStr(buffer, SIZE, timespan);
+    int result = format(buffer, SIZE, timespan);
     TEST_ASSERT_EQUAL_INT(21, result);
     TEST_ASSERT_EQUAL_STRING("17D01:19:36.123456789", buffer);
 
     // Require size >= 22
-    result = qTimespanToStr(buffer, 21, timespan);
+    result = format(buffer, 21, timespan);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
     timespan = -1473576123456789;
-    result = qTimespanToStr(buffer, SIZE, timespan);
+    result = format(buffer, SIZE, timespan);
     TEST_ASSERT_EQUAL_INT(22, result);
     TEST_ASSERT_EQUAL_STRING("-17D01:19:36.123456789", buffer);
 
-    result = qTimespanToStr(nullptr, SIZE, timespan);
+    result = format(nullptr, SIZE, timespan);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    result = qTimespanToStr(buffer, 0, timespan);
+    result = format(buffer, 0, timespan);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
+void testTimespanToStr() {
+    assertTimespanFormatting(qTimespanToStr);
+}
+
 void testTimespanToLiteral() {
-    QTimespan timespan = 1473576123456789;
-    int result = qTimespanToLiteral(buffer, SIZE, timespan);
-    TEST_ASSERT_EQUAL_INT(21, result);
-    TEST_ASSERT_EQUAL_STRING("17D01:19:36.123456789", buffer);
-
-    // Require size >= 22
-    result = qTimespanToLiteral(buffer, 21, timespan);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    timespan = -1473576123456789;
-    result = qTimespanToLiteral(buffer, SIZE, timespan);
-    TEST_ASSERT_EQUAL_INT(22, result);
-    TEST_ASSERT_EQUAL_STRING("-17D01:19:36.123456789", buffer);
-
-    result = qTimespanToLiteral(nullptr, SIZE, timespan);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qTimespanToLiteral(buffer, 0, timespan);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    assertTimespanFormatting(qTimespanToLiteral);
 }
 
 void testTimespanExtremes() {
@@ -1018,166 +875,109 @@ void testTimespanExtremes() {
     }
 }
 
-void testMinuteToStr() {
+static void assertMinuteFormatting(int (*format)(char *, QSize, QMinute)) {
     QMinute minute = 980;
-    int result = qMinuteToStr(buffer, SIZE, minute);
+    int result = format(buffer, SIZE, minute);
     TEST_ASSERT_EQUAL_INT(5, result);
     TEST_ASSERT_EQUAL_STRING("16:20", buffer);
 
     // Require size >= 6
-    result = qMinuteToStr(buffer, 5, minute);
+    result = format(buffer, 5, minute);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
     minute = -980;
-    result = qMinuteToStr(buffer, SIZE, minute);
+    result = format(buffer, SIZE, minute);
     TEST_ASSERT_EQUAL_INT(6, result);
     TEST_ASSERT_EQUAL_STRING("-16:20", buffer);
 
     minute = 6000;
-    result = qMinuteToStr(buffer, SIZE, minute);
+    result = format(buffer, SIZE, minute);
     TEST_ASSERT_EQUAL_INT(6, result);
     TEST_ASSERT_EQUAL_STRING("100:00", buffer);
 
-    result = qMinuteToStr(nullptr, SIZE, minute);
+    result = format(nullptr, SIZE, minute);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    result = qMinuteToStr(buffer, 0, minute);
+    result = format(buffer, 0, minute);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
+void testMinuteToStr() {
+    assertMinuteFormatting(qMinuteToStr);
+}
+
 void testMinuteToLiteral() {
-    QMinute minute = 980;
-    int result = qMinuteToLiteral(buffer, SIZE, minute);
-    TEST_ASSERT_EQUAL_INT(5, result);
-    TEST_ASSERT_EQUAL_STRING("16:20", buffer);
+    assertMinuteFormatting(qMinuteToLiteral);
+}
 
-    // Require size >= 6
-    result = qMinuteToLiteral(buffer, 5, minute);
+static void assertSecondFormatting(int (*format)(char *, QSize, QSecond)) {
+    QSecond second = 58817;
+    int result = format(buffer, SIZE, second);
+    TEST_ASSERT_EQUAL_INT(8, result);
+    TEST_ASSERT_EQUAL_STRING("16:20:17", buffer);
+
+    // Require size >= 9
+    result = format(buffer, 8, second);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    minute = -980;
-    result = qMinuteToLiteral(buffer, SIZE, minute);
-    TEST_ASSERT_EQUAL_INT(6, result);
-    TEST_ASSERT_EQUAL_STRING("-16:20", buffer);
+    second = -58817;
+    result = format(buffer, SIZE, second);
+    TEST_ASSERT_EQUAL_INT(9, result);
+    TEST_ASSERT_EQUAL_STRING("-16:20:17", buffer);
 
-    minute = 6000;
-    result = qMinuteToLiteral(buffer, SIZE, minute);
-    TEST_ASSERT_EQUAL_INT(6, result);
-    TEST_ASSERT_EQUAL_STRING("100:00", buffer);
+    second = 360000;
+    result = format(buffer, SIZE, second);
+    TEST_ASSERT_EQUAL_INT(9, result);
+    TEST_ASSERT_EQUAL_STRING("100:00:00", buffer);
 
-    result = qMinuteToLiteral(nullptr, SIZE, minute);
+    result = format(nullptr, SIZE, second);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    result = qMinuteToLiteral(buffer, 0, minute);
+    result = format(buffer, 0, second);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
 void testSecondToStr() {
-    QSecond second = 58817;
-    int result = qSecondToStr(buffer, SIZE, second);
-    TEST_ASSERT_EQUAL_INT(8, result);
-    TEST_ASSERT_EQUAL_STRING("16:20:17", buffer);
-
-    // Require size >= 9
-    result = qSecondToStr(buffer, 8, second);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    second = -58817;
-    result = qSecondToStr(buffer, SIZE, second);
-    TEST_ASSERT_EQUAL_INT(9, result);
-    TEST_ASSERT_EQUAL_STRING("-16:20:17", buffer);
-
-    second = 360000;
-    result = qSecondToStr(buffer, SIZE, second);
-    TEST_ASSERT_EQUAL_INT(9, result);
-    TEST_ASSERT_EQUAL_STRING("100:00:00", buffer);
-
-    result = qSecondToStr(nullptr, SIZE, second);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qSecondToStr(buffer, 0, second);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    assertSecondFormatting(qSecondToStr);
 }
 
 void testSecondToLiteral() {
-    QSecond second = 58817;
-    int result = qSecondToLiteral(buffer, SIZE, second);
-    TEST_ASSERT_EQUAL_INT(8, result);
-    TEST_ASSERT_EQUAL_STRING("16:20:17", buffer);
+    assertSecondFormatting(qSecondToLiteral);
+}
 
-    // Require size >= 9
-    result = qSecondToLiteral(buffer, 8, second);
+static void assertTimeFormatting(int (*format)(char *, QSize, QTime)) {
+    QTime time = 58817123;
+    int result = format(buffer, SIZE, time);
+    TEST_ASSERT_EQUAL_INT(12, result);
+    TEST_ASSERT_EQUAL_STRING("16:20:17.123", buffer);
+
+    // Require size >= 13
+    result = format(buffer, 12, time);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    second = -58817;
-    result = qSecondToLiteral(buffer, SIZE, second);
-    TEST_ASSERT_EQUAL_INT(9, result);
-    TEST_ASSERT_EQUAL_STRING("-16:20:17", buffer);
+    time = -58817123;
+    result = format(buffer, SIZE, time);
+    TEST_ASSERT_EQUAL_INT(13, result);
+    TEST_ASSERT_EQUAL_STRING("-16:20:17.123", buffer);
 
-    second = 360000;
-    result = qSecondToLiteral(buffer, SIZE, second);
-    TEST_ASSERT_EQUAL_INT(9, result);
-    TEST_ASSERT_EQUAL_STRING("100:00:00", buffer);
+    time = 360000000;
+    result = format(buffer, SIZE, time);
+    TEST_ASSERT_EQUAL_INT(13, result);
+    TEST_ASSERT_EQUAL_STRING("100:00:00.000", buffer);
 
-    result = qSecondToLiteral(nullptr, SIZE, second);
+    result = format(nullptr, SIZE, time);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 
-    result = qSecondToLiteral(buffer, 0, second);
+    result = format(buffer, 0, time);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
 }
 
 void testTimeToStr() {
-    QTime time = 58817123;
-    int result = qTimeToStr(buffer, SIZE, time);
-    TEST_ASSERT_EQUAL_INT(12, result);
-    TEST_ASSERT_EQUAL_STRING("16:20:17.123", buffer);
-
-    // Require size >= 13
-    result = qTimeToStr(buffer, 12, time);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    time = -58817123;
-    result = qTimeToStr(buffer, SIZE, time);
-    TEST_ASSERT_EQUAL_INT(13, result);
-    TEST_ASSERT_EQUAL_STRING("-16:20:17.123", buffer);
-
-    time = 360000000;
-    result = qTimeToStr(buffer, SIZE, time);
-    TEST_ASSERT_EQUAL_INT(13, result);
-    TEST_ASSERT_EQUAL_STRING("100:00:00.000", buffer);
-
-    result = qTimeToStr(nullptr, SIZE, time);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qTimeToStr(buffer, 0, time);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    assertTimeFormatting(qTimeToStr);
 }
 
 void testTimeToLiteral() {
-    QTime time = 58817123;
-    int result = qTimeToLiteral(buffer, SIZE, time);
-    TEST_ASSERT_EQUAL_INT(12, result);
-    TEST_ASSERT_EQUAL_STRING("16:20:17.123", buffer);
-
-    // Require size >= 13
-    result = qTimeToLiteral(buffer, 12, time);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    time = -58817123;
-    result = qTimeToLiteral(buffer, SIZE, time);
-    TEST_ASSERT_EQUAL_INT(13, result);
-    TEST_ASSERT_EQUAL_STRING("-16:20:17.123", buffer);
-
-    time = 360000000;
-    result = qTimeToLiteral(buffer, SIZE, time);
-    TEST_ASSERT_EQUAL_INT(13, result);
-    TEST_ASSERT_EQUAL_STRING("100:00:00.000", buffer);
-
-    result = qTimeToLiteral(nullptr, SIZE, time);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qTimeToLiteral(buffer, 0, time);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    assertTimeFormatting(qTimeToLiteral);
 }
 
 void testAtomToStr() {
@@ -1188,27 +988,9 @@ void testAtomToStr() {
     TEST_ASSERT_EQUAL_INT(1, result);
     TEST_ASSERT_EQUAL_STRING("1", buffer);
 
-    QGuid guid = {
-        {0x12,
-         0x34,
-         0x56,
-         0x78,
-         0x9A,
-         0xBC,
-         0xDE,
-         0xF0,
-         0x11,
-         0x22,
-         0x33,
-         0x44,
-         0x55,
-         0x66,
-         0x77,
-         0x88}
-    };
-    result = qAtomToStr(buffer, SIZE, &guid, Q_TYPE_GUID, 0);
+    result = qAtomToStr(buffer, SIZE, &guids[0], Q_TYPE_GUID, 0);
     TEST_ASSERT_EQUAL_INT(36, result);
-    TEST_ASSERT_EQUAL_STRING("12345678-9abc-def0-1122-334455667788", buffer);
+    TEST_ASSERT_EQUAL_STRING(guidString, buffer);
 
     QByte byte = 1;
     result = qAtomToStr(buffer, SIZE, &byte, Q_TYPE_BYTE, 0);
@@ -1299,27 +1081,9 @@ void testAtomToLiteral() {
     TEST_ASSERT_EQUAL_INT(2, result);
     TEST_ASSERT_EQUAL_STRING("1b", buffer);
 
-    QGuid guid = {
-        {0x12,
-         0x34,
-         0x56,
-         0x78,
-         0x9A,
-         0xBC,
-         0xDE,
-         0xF0,
-         0x11,
-         0x22,
-         0x33,
-         0x44,
-         0x55,
-         0x66,
-         0x77,
-         0x88}
-    };
-    result = qAtomToLiteral(buffer, SIZE, &guid, Q_TYPE_GUID, 0);
+    result = qAtomToLiteral(buffer, SIZE, &guids[0], Q_TYPE_GUID, 0);
     TEST_ASSERT_EQUAL_INT(36, result);
-    TEST_ASSERT_EQUAL_STRING("12345678-9abc-def0-1122-334455667788", buffer);
+    TEST_ASSERT_EQUAL_STRING(guidString, buffer);
 
     QByte byte = 1;
     result = qAtomToLiteral(buffer, SIZE, &byte, Q_TYPE_BYTE, 0);
@@ -1417,10 +1181,8 @@ void testGuidListToStr() {
         qGuidListToStr,
         guids,
         3,
-        "12345678-9abc-def0-1122-334455667788 "
-        "00112233-4455-6677-8899-aabbccddeeff "
-        "ffeeddcc-bbaa-9988-7766-554433221100",
-        "12345678-9abc-def0-1122-334455667788"
+        guidListString,
+        guidString
     );
 }
 
@@ -1429,10 +1191,8 @@ void testGuidListToLiteral() {
         qGuidListToLiteral,
         guids,
         3,
-        "12345678-9abc-def0-1122-334455667788 "
-        "00112233-4455-6677-8899-aabbccddeeff "
-        "ffeeddcc-bbaa-9988-7766-554433221100",
-        "12345678-9abc-def0-1122-334455667788"
+        guidListString,
+        guidString
     );
 }
 
@@ -1706,57 +1466,17 @@ void testTimeListToLiteral() {
 
 void testGuidListFromQObject() {
     // The items of a Q guid list are stored contiguously and can be formatted directly
-    QGuid values[] = {
-        {{
-            0x12,
-            0x34,
-            0x56,
-            0x78,
-            0x9A,
-            0xBC,
-            0xDE,
-            0xF0,
-            0x11,
-            0x22,
-            0x33,
-            0x44,
-            0x55,
-            0x66,
-            0x77,
-            0x88,
-        }},
-        {{
-            0x00,
-            0x11,
-            0x22,
-            0x33,
-            0x44,
-            0x55,
-            0x66,
-            0x77,
-            0x88,
-            0x99,
-            0xAA,
-            0xBB,
-            0xCC,
-            0xDD,
-            0xEE,
-            0xFF,
-        }},
-    };
-    QObj *list = qNewGuidList(values, 2);
+    QObj *list = qNewGuidList(guids, 2);
+    TEST_ASSERT_NOT_NULL(list);
 
     int result = qListToStr(buffer, SIZE, list->list, list->length, Q_TYPE_GUID, 0);
     TEST_ASSERT_EQUAL_INT(73, result);
-    TEST_ASSERT_EQUAL_STRING(
-        "12345678-9abc-def0-1122-334455667788 "
-        "00112233-4455-6677-8899-aabbccddeeff",
-        buffer
-    );
+    TEST_ASSERT_EQUAL_STRING(guidPairString, buffer);
 
     result = qGuidListToLiteral(buffer, SIZE, (const QGuid *)list->list, list->length);
     TEST_ASSERT_EQUAL_INT(73, result);
 
+    TEST_ASSERT_EQUAL_STRING(guidPairString, buffer);
     qDecRef(list);
 }
 
@@ -1787,8 +1507,8 @@ static void assertGenericListFormatting(bool literal) {
         {Q_TYPE_BOOLEAN, booleans, "1 0", "10b"},
         {Q_TYPE_GUID,
          guids,
-         "12345678-9abc-def0-1122-334455667788 00112233-4455-6677-8899-aabbccddeeff",
-         "12345678-9abc-def0-1122-334455667788 00112233-4455-6677-8899-aabbccddeeff"},
+         guidPairString,
+         guidPairString},
         {Q_TYPE_BYTE, bytes, "01 ff", "0x01ff"},
         {Q_TYPE_SHORT, shorts, "-123 456", "-123 456h"},
         {Q_TYPE_INT, ints, "-123456 789012", "-123456 789012i"},
