@@ -1,6 +1,6 @@
 # Formatting
 
-This document describes the formatting functions from [`fmt.h`](/src/c/cdk/fmt.h). These functions write Q values into a caller-provided character buffer, either as a plain string or as a Q literal.
+This document describes the formatting functions from [`fmt.h`](/src/c/cdk/fmt.h). These functions write Q values into a caller-provided character buffer as plain text or Q-style literal text for display. They are formatting functions, not a serialization API.
 
 ## Table of Contents
 
@@ -21,10 +21,22 @@ This document describes the formatting functions from [`fmt.h`](/src/c/cdk/fmt.h
 
 Every type has two functions:
 
-- `q<Type>ToStr` writes the value as a plain string, as it would appear in a table cell (`42`, `abc`, `2000.01.01`).
-- `q<Type>ToLiteral` writes the value in a form that Q parses back to the same type where the type needs a marker (`42i`, `` `abc ``, `0xab`, `"a"`).
+- `q<Type>ToStr` writes plain display text (`42`, `abc`, `2000.01.01`).
+- `q<Type>ToLiteral` writes Q-style display text, adding familiar type markers or delimiters where implemented (`42i`, `` `abc ``, `0xab`, `"a"`). The `Literal` name does not promise a parseable Q expression.
 
 For example, the int `42` is `42` as a string and `42i` as a literal, while the long `42` is `42` in both forms.
+
+This display-only contract applies to atoms, lists, and generic dispatch. Successful
+formatting does not guarantee that Q can parse the output, or that parsing would
+recover the original type, value, list shape, or special-value semantics. Characters
+and symbols are not escaped, and empty/singleton lists and nulls/infinities are not
+encoded for round trips. See [Limitations](#limitations) for examples.
+
+Numeric precision is a separate source of information loss: formatting `1.234` with
+precision `2` produces `1.23`. Even text that parses with the intended type need not
+recover the exact original floating-point value. Applications needing serialization
+or generated Q expressions require a separate encoder with explicit round-trip
+rules; these display functions provide no such guarantee.
 
 ### Return Values
 
@@ -212,7 +224,7 @@ int qLongListToLiteral(char *buffer, QSize size, const QLong *longs, QSize lengt
 
 As with atoms, the real and float list functions take an additional `precision`. The items of a Q list can be passed directly, e.g. `qLongListToStr(buffer, size, (const QLong *)obj->list, obj->length)`, or `qGuidListToStr(buffer, size, (const QGuid *)obj->list, obj->length)` for a guid list.
 
-Items are separated by a single space in the string form. The literal form follows Q's syntax for each type:
+Items are separated by a single space in the string form. The literal form uses type-specific Q-style display conventions, without guaranteeing a parseable list expression:
 
 | Type    | Items                | String                    | Literal                   |
 | ------- | -------------------- | ------------------------- | ------------------------- |
@@ -256,14 +268,15 @@ Only the primitive types (`Q_TYPE_BOOLEAN` to `Q_TYPE_TIME`) are supported; any 
 
 ## Limitations
 
-The formatting functions write the raw value of each type. They do not currently handle the following, which should be taken into account when the output must match Q or be parsed back by Q:
+The following behaviors are part of the current display-oriented contract. The functions format underlying values with the documented rounding and range checks; they do not encode values for parsing back into Q:
 
 - **Nulls and infinities are not recognised.** They are written as ordinary values: a long null as `-9223372036854775808` rather than `0N`, a float null as `nan` rather than `0n`, and a float infinity as `inf` rather than `0w`. Temporal special values are not formatted as Q nulls or infinities: non-finite datetimes return `Q_FMT_ERROR_RANGE`, and other temporal types format their underlying value where supported. Check for [special values](/doc/c/type.md#special-values) before formatting.
 - **Timespans use the full signed 64-bit raw value range.** For example, `INT64_MIN` (the timespan null sentinel) is formatted as `-106751D23:47:16.854775808`, not as a Q null.
 - **Char literals are not escaped.** A `"` is written as `"""` rather than `"\""`, and backslashes and control characters (such as a newline) are written as they are.
 - **Symbols are not quoted.** A symbol containing a space, such as `a b`, is written as `` `a b ``, which Q parses as two tokens.
+- **Numeric output is display-dependent.** Requested fractional precision can round away information, and `printf` uses the current numeric locale. Examples in this document assume the C numeric locale. Neither output form guarantees recovery of the exact floating-point value.
 - **A float literal can lose its type.** With a precision of `0`, the float `1.0` is written as `1`, which Q parses as a long.
-- **One-item and empty list literals are not distinguished from atoms.** A one-item long list is written as `1` (Q would write `,1`), a one-item char list as `"a"` (Q: `,"a"`), and an empty list as nothing at all (Q: `` `long$() ``, or `""` for an empty char list).
+- **List shape is not preserved for round trips.** A one-item long list is written as `1` (Q would write `,1`), a one-item char list as `"a"` (Q: `,"a"`), and an empty list as nothing at all (Q: `` `long$() ``, or `""` for an empty char list).
 
 ## Examples
 

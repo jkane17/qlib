@@ -1,7 +1,14 @@
 
 /**
  * @file fmt.h
- * @brief String formatting.
+ * @brief Display formatting of Q values.
+ *
+ * ToStr produces plain display text; ToLiteral produces Q-style display text with
+ * type markers and delimiters where implemented. Neither is a serialization API.
+ * ToLiteral does not guarantee a parseable Q expression or preservation of the
+ * original type, value, list shape, or special-value semantics. Characters and
+ * symbols are not escaped. Fractional precision can round away information, and
+ * numeric output follows the current locale. See doc/c/formatting.md for examples.
  *
  * Buffer sizes are byte capacities, including room for the final null terminator.
  * Successful output counts exclude that terminator and cannot exceed INT_MAX.
@@ -67,7 +74,7 @@ extern "C" {
 int qBooleanToStr(char *buffer, QSize size, QBoolean boolean);
 
 /**
- * @brief Format a boolean value into literal form.
+ * @brief Format a boolean value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -89,7 +96,7 @@ int qBooleanToLiteral(char *buffer, QSize size, QBoolean boolean);
 int qGuidToStr(char *buffer, QSize size, const QGuid *guid);
 
 /**
- * @brief Format a guid value into literal form.
+ * @brief Format a guid value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -111,7 +118,7 @@ int qGuidToLiteral(char *buffer, QSize size, const QGuid *guid);
 int qByteToStr(char *buffer, QSize size, QByte byte);
 
 /**
- * @brief Format a byte value into literal form.
+ * @brief Format a byte value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -133,7 +140,7 @@ int qByteToLiteral(char *buffer, QSize size, QByte byte);
 int qShortToStr(char *buffer, QSize size, QShort short_);
 
 /**
- * @brief Format a short value into literal form.
+ * @brief Format a short value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -155,7 +162,7 @@ int qShortToLiteral(char *buffer, QSize size, QShort short_);
 int qIntToStr(char *buffer, QSize size, QInt int_);
 
 /**
- * @brief Format a int value into literal form.
+ * @brief Format a int value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -177,7 +184,7 @@ int qIntToLiteral(char *buffer, QSize size, QInt int_);
 int qLongToStr(char *buffer, QSize size, QLong long_);
 
 /**
- * @brief Format a long value into literal form.
+ * @brief Format a long value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -201,7 +208,7 @@ int qLongToLiteral(char *buffer, QSize size, QLong long_);
 int qRealToStr(char *buffer, QSize size, QReal real, int precision);
 
 /**
- * @brief Format a real value into literal form.
+ * @brief Format a real value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -227,7 +234,7 @@ int qRealToLiteral(char *buffer, QSize size, QReal real, int precision);
 int qFloatToStr(char *buffer, QSize size, QFloat float_, int precision);
 
 /**
- * @brief Format a float value into literal form.
+ * @brief Format a float value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -251,7 +258,7 @@ int qFloatToLiteral(char *buffer, QSize size, QFloat float_, int precision);
 int qCharToStr(char *buffer, QSize size, QChar char_);
 
 /**
- * @brief Format a char value into literal form.
+ * @brief Format a char value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -273,7 +280,7 @@ int qCharToLiteral(char *buffer, QSize size, QChar char_);
 int qSymbolToStr(char *buffer, QSize size, QSymbol symbol);
 
 /**
- * @brief Format a symbol value into literal form.
+ * @brief Format a symbol value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -298,7 +305,7 @@ int qSymbolToLiteral(char *buffer, QSize size, QSymbol symbol);
 int qTimestampToStr(char *buffer, QSize size, QTimestamp timestamp);
 
 /**
- * @brief Format a timestamp value into literal form.
+ * @brief Format a timestamp value into Q-style text for display.
  *
  * @note Uses UTC. Returns Q_FMT_ERROR_RANGE without writing output if the platform
  * cannot convert the value to calendar time.
@@ -323,7 +330,7 @@ int qTimestampToLiteral(char *buffer, QSize size, QTimestamp timestamp);
 int qMonthToStr(char *buffer, QSize size, QMonth month);
 
 /**
- * @brief Format a month value into literal form.
+ * @brief Format a month value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -348,7 +355,7 @@ int qMonthToLiteral(char *buffer, QSize size, QMonth month);
 int qDateToStr(char *buffer, QSize size, QDate date);
 
 /**
- * @brief Format a date value into literal form.
+ * @brief Format a date value into Q-style text for display.
  *
  * @note Uses UTC. Returns Q_FMT_ERROR_RANGE without writing output if the platform
  * cannot convert the value to calendar time.
@@ -377,7 +384,7 @@ int qDateToLiteral(char *buffer, QSize size, QDate date);
 int qDatetimeToStr(char *buffer, QSize size, QDatetime datetime);
 
 /**
- * @brief Format a datetime value into literal form.
+ * @brief Format a datetime value into Q-style text for display.
  *
  * @note Uses the proleptic Gregorian calendar with years INT32_MIN through INT32_MAX.
  * Rounds to the nearest millisecond; halfway values round toward the later time.
@@ -403,7 +410,7 @@ int qDatetimeToLiteral(char *buffer, QSize size, QDatetime datetime);
 int qTimespanToStr(char *buffer, QSize size, QTimespan timespan);
 
 /**
- * @brief Format a timespan value into literal form.
+ * @brief Format a timespan value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -429,7 +436,7 @@ int qTimespanToLiteral(char *buffer, QSize size, QTimespan timespan);
 int qMinuteToStr(char *buffer, QSize size, QMinute minute);
 
 /**
- * @brief Format a minute value into literal form.
+ * @brief Format a minute value into Q-style text for display.
  * 
  * @note Q itself will display any minute with an underlying int value above/below +/-5999 with '**' 
  * in the hour position (i.e., it does not show the hour above 99). However, this function will 
@@ -459,7 +466,7 @@ int qMinuteToLiteral(char *buffer, QSize size, QMinute minute);
 int qSecondToStr(char *buffer, QSize size, QSecond second);
 
 /**
- * @brief Format a second value into literal form.
+ * @brief Format a second value into Q-style text for display.
  * 
  * @note Q itself will display any second with an underlying int value above/below +/-359,999 with 
  * '**' in the hour position (i.e., it does not show the hour above 99). However, this function will 
@@ -489,7 +496,7 @@ int qSecondToLiteral(char *buffer, QSize size, QSecond second);
 int qTimeToStr(char *buffer, QSize size, QTime time);
 
 /**
- * @brief Format a time value into literal form.
+ * @brief Format a time value into Q-style text for display.
  * 
  * @note Q itself will display any time with an underlying int value above/below +/-359,999,999 with 
  * '**' in the hour position (i.e., it does not show the hour above 99). However, this function will 
@@ -519,7 +526,7 @@ int qTimeToLiteral(char *buffer, QSize size, QTime time);
 int qAtomToStr(char *buffer, QSize size, const void *atom, QTypeCode type, int precision);
 
 /**
- * @brief Format any atom value into literal form.
+ * @brief Format any atom value into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -547,7 +554,7 @@ int qAtomToLiteral(char *buffer, QSize size, const void *atom, QTypeCode type, i
 int qBooleanListToStr(char *buffer, QSize size, const QBoolean *booleans, QSize length);
 
 /**
- * @brief Format a list of boolean values into literal form.
+ * @brief Format a list of boolean values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -571,7 +578,7 @@ int qBooleanListToLiteral(char *buffer, QSize size, const QBoolean *booleans, QS
 int qGuidListToStr(char *buffer, QSize size, const QGuid *guids, QSize length);
 
 /**
- * @brief Format a list of guid values into literal form.
+ * @brief Format a list of guid values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -595,7 +602,7 @@ int qGuidListToLiteral(char *buffer, QSize size, const QGuid *guids, QSize lengt
 int qByteListToStr(char *buffer, QSize size, const QByte *bytes, QSize length);
 
 /**
- * @brief Format a list of byte values into literal form.
+ * @brief Format a list of byte values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -619,7 +626,7 @@ int qByteListToLiteral(char *buffer, QSize size, const QByte *bytes, QSize lengt
 int qShortListToStr(char *buffer, QSize size, const QShort *shorts, QSize length);
 
 /**
- * @brief Format a list of short values into literal form.
+ * @brief Format a list of short values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -643,7 +650,7 @@ int qShortListToLiteral(char *buffer, QSize size, const QShort *shorts, QSize le
 int qIntListToStr(char *buffer, QSize size, const QInt *ints, QSize length);
 
 /**
- * @brief Format a list of int values into literal form.
+ * @brief Format a list of int values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -667,7 +674,7 @@ int qIntListToLiteral(char *buffer, QSize size, const QInt *ints, QSize length);
 int qLongListToStr(char *buffer, QSize size, const QLong *longs, QSize length);
 
 /**
- * @brief Format a list of long values into literal form.
+ * @brief Format a list of long values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -693,7 +700,7 @@ int qLongListToLiteral(char *buffer, QSize size, const QLong *longs, QSize lengt
 int qRealListToStr(char *buffer, QSize size, const QReal *reals, QSize length, int precision);
 
 /**
- * @brief Format a list of real values into literal form.
+ * @brief Format a list of real values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -721,7 +728,7 @@ int qRealListToLiteral(char *buffer, QSize size, const QReal *reals, QSize lengt
 int qFloatListToStr(char *buffer, QSize size, const QFloat *floats, QSize length, int precision);
 
 /**
- * @brief Format a list of float values into literal form.
+ * @brief Format a list of float values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -753,7 +760,7 @@ int qFloatListToLiteral(
 int qCharListToStr(char *buffer, QSize size, const QChar *chars, QSize length);
 
 /**
- * @brief Format a list of char values into literal form.
+ * @brief Format a list of char values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -777,7 +784,7 @@ int qCharListToLiteral(char *buffer, QSize size, const QChar *chars, QSize lengt
 int qSymbolListToStr(char *buffer, QSize size, const QSymbol *symbols, QSize length);
 
 /**
- * @brief Format a list of symbol values into literal form.
+ * @brief Format a list of symbol values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -801,7 +808,7 @@ int qSymbolListToLiteral(char *buffer, QSize size, const QSymbol *symbols, QSize
 int qTimestampListToStr(char *buffer, QSize size, const QTimestamp *timestamps, QSize length);
 
 /**
- * @brief Format a list of timestamp values into literal form.
+ * @brief Format a list of timestamp values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -825,7 +832,7 @@ int qTimestampListToLiteral(char *buffer, QSize size, const QTimestamp *timestam
 int qMonthListToStr(char *buffer, QSize size, const QMonth *months, QSize length);
 
 /**
- * @brief Format a list of month values into literal form.
+ * @brief Format a list of month values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -849,7 +856,7 @@ int qMonthListToLiteral(char *buffer, QSize size, const QMonth *months, QSize le
 int qDateListToStr(char *buffer, QSize size, const QDate *dates, QSize length);
 
 /**
- * @brief Format a list of date values into literal form.
+ * @brief Format a list of date values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -873,7 +880,7 @@ int qDateListToLiteral(char *buffer, QSize size, const QDate *dates, QSize lengt
 int qDatetimeListToStr(char *buffer, QSize size, const QDatetime *datetimes, QSize length);
 
 /**
- * @brief Format a list of datetime values into literal form.
+ * @brief Format a list of datetime values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -897,7 +904,7 @@ int qDatetimeListToLiteral(char *buffer, QSize size, const QDatetime *datetimes,
 int qTimespanListToStr(char *buffer, QSize size, const QTimespan *timespans, QSize length);
 
 /**
- * @brief Format a list of timespan values into literal form.
+ * @brief Format a list of timespan values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -921,7 +928,7 @@ int qTimespanListToLiteral(char *buffer, QSize size, const QTimespan *timespans,
 int qMinuteListToStr(char *buffer, QSize size, const QMinute *minutes, QSize length);
 
 /**
- * @brief Format a list of minute values into literal form.
+ * @brief Format a list of minute values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -945,7 +952,7 @@ int qMinuteListToLiteral(char *buffer, QSize size, const QMinute *minutes, QSize
 int qSecondListToStr(char *buffer, QSize size, const QSecond *seconds, QSize length);
 
 /**
- * @brief Format a list of second values into literal form.
+ * @brief Format a list of second values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -969,7 +976,7 @@ int qSecondListToLiteral(char *buffer, QSize size, const QSecond *seconds, QSize
 int qTimeListToStr(char *buffer, QSize size, const QTime *time, QSize length);
 
 /**
- * @brief Format a list of time values into literal form.
+ * @brief Format a list of time values into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted values into.
  * @param size Size of buffer (number of bytes).
@@ -1003,7 +1010,7 @@ int qListToStr(
 );
 
 /**
- * @brief Format any simple list into literal form.
+ * @brief Format any simple list into Q-style text for display.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
