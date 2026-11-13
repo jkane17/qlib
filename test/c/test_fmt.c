@@ -432,100 +432,60 @@ void testLongToLiteral() {
     assertLongFormatting(qLongToLiteral);
 }
 
+static void assertRealFormatting(int (*format)(char *, QSize, QReal, int), bool literal) {
+    const struct {
+        QReal value;
+        int precision;
+        const char *text;
+    } cases[] = {
+        {3.14f, 2, "3.1"},
+        {3.14f, 4, "3.14"},
+        {1.25f, 10, "1.25"},
+        {-3.14f, 3, "-3.14"},
+    };
+    for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        char expected[32];
+        snprintf(expected, sizeof(expected), "%s%s", cases[i].text, literal ? "e" : "");
+        QSize width = strlen(expected);
+        TEST_ASSERT_EQUAL_INT(width, format(buffer, width + 1, cases[i].value, cases[i].precision));
+        TEST_ASSERT_EQUAL_STRING(expected, buffer);
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_SIZE, format(buffer, width, cases[i].value, cases[i].precision)
+        );
+    }
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, format(nullptr, SIZE, 1.25f, Q_FMT_DEFAULT_PRECISION));
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, format(buffer, 0, 1.25f, Q_FMT_DEFAULT_PRECISION));
+}
+
 void testRealToStr() {
-    QReal real = 3.14;
-    int result = qRealToStr(buffer, SIZE, real, 2);
-    TEST_ASSERT_EQUAL_INT(4, result);
-    TEST_ASSERT_EQUAL_STRING("3.14", buffer);
-
-    result = qRealToStr(buffer, SIZE, real, 4);
-    TEST_ASSERT_EQUAL_INT(6, result);
-    TEST_ASSERT_EQUAL_STRING("3.1400", buffer);
-
-    // An exactly representable fraction can be padded beyond the significant-digit precision.
-    real = 1.25f;
-    result = qRealToStr(buffer, SIZE, real, 10);
-    TEST_ASSERT_EQUAL_INT(12, result);
-    TEST_ASSERT_EQUAL_STRING("1.2500000000", buffer);
-
-    real = -3.14;
-    result = qRealToStr(buffer, SIZE, real, 2);
-    TEST_ASSERT_EQUAL_INT(5, result);
-    TEST_ASSERT_EQUAL_STRING("-3.14", buffer);
-
-    // Require size >= 6
-    result = qRealToStr(buffer, 5, real, 2);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qRealToStr(nullptr, SIZE, real, 2);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qRealToStr(buffer, 0, real, 2);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    assertRealFormatting(qRealToStr, false);
 }
 
 void testRealToLiteral() {
-    QReal real = 3.14;
-    int result = qRealToLiteral(buffer, SIZE, real, 2);
-    TEST_ASSERT_EQUAL_INT(5, result);
-    TEST_ASSERT_EQUAL_STRING("3.14e", buffer);
-
-    result = qRealToLiteral(buffer, SIZE, real, 4);
-    TEST_ASSERT_EQUAL_INT(7, result);
-    TEST_ASSERT_EQUAL_STRING("3.1400e", buffer);
-
-    // An exactly representable fraction can be padded beyond the significant-digit precision.
-    real = 1.25f;
-    result = qRealToLiteral(buffer, SIZE, real, 10);
-    TEST_ASSERT_EQUAL_INT(13, result);
-    TEST_ASSERT_EQUAL_STRING("1.2500000000e", buffer);
-
-    real = -3.14;
-    result = qRealToLiteral(buffer, SIZE, real, 2);
-    TEST_ASSERT_EQUAL_INT(6, result);
-    TEST_ASSERT_EQUAL_STRING("-3.14e", buffer);
-
-    // Require size >= 7
-    result = qRealToLiteral(buffer, 6, real, 2);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qRealToLiteral(nullptr, SIZE, real, 2);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = qRealToLiteral(buffer, 0, real, 2);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    assertRealFormatting(qRealToLiteral, true);
 }
 
 static void assertFloatFormatting(int (*format)(char *, QSize, QFloat, int)) {
-    QFloat float_ = 3.14;
-    int result = format(buffer, SIZE, float_, 2);
-    TEST_ASSERT_EQUAL_INT(4, result);
-    TEST_ASSERT_EQUAL_STRING("3.14", buffer);
-
-    result = format(buffer, SIZE, float_, 4);
-    TEST_ASSERT_EQUAL_INT(6, result);
-    TEST_ASSERT_EQUAL_STRING("3.1400", buffer);
-
-    // An exactly representable fraction can be padded beyond the significant-digit precision.
-    float_ = 1.25;
-    result = format(buffer, SIZE, float_, 21);
-    TEST_ASSERT_EQUAL_INT(23, result);
-    TEST_ASSERT_EQUAL_STRING("1.250000000000000000000", buffer);
-
-    float_ = -3.14;
-    result = format(buffer, SIZE, float_, 2);
-    TEST_ASSERT_EQUAL_INT(5, result);
-    TEST_ASSERT_EQUAL_STRING("-3.14", buffer);
-
-    // Require size >= 6
-    result = format(buffer, 5, float_, 2);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = format(nullptr, SIZE, float_, 2);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
-
-    result = format(buffer, 0, float_, 2);
-    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+    const struct {
+        QFloat value;
+        int precision;
+        const char *text;
+    } cases[] = {
+        {3.14, 2, "3.1"},
+        {3.14, 4, "3.14"},
+        {1.25, 17, "1.25"},
+        {-3.14, 3, "-3.14"},
+    };
+    for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        QSize width = strlen(cases[i].text);
+        TEST_ASSERT_EQUAL_INT(width, format(buffer, width + 1, cases[i].value, cases[i].precision));
+        TEST_ASSERT_EQUAL_STRING(cases[i].text, buffer);
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_SIZE, format(buffer, width, cases[i].value, cases[i].precision)
+        );
+    }
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, format(nullptr, SIZE, 1.25, Q_FMT_DEFAULT_PRECISION));
+    TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, format(buffer, 0, 1.25, Q_FMT_DEFAULT_PRECISION));
 }
 
 void testFloatToStr() {
@@ -1008,13 +968,13 @@ void testAtomToStr() {
 
     QReal real = 3.14159;
     result = qAtomToStr(buffer, SIZE, &real, Q_TYPE_REAL, 3);
-    TEST_ASSERT_EQUAL_INT(5, result);
-    TEST_ASSERT_EQUAL_STRING("3.142", buffer); // Precision rounding
+    TEST_ASSERT_EQUAL_INT(4, result);
+    TEST_ASSERT_EQUAL_STRING("3.14", buffer); // Precision rounding
 
     QFloat float_ = 3.14159;
     result = qAtomToStr(buffer, SIZE, &float_, Q_TYPE_FLOAT, 3);
-    TEST_ASSERT_EQUAL_INT(5, result);
-    TEST_ASSERT_EQUAL_STRING("3.142", buffer);
+    TEST_ASSERT_EQUAL_INT(4, result);
+    TEST_ASSERT_EQUAL_STRING("3.14", buffer);
 
     QChar char_ = 'a';
     result = qAtomToStr(buffer, SIZE, &char_, Q_TYPE_CHAR, 0);
@@ -1101,13 +1061,13 @@ void testAtomToLiteral() {
 
     QReal real = 3.14159;
     result = qAtomToLiteral(buffer, SIZE, &real, Q_TYPE_REAL, 3);
-    TEST_ASSERT_EQUAL_INT(6, result);
-    TEST_ASSERT_EQUAL_STRING("3.142e", buffer);
+    TEST_ASSERT_EQUAL_INT(5, result);
+    TEST_ASSERT_EQUAL_STRING("3.14e", buffer);
 
     QFloat float_ = 3.14159;
     result = qAtomToLiteral(buffer, SIZE, &float_, Q_TYPE_FLOAT, 3);
-    TEST_ASSERT_EQUAL_INT(5, result);
-    TEST_ASSERT_EQUAL_STRING("3.142", buffer);
+    TEST_ASSERT_EQUAL_INT(4, result);
+    TEST_ASSERT_EQUAL_STRING("3.14", buffer);
 
     QChar char_ = 'a';
     result = qAtomToLiteral(buffer, SIZE, &char_, Q_TYPE_CHAR, 0);
@@ -1260,22 +1220,22 @@ void testLongListToLiteral() {
 
 void testRealListToStr() {
     QReal reals[] = {3.14, -3.14, 0.159};
-    ASSERT_PRECISION_LIST(qRealListToStr, reals, 3, 2, "3.14 -3.14 0.16", "3.14");
+    ASSERT_PRECISION_LIST(qRealListToStr, reals, 3, 2, "3.1 -3.1 0.16", "3.1");
 }
 
 void testRealListToLiteral() {
     QReal reals[] = {3.14, -3.14, 0.159};
-    ASSERT_PRECISION_LIST(qRealListToLiteral, reals, 3, 2, "3.14 -3.14 0.16e", "3.14e");
+    ASSERT_PRECISION_LIST(qRealListToLiteral, reals, 3, 2, "3.1 -3.1 0.16e", "3.1e");
 }
 
 void testFloatListToStr() {
     QFloat floats[] = {3.14, -3.14, 0.159};
-    ASSERT_PRECISION_LIST(qFloatListToStr, floats, 3, 2, "3.14 -3.14 0.16", "3.14");
+    ASSERT_PRECISION_LIST(qFloatListToStr, floats, 3, 2, "3.1 -3.1 0.16", "3.1");
 }
 
 void testFloatListToLiteral() {
     QFloat floats[] = {3.14, -3.14, 0.159};
-    ASSERT_PRECISION_LIST(qFloatListToLiteral, floats, 3, 2, "3.14 -3.14 0.16", "3.14");
+    ASSERT_PRECISION_LIST(qFloatListToLiteral, floats, 3, 2, "3.1 -3.1 0.16", "3.1");
 }
 
 void testCharListToStr() {
@@ -1499,16 +1459,13 @@ static void assertGenericListFormatting(bool literal) {
         const char *literal;
     } cases[] = {
         {Q_TYPE_BOOLEAN, booleans, "1 0", "10b"},
-        {Q_TYPE_GUID,
-         guids,
-         guidPairString,
-         guidPairString},
+        {Q_TYPE_GUID, guids, guidPairString, guidPairString},
         {Q_TYPE_BYTE, bytes, "01 ff", "0x01ff"},
         {Q_TYPE_SHORT, shorts, "-123 456", "-123 456h"},
         {Q_TYPE_INT, ints, "-123456 789012", "-123456 789012i"},
         {Q_TYPE_LONG, longs, "-1234567890123 4567890123456", "-1234567890123 4567890123456"},
-        {Q_TYPE_REAL, reals, "1.250 -2.500", "1.250 -2.500e"},
-        {Q_TYPE_FLOAT, floats, "1.250 -2.500", "1.250 -2.500"},
+        {Q_TYPE_REAL, reals, "1.25 -2.5", "1.25 -2.5e"},
+        {Q_TYPE_FLOAT, floats, "1.25 -2.5", "1.25 -2.5"},
         {Q_TYPE_CHAR, chars, "a z", "\"az\""},
         {Q_TYPE_SYMBOL, symbols, "abc xyz", "`abc`xyz"},
         {Q_TYPE_TIMESTAMP,
@@ -1880,43 +1837,82 @@ void testPrecisionRange() {
 }
 
 void testMaximumPrecision() {
-    const QReal real = 1.25f;
-    const QFloat float_ = 1.25;
-    char expected[Q_FMT_MAX_PRECISION + 4];
-    char output[sizeof(expected) + 1];
-    memcpy(expected, "1.25", 4);
-    memset(expected + 4, '0', Q_FMT_MAX_PRECISION - 2);
-    for (int literal = 0; literal <= 1; literal++) {
+    const QReal real = 1.23456789f;
+    const QFloat float_ = 1.23456789123456789;
+    // Golden output from Q at every supported setting, including its type-specific P 0.
+    const char *realExpected[] = {
+        "1.2345679",
+        "1",
+        "1.2",
+        "1.23",
+        "1.235",
+        "1.2346",
+        "1.23457",
+        "1.234568",
+        "1.2345679",
+        "1.23456788",
+        "1.234567881",
+        "1.2345678806",
+        "1.23456788063",
+        "1.23456788063",
+        "1.2345678806305",
+        "1.23456788063049",
+        "1.234567880630493",
+        "1.2345678806304932"
+    };
+    const char *floatExpected[] = {
+        "1.2345678912345679",
+        "1",
+        "1.2",
+        "1.23",
+        "1.235",
+        "1.2346",
+        "1.23457",
+        "1.234568",
+        "1.2345679",
+        "1.23456789",
+        "1.234567891",
+        "1.2345678912",
+        "1.23456789123",
+        "1.234567891235",
+        "1.2345678912346",
+        "1.23456789123457",
+        "1.234567891234568",
+        "1.2345678912345679"
+    };
+    TEST_ASSERT_EQUAL_INT(7, Q_FMT_DEFAULT_PRECISION);
+    TEST_ASSERT_EQUAL_INT(17, Q_FMT_MAX_PRECISION);
+    for (int precision = 0; precision <= Q_FMT_MAX_PRECISION; precision++) {
         for (int isReal = 0; isReal <= 1; isReal++) {
-            int width = Q_FMT_MAX_PRECISION + 2;
-            if (literal && isReal)
-                expected[width++] = 'e';
-            expected[width] = '\0';
-            memset(output, 0x5A, sizeof(output));
-            int result;
-            if (isReal) {
-                result =
-                    (literal ? qRealToLiteral
-                             : qRealToStr)(output, width + 1, real, Q_FMT_MAX_PRECISION);
-            } else {
-                result =
-                    (literal ? qFloatToLiteral
-                             : qFloatToStr)(output, width + 1, float_, Q_FMT_MAX_PRECISION);
-            }
-            TEST_ASSERT_EQUAL_INT(width, result);
-            TEST_ASSERT_EQUAL_STRING(expected, output);
-            TEST_ASSERT_EQUAL_HEX8(0x5A, output[width + 1]);
             const void *value = isReal ? (const void *)&real : (const void *)&float_;
             QTypeCode type = isReal ? Q_TYPE_REAL : Q_TYPE_FLOAT;
-            result =
-                (literal ? qListToLiteral
-                         : qListToStr)(output, width + 1, value, 1, type, Q_FMT_MAX_PRECISION);
-            TEST_ASSERT_EQUAL_INT(width, result);
-            TEST_ASSERT_EQUAL_STRING(expected, output);
-            result =
-                (literal ? qAtomToLiteral
-                         : qAtomToStr)(output, width, value, type, Q_FMT_MAX_PRECISION);
-            TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+            for (int literal = 0; literal <= 1; literal++) {
+                char expected[32];
+                snprintf(
+                    expected,
+                    sizeof(expected),
+                    "%s%s",
+                    isReal ? realExpected[precision] : floatExpected[precision],
+                    literal && isReal ? "e" : ""
+                );
+                QSize width = strlen(expected);
+                TEST_ASSERT_EQUAL_INT(
+                    width,
+                    (literal ? qAtomToLiteral
+                             : qAtomToStr)(buffer, width + 1, value, type, precision)
+                );
+                TEST_ASSERT_EQUAL_STRING(expected, buffer);
+                TEST_ASSERT_EQUAL_INT(
+                    width,
+                    (literal ? qListToLiteral
+                             : qListToStr)(buffer, width + 1, value, 1, type, precision)
+                );
+                TEST_ASSERT_EQUAL_STRING(expected, buffer);
+                TEST_ASSERT_EQUAL_INT(
+                    Q_FMT_ERROR_SIZE,
+                    (literal ? qAtomToLiteral : qAtomToStr)(buffer, width, value, type, precision)
+                );
+            }
         }
     }
 }
@@ -1927,14 +1923,13 @@ void testPrecisionRounding() {
         int precision;
         const char *expected;
     } cases[] = {
-        {1.49, 0, "1"},
-        {1.51, 0, "2"},
-        {-1.51, 0, "-2"},
-        {1.1249, 2, "1.12"},
-        {1.1251, 2, "1.13"},
-        {-1.1249, 2, "-1.12"},
-        {-1.1251, 2, "-1.13"},
-        {9.9996, 3, "10.000"},
+        {1.49, 1, "1"},         {1.51, 1, "2"},        {-1.51, 1, "-2"},
+        {1.1249, 3, "1.12"},    {1.1251, 3, "1.13"},   {-1.1249, 3, "-1.12"},
+        {-1.1251, 3, "-1.13"},  {9.9996, 4, "10"},     {2.5, 1, "2"},
+        {3.5, 1, "4"},          {-2.5, 1, "-2"},       {1.25, 2, "1.2"},
+        {1.75, 2, "1.8"},       {0.0, 7, "0"},         {-0.0, 7, "-0"},
+        {0.00001, 7, "1e-05"},  {0.0001, 7, "0.0001"}, {1000000, 7, "1000000"},
+        {10000000, 7, "1e+07"}, {999.5, 3, "1e+03"},   {999.5, 4, "999.5"},
     };
     for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
         QReal real = (QReal)cases[i].value;
@@ -1952,6 +1947,41 @@ void testPrecisionRounding() {
                 TEST_ASSERT_EQUAL_STRING(expected, buffer);
             }
         }
+    }
+}
+
+void testDisplayPrecisionLists() {
+    const QReal subnormals[] = {-FLT_TRUE_MIN, FLT_MIN, FLT_TRUE_MIN};
+    {
+        ASSERT_PRECISION_LIST(qRealListToLiteral, subnormals, 3, 0, "-0 1.1754944e-38 0e", "-0e");
+    }
+
+    const QReal reals[] = {1.25f, 1e20f, -0.0f, NAN};
+    const QFloat floats[] = {1.25, 1e20, -0.0, NAN};
+    {
+        ASSERT_PRECISION_LIST(qRealListToStr, reals, 4, 2, "1.2 1e+20 -0 ", "1.2");
+    }
+    {
+        ASSERT_PRECISION_LIST(qRealListToLiteral, reals, 4, 2, "1.2 1e+20 -0 0Ne", "1.2e");
+    }
+    {
+        ASSERT_PRECISION_LIST(qFloatListToStr, floats, 4, 2, "1.2 1e+20 -0 ", "1.2");
+    }
+    {
+        ASSERT_PRECISION_LIST(qFloatListToLiteral, floats, 4, 2, "1.2 1e+20 -0 0n", "1.2");
+    }
+    {
+        ASSERT_PRECISION_LIST(qRealListToLiteral, reals, 4, 0, "1.25 1e+20 -0 0Ne", "1.25e");
+    }
+    {
+        ASSERT_PRECISION_LIST(
+            qRealListToLiteral, reals, 4, 17, "1.25 1.0000000200408773e+20 -0 0Ne", "1.25e"
+        );
+    }
+    {
+        ASSERT_PRECISION_LIST(
+            qFloatListToLiteral, floats, 4, Q_FMT_DEFAULT_PRECISION, "1.25 1e+20 -0 0n", "1.25"
+        );
     }
 }
 
@@ -1980,7 +2010,7 @@ static void assertDynamicAtomBounds(
         literal ? qAtomToLiteral : qAtomToStr;
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, formatter(nullptr, width + 1, atom, type, precision));
     for (QSize c = 0; c < sizeof(capacities) / sizeof(capacities[0]); c++) {
-        unsigned char guarded[Q_FMT_MAX_PRECISION + 8];
+        unsigned char guarded[512];
         memset(guarded, 0xA5, sizeof(guarded));
         QSize capacity = capacities[c];
         TEST_ASSERT_TRUE(capacity + 1 < sizeof(guarded));
@@ -2018,21 +2048,48 @@ void testDynamicSymbolBufferSizes() {
 }
 
 void testDynamicFloatBufferSizes() {
-    const int precisions[] = {124, 125, 126, 127, 256, Q_FMT_MAX_PRECISION};
-    const QReal real = 1.25f;
-    const QFloat float_ = 1.25;
-    char expected[Q_FMT_MAX_PRECISION + 4];
-    for (QSize i = 0; i < sizeof(precisions) / sizeof(precisions[0]); i++) {
-        int precision = precisions[i];
-        memcpy(expected, "1.25", 4);
-        memset(expected + 4, '0', precision - 2);
-        expected[precision + 2] = '\0';
-        assertDynamicAtomBounds(&float_, Q_TYPE_FLOAT, precision, false, expected);
-        assertDynamicAtomBounds(&float_, Q_TYPE_FLOAT, precision, true, expected);
-        assertDynamicAtomBounds(&real, Q_TYPE_REAL, precision, false, expected);
-        expected[precision + 2] = 'e';
-        expected[precision + 3] = '\0';
-        assertDynamicAtomBounds(&real, Q_TYPE_REAL, precision, true, expected);
+    const struct {
+        QFloat value;
+        int precision;
+        const char *expected;
+    } floats[] = {
+        {DBL_MAX, 0, "1.7976931348623157e+308"},
+        {-DBL_MAX, 17, "-1.7976931348623157e+308"},
+        {DBL_MIN, 0, "2.2250738585072014e-308"},
+        {DBL_TRUE_MIN, 17, "4.9406564584124654e-324"},
+        {-DBL_TRUE_MIN, 17, "-4.9406564584124654e-324"},
+        {0.0001, 17, "0.0001"},
+        {1.25, 2, "1.2"},
+        {-0.0, 0, "-0"},
+    };
+    for (QSize i = 0; i < sizeof(floats) / sizeof(floats[0]); i++) {
+        for (int literal = 0; literal <= 1; literal++)
+            assertDynamicAtomBounds(
+                &floats[i].value, Q_TYPE_FLOAT, floats[i].precision, literal, floats[i].expected
+            );
+    }
+    const struct {
+        QReal value;
+        int precision;
+        const char *expected;
+    } reals[] = {
+        {FLT_MAX, 0, "3.4028235e+38"},
+        {FLT_MAX, 17, "3.4028234663852886e+38"},
+        {FLT_MIN, 0, "1.1754944e-38"},
+        {FLT_TRUE_MIN, 17, "0"},
+        {-FLT_TRUE_MIN, 0, "-0"},
+        {nextafterf(FLT_MIN, 0), 0, "0"},
+        {-nextafterf(FLT_MIN, 0), 17, "-0"},
+        {-0.0f, 0, "-0"},
+        {1.25f, 2, "1.2"},
+    };
+    for (QSize i = 0; i < sizeof(reals) / sizeof(reals[0]); i++) {
+        assertDynamicAtomBounds(
+            &reals[i].value, Q_TYPE_REAL, reals[i].precision, false, reals[i].expected
+        );
+        char expected[32];
+        snprintf(expected, sizeof(expected), "%se", reals[i].expected);
+        assertDynamicAtomBounds(&reals[i].value, Q_TYPE_REAL, reals[i].precision, true, expected);
     }
 }
 
@@ -2046,8 +2103,7 @@ void testEmptySymbolListItems() {
     }
 }
 
-// Expected tokens were checked against Q's string and .Q.s1. Finite float
-// formatting retains the existing fractional precision contract for this change.
+// Expected tokens were checked against Q's string and .Q.s1.
 static const QShort specialShorts[] = {Q_SHORT_NULL, Q_SHORT_INF, -Q_SHORT_INF, 0};
 static const QInt specialInts[] = {Q_INT_NULL, Q_INT_INF, -Q_INT_INF, 0};
 static const QLong specialLongs[] = {Q_LONG_NULL, Q_LONG_INF, -Q_LONG_INF, 0};
@@ -2103,9 +2159,9 @@ static const struct {
      {"0Ne", "0we", "-0we"},
      "0N 0w -0we",
      "0N 0Ne",
-     " 0.00",
-     "0N 0.00e",
-     "0.00 0Ne"},
+     " 0",
+     "0N 0e",
+     "0 0Ne"},
     {Q_TYPE_FLOAT,
      specialFloats,
      sizeof(QFloat),
@@ -2113,9 +2169,9 @@ static const struct {
      {"0n", "0w", "-0w"},
      "0n 0w -0w",
      "0n 0n",
-     " 0.00",
-     "0n 0.00",
-     "0.00 0n"},
+     " 0",
+     "0n 0",
+     "0 0n"},
     {Q_TYPE_TIMESTAMP,
      specialLongs,
      sizeof(QLong),
@@ -2402,6 +2458,7 @@ int main() {
     RUN_TEST(testCharListEmbeddedNull);
     RUN_TEST(testPrecisionRange);
     RUN_TEST(testMaximumPrecision);
+    RUN_TEST(testDisplayPrecisionLists);
     RUN_TEST(testPrecisionRounding);
     RUN_TEST(testGenericNullInputs);
     RUN_TEST(testNullSymbolInputs);

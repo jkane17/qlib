@@ -227,37 +227,60 @@ int qLongToStr(char *buffer, QSize size, QLong long_);
 int qLongToLiteral(char *buffer, QSize size, QLong long_);
 ```
 
-The real and float functions take an additional `precision`, the number of fractional digits to write for finite values:
+The real and float functions take an explicit Q-style display `precision`:
 
 ```c
 int qFloatToStr(char *buffer, QSize size, QFloat float_, int precision);
 ```
 
-`precision` must be between `0` and `Q_FMT_MAX_PRECISION` (`1074`), inclusive.
-Negative values do not request the `printf` default precision: they return
-`Q_FMT_ERROR_RANGE`, as do values above the limit, before any output is written.
-The same rule applies to nonempty real/float lists and generic dispatch, including
-when a value is NaN or infinity. Empty lists remain no-ops regardless of precision;
-generic functions ignore precision for other types.
+| Precision                                | Meaning                                                        |
+| ---------------------------------------- | -------------------------------------------------------------- |
+| `Q_FMT_DEFAULT_PRECISION` (`7`)          | Q's default display precision: 7 significant digits            |
+| `1` through `Q_FMT_MAX_PRECISION` (`17`) | Requested significant digits                                   |
+| `0`                                      | Q's maximum display precision: 8 digits for real, 17 for float |
 
-The limit allows the complete fractional decimal expansion of an IEEE binary64
-value while bounding formatting work per value. It is an output-formatting limit,
-not a claim about numeric accuracy. A buffer must still accommodate the integer
-part, decimal point, requested fractional digits, sign, any literal suffix, and
-final terminator. Nulls and infinities use the Q tokens documented above and do not
-receive fractional digits.
+Precision zero is type-specific: it is not equivalent to an explicit precision of
+17 for reals. For example, the real `1.23456789e` displays as `1.2345679` with precision
+zero, but as `1.2345678806304932` with precision 17. More displayed digits expose the
+stored binary approximation; they do not add accuracy to the value.
 
-Fractional digits and significant digits are different. `QReal` uses C `float`,
-whose decimal precision is `FLT_DIG` (typically 6 significant digits); `QFloat`
-uses C `double`, with `DBL_DIG` (typically 15). These describe decimal precision
-of the stored value, not a guaranteed number of accurate places after the decimal
-point. More output digits may reveal the binary approximation or add trailing zeros;
-they do not restore information lost when the value was stored.
+The formatter suppresses trailing zeros and the unnecessary decimal point. It uses
+scientific notation when the rounded decimal exponent is below -4 or at least the
+effective precision. For example, with precision 7:
 
-Formatting uses `printf` rounding and the current numeric locale. For example,
-`1.25` with precision `4` becomes `1.2500`, while precision `0` omits the decimal
-point and fractional digits. The real literal still adds `e`; float literals at
-precision `0` can lose their Q type (see [Limitations](#limitations)).
+| Value        | String output  |
+| ------------ | -------------- |
+| `1.5`        | `1.5`          |
+| `1.23456789` | `1.234568`     |
+| `12345678.9` | `1.234568e+07` |
+| `1e-20`      | `1e-20`        |
+| `1.25`       | `1.25`         |
+
+Values outside `0..17` return `Q_FMT_ERROR_RANGE` before formatting. This also applies
+to nulls and infinities, whose text is otherwise independent of valid precision.
+Empty lists remain no-ops regardless of precision; generic functions ignore precision
+for other types. The default constant is a convenience for callers, not an implicit
+fallback for invalid arguments.
+
+**Compatibility change:** precision previously meant fixed fractional digits, with
+values up to 1074. It now means Q display precision. In particular, precision zero
+no longer rounds to an integer, and precision 2 formats `1.25` as `1.2`, not `1.25`.
+There is currently no separate fixed-decimal formatting mode.
+
+Real (32-bit) subnormal values display as signed zero, matching the installed Q
+runtime. Float (64-bit) subnormals retain their numeric text. This affects only
+formatting; neither the input value nor the floating-point environment is changed.
+
+These functions do not query a Q runtime or require a Q connection. A Q-facing caller
+can obtain `system "P"` once per formatting operation and pass that setting to the
+atom/list formatter. Standalone C callers can use `Q_FMT_DEFAULT_PRECISION` or their
+own setting. Querying a new Q process would only read that process's setting, not
+another session's current precision.
+
+Formatting uses `printf` general-format rounding and the current numeric locale.
+Examples here assume the C numeric locale and the default round-to-nearest mode.
+Real literals append `e`; the conditional `f` marker for float literals remains a
+known difference from Q (see [Limitations](#limitations)).
 
 The guid functions take a `const QGuid *`.
 
@@ -269,8 +292,8 @@ The guid functions take a `const QGuid *`.
 | short     | `42`                              | `42`                                   | `42h`          |
 | int       | `42`                              | `42`                                   | `42i`          |
 | long      | `42`                              | `42`                                   | `42`           |
-| real      | `1.5` (precision 2)               | `1.50`                                 | `1.50e`        |
-| float     | `1.5` (precision 3)               | `1.500`                                | `1.500`        |
+| real      | `1.5` (precision 2)               | `1.5`                                  | `1.5e`         |
+| float     | `1.5` (precision 3)               | `1.5`                                  | `1.5`          |
 | char      | `'a'`                             | `a`                                    | `"a"`          |
 | symbol    | `"abc"`                           | `abc`                                  | `` `abc ``     |
 | timestamp | 1.5 days in nanoseconds           | `2000.01.02D12:00:00.000000000`        | same as string |
@@ -301,7 +324,7 @@ Items are separated by a single space in the string form. The literal form uses 
 | boolean | `1 0 1`                  | `1 0 1`                 | `101b`         |
 | byte    | `0x01 0xff`              | `01 ff`                 | `0x01ff`       |
 | int     | `1 -2 3`                 | `1 -2 3`                | `1 -2 3i`      |
-| real    | `1.5 2.25` (precision 2) | `1.50 2.25`             | `1.50 2.25e`   |
+| real    | `1.5 2.25` (precision 3) | `1.5 2.25`              | `1.5 2.25e`    |
 | char    | `'a' 'b'`                | `a b`                   | `"ab"`         |
 | symbol  | `"a" "b"`                | `a b`                   | `` `a`b ``     |
 | date    | `0 1`                    | `2000.01.01 2000.01.02` | same as string |
@@ -345,27 +368,16 @@ this comparison.
 
 ### Real and float display
 
-The current `precision` argument specifies fixed fractional digits. Q's `\P`
-controls significant-digit display precision, suppresses trailing zeros, and permits
-scientific notation. The two precision settings are not equivalent:
-
-| Value        | Current output with precision 7 | Q `string` with `\P 7` |
-| ------------ | ------------------------------- | ---------------------- |
-| `1.5`        | `1.5000000`                     | `1.5`                  |
-| `1.23456789` | `1.2345679`                     | `1.234568`             |
-| `12345678.9` | `12345678.9000000`              | `1.234568e+07`         |
-| `1e-20`      | `0.0000000`                     | `1e-20`                |
-
-Q's `\P 0` requests full display precision; our precision zero omits the fractional
-part. The existing precision range and meaning remain unchanged pending a decision
-on how this argument should map to Q's setting. Current numeric output also follows
-the C numeric locale; examples here assume the C locale.
+Significant-digit precision, trailing-zero suppression, and scientific notation now
+follow Q's display rules. Numeric output still follows the current C numeric locale
+and floating-point rounding mode; matching the examples assumes the C locale and
+default round-to-nearest mode.
 
 Float literals lack Q's conditional `f` marker. Q formats an integral float atom as
 `1f`, and an all-integral float list as `1 2f`, but a list containing a displayed
 fractional value as `1 1.5`. Special values can also identify the list's type, as in
-`0n 1`. The current implementation never adds that conditional marker; at precision
-zero, a float literal can look like a long.
+`0n 1`. The current implementation never adds that conditional marker, so an integral
+float literal can look like a long at any precision.
 
 ### Character escaping and symbol text
 

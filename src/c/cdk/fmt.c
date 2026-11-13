@@ -299,6 +299,14 @@ int qLongToLiteral(char *buffer, QSize size, QLong long_) {
     return qLongToStr(buffer, size, long_);
 }
 
+// Q displays real subnormals as signed zero, including in a standalone caller
+// whose floating-point environment does not flush subnormals during promotion.
+static QFloat realForDisplay(QReal value) {
+    if (fpclassify(value) == FP_SUBNORMAL)
+        return signbit(value) ? -0.0 : 0.0;
+    return (QFloat)value;
+}
+
 int qRealToStr(char *buffer, QSize size, QReal real, int precision) {
     if (precision < 0 || precision > Q_FMT_MAX_PRECISION)
         return Q_FMT_ERROR_RANGE;
@@ -306,7 +314,8 @@ int qRealToStr(char *buffer, QSize size, QReal real, int precision) {
     if (special != FMT_FINITE)
         return writeSpecial(buffer, size, special, Q_TYPE_REAL, false, "");
 
-    WRITE_DYNAMIC(buffer, size, "%.*f", precision, (QFloat)real);
+    // Q uses eight significant digits for real values when \P is zero.
+    WRITE_DYNAMIC(buffer, size, "%.*g", precision == 0 ? 8 : precision, realForDisplay(real));
 }
 
 int qRealToLiteral(char *buffer, QSize size, QReal real, int precision) {
@@ -316,7 +325,7 @@ int qRealToLiteral(char *buffer, QSize size, QReal real, int precision) {
     if (special != FMT_FINITE)
         return writeSpecial(buffer, size, special, Q_TYPE_REAL, true, specialSuffix(Q_TYPE_REAL));
 
-    WRITE_DYNAMIC(buffer, size, "%.*fe", precision, (QFloat)real);
+    WRITE_DYNAMIC(buffer, size, "%.*ge", precision == 0 ? 8 : precision, realForDisplay(real));
 }
 
 int qFloatToStr(char *buffer, QSize size, QFloat float_, int precision) {
@@ -326,7 +335,7 @@ int qFloatToStr(char *buffer, QSize size, QFloat float_, int precision) {
     if (special != FMT_FINITE)
         return writeSpecial(buffer, size, special, Q_TYPE_FLOAT, false, "");
 
-    WRITE_DYNAMIC(buffer, size, "%.*f", precision, float_);
+    WRITE_DYNAMIC(buffer, size, "%.*g", precision == 0 ? 17 : precision, float_);
 }
 
 int qFloatToLiteral(char *buffer, QSize size, QFloat float_, int precision) {
