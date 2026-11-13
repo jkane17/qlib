@@ -744,9 +744,6 @@ void testDatetimeToLiteral() {
 
 void testDatetimeInvalidRange() {
     const QDatetime values[] = {
-        NAN,
-        INFINITY,
-        -INFINITY,
         DBL_MAX,
         -DBL_MAX,
         784351565820.0,
@@ -842,11 +839,8 @@ void testTimespanExtremes() {
         QTimespan value;
         const char *expected;
     } cases[] = {
-        {INT64_MIN, "-106751D23:47:16.854775808"},
-        {INT64_MIN + 1, "-106751D23:47:16.854775807"},
         {INT64_MIN + 2, "-106751D23:47:16.854775806"},
         {INT64_MAX - 1, "106751D23:47:16.854775806"},
-        {INT64_MAX, "106751D23:47:16.854775807"},
         {-1, "-0D00:00:00.000000001"},
     };
     int (*formatters[])(char *, QSize, QTimespan) = {qTimespanToStr, qTimespanToLiteral};
@@ -1419,13 +1413,13 @@ void testTimespanListToLiteral() {
 }
 
 void testTimespanListExtremes() {
-    const QTimespan values[] = {INT64_MIN, INT64_MIN + 2, INT64_MAX - 1};
-    const char *expected = "-106751D23:47:16.854775808 -106751D23:47:16.854775806 "
+    const QTimespan values[] = {INT64_MIN + 2, INT64_MAX - 1};
+    const char *expected = "-106751D23:47:16.854775806 "
                            "106751D23:47:16.854775806";
-    int result = qTimespanListToStr(buffer, SIZE, values, 3);
+    int result = qTimespanListToStr(buffer, SIZE, values, 2);
     TEST_ASSERT_EQUAL_INT(strlen(expected), result);
     TEST_ASSERT_EQUAL_STRING(expected, buffer);
-    result = qTimespanListToLiteral(buffer, SIZE, values, 3);
+    result = qTimespanListToLiteral(buffer, SIZE, values, 2);
     TEST_ASSERT_EQUAL_INT(strlen(expected), result);
     TEST_ASSERT_EQUAL_STRING(expected, buffer);
 }
@@ -1577,8 +1571,8 @@ void testMonthBoundaries() {
         {-11, "1999.02"},
         {-12, "1999.01"},
         {-13, "1998.12"},
-        {INT32_MIN, "-178954971.05"},
-        {INT32_MAX, "178958970.08"},
+        {INT32_MIN + 2, "-178954971.07"},
+        {INT32_MAX - 1, "178958970.07"},
     };
     for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
         int result = qMonthToStr(buffer, SIZE, cases[i].value);
@@ -1599,12 +1593,12 @@ void testDurationIntegerExtremes() {
         int32_t value;
         const char *expected;
     } cases[] = {
-        {Q_TYPE_MINUTE, INT32_MIN, "-35791394:08"},
-        {Q_TYPE_MINUTE, INT32_MAX, "35791394:07"},
-        {Q_TYPE_SECOND, INT32_MIN, "-596523:14:08"},
-        {Q_TYPE_SECOND, INT32_MAX, "596523:14:07"},
-        {Q_TYPE_TIME, INT32_MIN, "-596:31:23.648"},
-        {Q_TYPE_TIME, INT32_MAX, "596:31:23.647"},
+        {Q_TYPE_MINUTE, INT32_MIN + 2, "-35791394:06"},
+        {Q_TYPE_MINUTE, INT32_MAX - 1, "35791394:06"},
+        {Q_TYPE_SECOND, INT32_MIN + 2, "-596523:14:06"},
+        {Q_TYPE_SECOND, INT32_MAX - 1, "596523:14:06"},
+        {Q_TYPE_TIME, INT32_MIN + 2, "-596:31:23.646"},
+        {Q_TYPE_TIME, INT32_MAX - 1, "596:31:23.646"},
     };
     for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
         for (int literal = 0; literal <= 1; literal++) {
@@ -2052,8 +2046,356 @@ void testEmptySymbolListItems() {
     }
 }
 
+// Expected tokens were checked against Q's string and .Q.s1. Finite float
+// formatting retains the existing fractional precision contract for this change.
+static const QShort specialShorts[] = {Q_SHORT_NULL, Q_SHORT_INF, -Q_SHORT_INF, 0};
+static const QInt specialInts[] = {Q_INT_NULL, Q_INT_INF, -Q_INT_INF, 0};
+static const QLong specialLongs[] = {Q_LONG_NULL, Q_LONG_INF, -Q_LONG_INF, 0};
+static const QReal specialReals[] = {NAN, INFINITY, -INFINITY, 0};
+static const QFloat specialFloats[] = {NAN, INFINITY, -INFINITY, 0};
+
+static const struct {
+    QTypeCode type;
+    const void *values;
+    QSize itemSize;
+    const char *strings[3];
+    const char *literals[3];
+    const char *listLiteral;
+    const char *nullListLiteral;
+    const char *mixedString;
+    const char *mixedLiteral;
+    const char *reversedMixedLiteral;
+} specialCases[] = {
+    {Q_TYPE_SHORT,
+     specialShorts,
+     sizeof(QShort),
+     {"", "0W", "-0W"},
+     {"0Nh", "0Wh", "-0Wh"},
+     "0N 0W -0Wh",
+     "0N 0Nh",
+     " 0",
+     "0N 0h",
+     "0 0Nh"},
+    {Q_TYPE_INT,
+     specialInts,
+     sizeof(QInt),
+     {"", "0W", "-0W"},
+     {"0Ni", "0Wi", "-0Wi"},
+     "0N 0W -0Wi",
+     "0N 0Ni",
+     " 0",
+     "0N 0i",
+     "0 0Ni"},
+    {Q_TYPE_LONG,
+     specialLongs,
+     sizeof(QLong),
+     {"", "0W", "-0W"},
+     {"0N", "0W", "-0W"},
+     "0N 0W -0W",
+     "0N 0N",
+     " 0",
+     "0N 0",
+     "0 0N"},
+    {Q_TYPE_REAL,
+     specialReals,
+     sizeof(QReal),
+     {"", "0w", "-0w"},
+     {"0Ne", "0we", "-0we"},
+     "0N 0w -0we",
+     "0N 0Ne",
+     " 0.00",
+     "0N 0.00e",
+     "0.00 0Ne"},
+    {Q_TYPE_FLOAT,
+     specialFloats,
+     sizeof(QFloat),
+     {"", "0w", "-0w"},
+     {"0n", "0w", "-0w"},
+     "0n 0w -0w",
+     "0n 0n",
+     " 0.00",
+     "0n 0.00",
+     "0.00 0n"},
+    {Q_TYPE_TIMESTAMP,
+     specialLongs,
+     sizeof(QLong),
+     {"", "0W", "-0W"},
+     {"0Np", "0Wp", "-0Wp"},
+     "0N 0W -0Wp",
+     "0N 0Np",
+     " 2000.01.01D00:00:00.000000000",
+     "0N 2000.01.01D00:00:00.000000000",
+     "2000.01.01D00:00:00.000000000 0N"},
+    {Q_TYPE_MONTH,
+     specialInts,
+     sizeof(QInt),
+     {"", "0W", "-0W"},
+     {"0Nm", "0Wm", "-0Wm"},
+     "0N 0W -0Wm",
+     "0N 0Nm",
+     " 2000.01",
+     "0N 2000.01m",
+     "2000.01 0Nm"},
+    {Q_TYPE_DATE,
+     specialInts,
+     sizeof(QInt),
+     {"", "0W", "-0W"},
+     {"0Nd", "0Wd", "-0Wd"},
+     "0N 0W -0Wd",
+     "0N 0Nd",
+     " 2000.01.01",
+     "0N 2000.01.01",
+     "2000.01.01 0N"},
+    {Q_TYPE_DATETIME,
+     specialFloats,
+     sizeof(QFloat),
+     {"", "0w", "-0w"},
+     {"0Nz", "0wz", "-0wz"},
+     "0N 0w -0wz",
+     "0N 0Nz",
+     " 2000.01.01T00:00:00.000",
+     "0N 2000.01.01T00:00:00.000",
+     "2000.01.01T00:00:00.000 0N"},
+    {Q_TYPE_TIMESPAN,
+     specialLongs,
+     sizeof(QLong),
+     {"", "0W", "-0W"},
+     {"0Nn", "0Wn", "-0Wn"},
+     "0N 0W -0Wn",
+     "0N 0Nn",
+     " 0D00:00:00.000000000",
+     "0N 0D00:00:00.000000000",
+     "0D00:00:00.000000000 0N"},
+    {Q_TYPE_MINUTE,
+     specialInts,
+     sizeof(QInt),
+     {"", "0W", "-0W"},
+     {"0Nu", "0Wu", "-0Wu"},
+     "0N 0W -0Wu",
+     "0N 0Nu",
+     " 00:00",
+     "0N 00:00",
+     "00:00 0N"},
+    {Q_TYPE_SECOND,
+     specialInts,
+     sizeof(QInt),
+     {"", "0W", "-0W"},
+     {"0Nv", "0Wv", "-0Wv"},
+     "0N 0W -0Wv",
+     "0N 0Nv",
+     " 00:00:00",
+     "0N 00:00:00",
+     "00:00:00 0N"},
+    {Q_TYPE_TIME,
+     specialInts,
+     sizeof(QInt),
+     {"", "0W", "-0W"},
+     {"0Nt", "0Wt", "-0Wt"},
+     "0N 0W -0Wt",
+     "0N 0Nt",
+     " 00:00:00.000",
+     "0N 00:00:00.000",
+     "00:00:00.000 0N"},
+};
+
+void testSpecialAtoms() {
+    for (QSize c = 0; c < sizeof(specialCases) / sizeof(specialCases[0]); c++) {
+        for (QSize i = 0; i < 3; i++) {
+            const void *value =
+                (const unsigned char *)specialCases[c].values + i * specialCases[c].itemSize;
+            for (int literal = 0; literal <= 1; literal++) {
+                const char *expected =
+                    literal ? specialCases[c].literals[i] : specialCases[c].strings[i];
+                for (QSize capacity = 0; capacity <= strlen(expected) + 1; capacity++) {
+                    unsigned char guarded[SIZE + 2];
+                    memset(guarded, 0xA5, sizeof(guarded));
+                    int result = (literal ? qAtomToLiteral : qAtomToStr)(
+                        (char *)guarded + 1, capacity, value, specialCases[c].type, 2
+                    );
+                    assertOutputBounds(guarded, capacity, result, expected);
+                    if (result < 0)
+                        TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, guarded, sizeof(guarded));
+                }
+                TEST_ASSERT_EQUAL_INT(
+                    Q_FMT_ERROR_SIZE,
+                    (literal ? qAtomToLiteral
+                             : qAtomToStr)(nullptr, SIZE, value, specialCases[c].type, 2)
+                );
+            }
+        }
+    }
+}
+
+void testSpecialLists() {
+    for (QSize c = 0; c < sizeof(specialCases) / sizeof(specialCases[0]); c++) {
+        // All-special, all-null, mixed, and reversed mixed lists exercise suffix
+        // selection and leading/trailing empty fields. One null must terminate too.
+        const unsigned indices[][3] = {{0, 1, 2}, {0, 0}, {0, 3}, {3, 0}, {0}};
+        const QSize lengths[] = {3, 2, 2, 2, 1};
+        for (QSize fixture = 0; fixture < 5; fixture++) {
+            union {
+                QShort shorts[3];
+                QInt ints[3];
+                QLong longs[3];
+                QReal reals[3];
+                QFloat floats[3];
+            } values;
+            void *data;
+            switch (specialCases[c].type) {
+                case Q_TYPE_SHORT:
+                    data = values.shorts;
+                    break;
+                case Q_TYPE_REAL:
+                    data = values.reals;
+                    break;
+                case Q_TYPE_FLOAT:
+                case Q_TYPE_DATETIME:
+                    data = values.floats;
+                    break;
+                case Q_TYPE_LONG:
+                case Q_TYPE_TIMESTAMP:
+                case Q_TYPE_TIMESPAN:
+                    data = values.longs;
+                    break;
+                default:
+                    data = values.ints;
+                    break;
+            }
+            for (QSize i = 0; i < lengths[fixture]; i++)
+                memcpy(
+                    (unsigned char *)data + i * specialCases[c].itemSize,
+                    (const unsigned char *)specialCases[c].values +
+                        indices[fixture][i] * specialCases[c].itemSize,
+                    specialCases[c].itemSize
+                );
+            char stringExpected[SIZE], literalExpected[SIZE];
+            if (fixture == 0) {
+                snprintf(
+                    stringExpected,
+                    SIZE,
+                    " %s %s",
+                    specialCases[c].strings[1],
+                    specialCases[c].strings[2]
+                );
+                strcpy(literalExpected, specialCases[c].listLiteral);
+            } else if (fixture == 1) {
+                strcpy(stringExpected, " ");
+                strcpy(literalExpected, specialCases[c].nullListLiteral);
+            } else if (fixture == 2) {
+                strcpy(stringExpected, specialCases[c].mixedString);
+                strcpy(literalExpected, specialCases[c].mixedLiteral);
+            } else if (fixture == 3) {
+                snprintf(stringExpected, SIZE, "%s ", specialCases[c].mixedString + 1);
+                strcpy(literalExpected, specialCases[c].reversedMixedLiteral);
+            } else {
+                strcpy(stringExpected, "");
+                strcpy(literalExpected, specialCases[c].literals[0]);
+            }
+            for (int literal = 0; literal <= 1; literal++) {
+                const char *expected = literal ? literalExpected : stringExpected;
+                for (QSize capacity = 0; capacity <= strlen(expected) + 1; capacity++) {
+                    unsigned char guarded[SIZE + 2];
+                    memset(guarded, 0xA5, sizeof(guarded));
+                    int result = (literal ? qListToLiteral : qListToStr)(
+                        (char *)guarded + 1,
+                        capacity,
+                        data,
+                        lengths[fixture],
+                        specialCases[c].type,
+                        2
+                    );
+                    assertOutputBounds(guarded, capacity, result, expected);
+                }
+            }
+        }
+    }
+}
+
+void testSpecialPrecisionAndNaNs() {
+    const QReal reals[] = {nanf("1"), -nanf("2"), INFINITY, -INFINITY};
+    const QFloat floats[] = {nan("1"), -nan("2"), INFINITY, -INFINITY};
+    for (int isReal = 0; isReal <= 1; isReal++) {
+        QTypeCode type = isReal ? Q_TYPE_REAL : Q_TYPE_FLOAT;
+        for (QSize i = 0; i < 4; i++) {
+            const void *value = isReal ? (const void *)&reals[i] : (const void *)&floats[i];
+            for (int literal = 0; literal <= 1; literal++) {
+                const int invalid[] = {-1, Q_FMT_MAX_PRECISION + 1};
+                for (QSize p = 0; p < 2; p++) {
+                    strcpy(buffer, "unchanged");
+                    TEST_ASSERT_EQUAL_INT(
+                        Q_FMT_ERROR_RANGE,
+                        (literal ? qAtomToLiteral
+                                 : qAtomToStr)(buffer, SIZE, value, type, invalid[p])
+                    );
+                    TEST_ASSERT_EQUAL_INT(
+                        Q_FMT_ERROR_RANGE,
+                        (literal ? qListToLiteral
+                                 : qListToStr)(buffer, SIZE, value, 1, type, invalid[p])
+                    );
+                    TEST_ASSERT_EQUAL_STRING("unchanged", buffer);
+                }
+                if (i < 2) {
+                    const char *expected = literal ? (isReal ? "0Ne" : "0n") : "";
+                    TEST_ASSERT_EQUAL_INT(
+                        strlen(expected),
+                        (literal ? qAtomToLiteral
+                                 : qAtomToStr)(buffer, SIZE, value, type, Q_FMT_MAX_PRECISION)
+                    );
+                    TEST_ASSERT_EQUAL_STRING(expected, buffer);
+                }
+            }
+        }
+    }
+    QDatetime datetime = -nan("123");
+    TEST_ASSERT_EQUAL_INT(0, qDatetimeToStr(buffer, SIZE, datetime));
+    TEST_ASSERT_EQUAL_STRING("", buffer);
+    TEST_ASSERT_EQUAL_INT(3, qDatetimeToLiteral(buffer, SIZE, datetime));
+    TEST_ASSERT_EQUAL_STRING("0Nz", buffer);
+}
+
+void testFiniteIntegerBoundaries() {
+    const QShort shorts[] = {INT16_MIN + 2, INT16_MAX - 1};
+    const QInt ints[] = {INT32_MIN + 2, INT32_MAX - 1};
+    const QLong longs[] = {INT64_MIN + 2, INT64_MAX - 1};
+    const struct {
+        QTypeCode type;
+        const void *values;
+        QSize size;
+        const char *expected[2];
+        const char *suffix;
+    } cases[] = {
+        {Q_TYPE_SHORT, shorts, sizeof(QShort), {"-32766", "32766"}, "h"},
+        {Q_TYPE_INT, ints, sizeof(QInt), {"-2147483646", "2147483646"}, "i"},
+        {Q_TYPE_LONG, longs, sizeof(QLong), {"-9223372036854775806", "9223372036854775806"}, ""},
+    };
+    for (QSize c = 0; c < 3; c++) {
+        for (QSize i = 0; i < 2; i++) {
+            const void *value = (const unsigned char *)cases[c].values + i * cases[c].size;
+            for (int literal = 0; literal <= 1; literal++) {
+                char expected[32];
+                snprintf(
+                    expected,
+                    sizeof(expected),
+                    "%s%s",
+                    cases[c].expected[i],
+                    literal ? cases[c].suffix : ""
+                );
+                TEST_ASSERT_EQUAL_INT(
+                    strlen(expected),
+                    (literal ? qAtomToLiteral : qAtomToStr)(buffer, SIZE, value, cases[c].type, 0)
+                );
+                TEST_ASSERT_EQUAL_STRING(expected, buffer);
+            }
+        }
+    }
+}
+
 int main() {
     UNITY_BEGIN();
+    RUN_TEST(testSpecialAtoms);
+    RUN_TEST(testSpecialLists);
+    RUN_TEST(testSpecialPrecisionAndNaNs);
+    RUN_TEST(testFiniteIntegerBoundaries);
     RUN_TEST(testEmptySymbolListItems);
     RUN_TEST(testDynamicSymbolBufferSizes);
     RUN_TEST(testDynamicFloatBufferSizes);

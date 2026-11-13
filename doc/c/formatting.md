@@ -4,46 +4,115 @@ This document describes the formatting functions from [`fmt.h`](/src/c/cdk/fmt.h
 
 ## Table of Contents
 
-- [Conventions](#conventions)
+- [Formatting](#formatting)
+  - [Table of Contents](#table-of-contents)
+  - [Conventions](#conventions)
     - [String and Literal Forms](#string-and-literal-forms)
+    - [Nulls and infinities](#nulls-and-infinities)
     - [Return Values](#return-values)
     - [Buffer Size](#buffer-size)
     - [Pointer Requirements](#pointer-requirements)
-- [Atoms](#atoms)
-- [Lists](#lists)
-- [Generic Functions](#generic-functions)
-- [Limitations](#limitations)
-- [Examples](#examples)
+  - [Atoms](#atoms)
+  - [Lists](#lists)
+  - [Generic Functions](#generic-functions)
+  - [Limitations](#limitations)
+    - [Real and float display](#real-and-float-display)
+    - [Character escaping and symbol text](#character-escaping-and-symbol-text)
+    - [Empty and singleton lists](#empty-and-singleton-lists)
+    - [Console-width truncation](#console-width-truncation)
+    - [Temporal rounding and display ranges](#temporal-rounding-and-display-ranges)
+  - [Examples](#examples)
 
 ## Conventions
 
 ### String and Literal Forms
 
-Every type has two functions:
+For supported primitive atoms and lists, the intended formatting behaviour is:
 
-- `q<Type>ToStr` writes plain display text (`42`, `abc`, `2000.01.01`).
-- `q<Type>ToLiteral` writes Q-style display text, adding familiar type markers or delimiters where implemented (`42i`, `` `abc ``, `0xab`, `"a"`). The `Literal` name does not promise a parseable Q expression.
+- `q<Type>ToStr` follows Q's `string`.
+- `q<Type>ToLiteral` follows Q's `.Q.s1`.
 
-For example, the int `42` is `42` as a string and `42i` as a literal, while the long `42` is `42` in both forms.
+These rules also apply to generic atom/list dispatch. The current implementation
+has the differences recorded in [Limitations](#limitations); the examples and API
+rules below describe the implementation as it exists today, not behavior that has
+already been changed to match Q.
 
-This display-only contract applies to atoms, lists, and generic dispatch. Successful
-formatting does not guarantee that Q can parse the output, or that parsing would
-recover the original type, value, list shape, or special-value semantics. Characters
-and symbols are not escaped, and empty/singleton lists and nulls/infinities are not
-encoded for round trips. See [Limitations](#limitations) for examples.
+For example, the int `42` is `42` as a string and `42i` as a literal, while the long
+`42` is `42` in both forms.
 
-Numeric precision is a separate source of information loss: formatting `1.234` with
-precision `2` produces `1.23`. Even text that parses with the intended type need not
-recover the exact original floating-point value. Applications needing serialization
-or generated Q expressions require a separate encoder with explicit round-trip
-rules; these display functions provide no such guarantee.
+Q's `string` applied to a list returns a list of strings. Our list `ToStr` functions
+return one buffer containing those element strings separated by spaces: the intended
+text corresponds to `" " sv string values`, subject to the current differences below.
+`ToLiteral` targets `.Q.s1` of the whole list, including its list-level syntax, rather
+than joining the literal forms of individual atoms.
+
+Dictionaries and tables are not currently supported. They will have special handling
+later; the atom/list rules above do not define their future formatting behavior.
+
+These are display functions, not a serialization API. Even `.Q.s1` output does not
+always provide a parseable expression or preserve the original value: symbols can
+contain unquoted spaces or punctuation, and floating-point display precision can
+lose information. The `Literal` name therefore does not promise a round trip through
+Q's parser. Applications needing serialization require a separate encoder with
+explicit round-trip rules.
+
+### Nulls and infinities
+
+Numeric and temporal nulls and infinities follow Q's `string` and `.Q.s1`.
+Special values are detected before calendar conversion or duration arithmetic.
+Integer-backed types reserve their minimum value for null, minimum plus one for
+negative infinity, and maximum for positive infinity. Any floating-point NaN is
+formatted as null, regardless of its sign or payload.
+
+The following atom outputs are implemented. `""` in the string column means zero
+output characters, not two quote characters. It returns zero and writes a final
+null terminator, requiring a non-null buffer with capacity of at least one byte.
+Real/float precision is still validated for special values, but valid precision
+does not change their text.
+
+| Type      | `string` null | `string` positive / negative infinity | `.Q.s1` null | `.Q.s1` positive / negative infinity |
+| --------- | ------------- | ------------------------------------- | ------------ | ------------------------------------ |
+| short     | `""`          | `0W` / `-0W`                          | `0Nh`        | `0Wh` / `-0Wh`                       |
+| int       | `""`          | `0W` / `-0W`                          | `0Ni`        | `0Wi` / `-0Wi`                       |
+| long      | `""`          | `0W` / `-0W`                          | `0N`         | `0W` / `-0W`                         |
+| real      | `""`          | `0w` / `-0w`                          | `0Ne`        | `0we` / `-0we`                       |
+| float     | `""`          | `0w` / `-0w`                          | `0n`         | `0w` / `-0w`                         |
+| timestamp | `""`          | `0W` / `-0W`                          | `0Np`        | `0Wp` / `-0Wp`                       |
+| month     | `""`          | `0W` / `-0W`                          | `0Nm`        | `0Wm` / `-0Wm`                       |
+| date      | `""`          | `0W` / `-0W`                          | `0Nd`        | `0Wd` / `-0Wd`                       |
+| datetime  | `""`          | `0w` / `-0w`                          | `0Nz`        | `0wz` / `-0wz`                       |
+| timespan  | `""`          | `0W` / `-0W`                          | `0Nn`        | `0Wn` / `-0Wn`                       |
+| minute    | `""`          | `0W` / `-0W`                          | `0Nu`        | `0Wu` / `-0Wu`                       |
+| second    | `""`          | `0W` / `-0W`                          | `0Nv`        | `0Wv` / `-0Wv`                       |
+| time      | `""`          | `0W` / `-0W`                          | `0Nt`        | `0Wt` / `-0Wt`                       |
+
+Not every null becomes empty text under `string`. A null GUID prints the full
+all-zero GUID in both modes; a null char prints a space, quoted under `.Q.s1`.
+A null symbol prints empty text under `string` and a single backtick under `.Q.s1`.
+Boolean and byte have no distinct null/infinity values.
+A null input pointer remains an argument error, not a Q null value.
+
+Literal lists use Q's list-specific special-value rules: untyped tokens within the
+list and a type marker where necessary. The following outputs are implemented:
+
+| List contents                | Q `.Q.s1` output |
+| ---------------------------- | ---------------- |
+| int null, 42                 | `0N 42i`         |
+| date null, January 1 2000    | `0N 2000.01.01`  |
+| January 1 2000, date null    | `2000.01.01 0N`  |
+| date null, positive infinity | `0N 0Wd`         |
+
+For list string output, joining Q's element strings retains blank fields for nulls.
+For example, an int null followed by 42 produces `" 42"`, including the leading
+separator. An all-null list of two items produces one space. Empty and singleton
+list syntax still has the differences described under [Limitations](#limitations).
 
 ### Return Values
 
 On success, a function returns the number of bytes written, excluding the final null
 terminator. Atom functions and nonempty list functions write that terminator on
 success. An empty list instead returns `0` and leaves the buffer unchanged (see
-[Lists](#lists)). Formatting an empty symbol as a string also returns `0`, but writes
+[Lists](#lists)). Formatting an empty symbol or a numeric/temporal null as a string also returns `0`, but writes
 `buffer[0] = '\0'`. A null GUID pointer is an argument error, not a successful no-op.
 
 Character data can contain embedded null bytes. Those bytes count toward the return
@@ -57,20 +126,20 @@ if the count would exceed that limit. Partial output may already have been writt
 
 On failure, it returns one of the negative `QFmtError` values:
 
-| Constant             | Value | Cause                                                          |
-| -------------------- | ----: | -------------------------------------------------------------- |
-| `Q_FMT_ERROR_PRINTF` |  `-1` | The underlying `printf`-family function failed                 |
-| `Q_FMT_ERROR_SIZE`   |  `-2` | `buffer` is `NULL`, or `size` is too small for the whole result |
-| `Q_FMT_ERROR_TYPE`   |  `-3` | The type code is not supported (generic functions only)        |
-| `Q_FMT_ERROR_RANGE`  |  `-4` | Value or accumulated list output length exceeds the supported range, or calendar conversion fails |
-| `Q_FMT_ERROR_ARGUMENT` | `-5` | A required input pointer is null |
+| Constant               | Value | Cause                                                                                             |
+| ---------------------- | ----: | ------------------------------------------------------------------------------------------------- |
+| `Q_FMT_ERROR_PRINTF`   |  `-1` | The underlying `printf`-family function failed                                                    |
+| `Q_FMT_ERROR_SIZE`     |  `-2` | `buffer` is `NULL`, or `size` is too small for the whole result                                   |
+| `Q_FMT_ERROR_TYPE`     |  `-3` | The type code is not supported (generic functions only)                                           |
+| `Q_FMT_ERROR_RANGE`    |  `-4` | Value or accumulated list output length exceeds the supported range, or calendar conversion fails |
+| `Q_FMT_ERROR_ARGUMENT` |  `-5` | A required input pointer is null                                                                  |
 
 Date and timestamp formatting uses UTC. The supported range depends on the platform's
 `time_t` and `gmtime_r`; an atom conversion failure returns `Q_FMT_ERROR_RANGE` without
 writing to the buffer. List functions propagate this error but may already have written earlier items.
 
 Datetime formatting uses the proleptic Gregorian calendar, independently of `time_t`,
-with years from `INT32_MIN` through `INT32_MAX` (inclusive). NaN, infinities, and values
+with years from `INT32_MIN` through `INT32_MAX` (inclusive). Finite values
 outside that range return `Q_FMT_ERROR_RANGE` without writing output. The fractional
 day is rounded to the nearest millisecond, with halfway values rounding toward the
 later time; rounding across midnight advances the date. A rounded result outside the
@@ -93,29 +162,29 @@ query. When the size is hard to predict, retry with a larger buffer after
 `Q_FMT_ERROR_SIZE`.
 
 The following widths exclude the final terminator. **Add one byte** when allocating
-an atom buffer. Maxima cover the underlying numeric ranges, including raw special
-values, where conversion succeeds; date/timestamp platform limits and datetime's
+an atom buffer. These upper bounds cover finite values and special-value text
+where conversion succeeds; date/timestamp platform limits and datetime's
 supported year range still apply.
 
-| Type | Width rule | Maximum string / literal width |
-| ---- | ---------- | ------------------------------ |
-| boolean | Fixed for valid values `0` and `1` | 1 / 2 |
-| guid | Fixed | 36 / 36 |
-| byte | Fixed | 2 / 4 |
-| short | Decimal digits, optional sign; literal adds `h` | 6 / 7 |
-| int | Decimal digits, optional sign; literal adds `i` | 11 / 12 |
-| long | Decimal digits and optional sign; no literal suffix | 20 / 20 |
-| char | One raw byte; literal adds two quotes | 1 / 3 |
-| month | 7 / 8 with a four-digit nonnegative year; larger or negative years may need more | 13 / 14 |
-| date | 10 with a four-digit nonnegative year; larger or negative years may need more | 14 / 14 |
-| datetime | 23 with a four-digit nonnegative year; larger or negative years may need more | 30 / 30 |
-| timestamp | Fixed when conversion succeeds | 29 / 29 |
-| timespan | Variable day count and optional sign | 26 / 26 |
-| minute | At least 5; sign and hours above 99 increase the width | 12 / 12 |
-| second | At least 8; sign and hours above 99 increase the width | 13 / 13 |
-| time | At least 12; sign and hours above 99 increase the width | 14 / 14 |
-| symbol | String byte length; literal adds a backtick | Input-dependent |
-| real / float | Depends on value, precision, and numeric locale; real literal adds `e` | Input-dependent |
+| Type         | Width rule                                                                       | Maximum string / literal width |
+| ------------ | -------------------------------------------------------------------------------- | ------------------------------ |
+| boolean      | Fixed for valid values `0` and `1`                                               | 1 / 2                          |
+| guid         | Fixed                                                                            | 36 / 36                        |
+| byte         | Fixed                                                                            | 2 / 4                          |
+| short        | Decimal digits, optional sign; literal adds `h`                                  | 6 / 7                          |
+| int          | Decimal digits, optional sign; literal adds `i`                                  | 11 / 12                        |
+| long         | Decimal digits and optional sign; no literal suffix                              | 20 / 20                        |
+| char         | One raw byte; literal adds two quotes                                            | 1 / 3                          |
+| month        | 7 / 8 with a four-digit nonnegative year; larger or negative years may need more | 13 / 14                        |
+| date         | 10 with a four-digit nonnegative year; larger or negative years may need more    | 14 / 14                        |
+| datetime     | 23 with a four-digit nonnegative year; larger or negative years may need more    | 30 / 30                        |
+| timestamp    | Fixed when conversion succeeds                                                   | 29 / 29                        |
+| timespan     | Variable day count and optional sign                                             | 26 / 26                        |
+| minute       | At least 5; sign and hours above 99 increase the width                           | 12 / 12                        |
+| second       | At least 8; sign and hours above 99 increase the width                           | 13 / 13                        |
+| time         | At least 12; sign and hours above 99 increase the width                          | 14 / 14                        |
+| symbol       | String byte length; literal adds a backtick                                      | Input-dependent                |
+| real / float | Depends on value, precision, and numeric locale; real literal adds `e`           | Input-dependent                |
 
 Month, date, and datetime formatting measures the actual output size rather than
 assuming a four-digit year. Minute, second, time, and timespan widths also vary with
@@ -175,8 +244,8 @@ The limit allows the complete fractional decimal expansion of an IEEE binary64
 value while bounding formatting work per value. It is an output-formatting limit,
 not a claim about numeric accuracy. A buffer must still accommodate the integer
 part, decimal point, requested fractional digits, sign, any literal suffix, and
-final terminator. NaN and infinity retain the underlying `printf` spelling rather
-than receiving fractional digits.
+final terminator. Nulls and infinities use the Q tokens documented above and do not
+receive fractional digits.
 
 Fractional digits and significant digits are different. `QReal` uses C `float`,
 whose decimal precision is `FLT_DIG` (typically 6 significant digits); `QFloat`
@@ -192,26 +261,26 @@ precision `0` can lose their Q type (see [Limitations](#limitations)).
 
 The guid functions take a `const QGuid *`.
 
-| Type      | Value                                  | String                          | Literal                         |
-| --------- | -------------------------------------- | ------------------------------- | ------------------------------- |
-| boolean   | `1`                                    | `1`                             | `1b`                            |
-| guid      | bytes `12 34 56 78 9a bc ...`          | `12345678-9abc-def0-1234-56789abcdef0` | same as string           |
-| byte      | `0xab`                                 | `ab`                            | `0xab`                          |
-| short     | `42`                                   | `42`                            | `42h`                           |
-| int       | `42`                                   | `42`                            | `42i`                           |
-| long      | `42`                                   | `42`                            | `42`                            |
-| real      | `1.5` (precision 2)                    | `1.50`                          | `1.50e`                         |
-| float     | `1.5` (precision 3)                    | `1.500`                         | `1.500`                         |
-| char      | `'a'`                                  | `a`                             | `"a"`                           |
-| symbol    | `"abc"`                                | `abc`                           | `` `abc ``                      |
-| timestamp | 1.5 days in nanoseconds                | `2000.01.02D12:00:00.000000000` | same as string                  |
-| month     | `13`                                   | `2001.02`                       | `2001.02m`                      |
-| date      | `31`                                   | `2000.02.01`                    | same as string                  |
-| datetime  | `1.5`                                  | `2000.01.02T12:00:00.000`       | same as string                  |
-| timespan  | 1 day, 1 second and 5 nanoseconds      | `1D00:00:01.000000005`          | same as string                  |
-| minute    | `90`                                   | `01:30`                         | same as string                  |
-| second    | `3661`                                 | `01:01:01`                      | same as string                  |
-| time      | `3661001`                              | `01:01:01.001`                  | same as string                  |
+| Type      | Value                             | String                                 | Literal        |
+| --------- | --------------------------------- | -------------------------------------- | -------------- |
+| boolean   | `1`                               | `1`                                    | `1b`           |
+| guid      | bytes `12 34 56 78 9a bc ...`     | `12345678-9abc-def0-1234-56789abcdef0` | same as string |
+| byte      | `0xab`                            | `ab`                                   | `0xab`         |
+| short     | `42`                              | `42`                                   | `42h`          |
+| int       | `42`                              | `42`                                   | `42i`          |
+| long      | `42`                              | `42`                                   | `42`           |
+| real      | `1.5` (precision 2)               | `1.50`                                 | `1.50e`        |
+| float     | `1.5` (precision 3)               | `1.500`                                | `1.500`        |
+| char      | `'a'`                             | `a`                                    | `"a"`          |
+| symbol    | `"abc"`                           | `abc`                                  | `` `abc ``     |
+| timestamp | 1.5 days in nanoseconds           | `2000.01.02D12:00:00.000000000`        | same as string |
+| month     | `13`                              | `2001.02`                              | `2001.02m`     |
+| date      | `31`                              | `2000.02.01`                           | same as string |
+| datetime  | `1.5`                             | `2000.01.02T12:00:00.000`              | same as string |
+| timespan  | 1 day, 1 second and 5 nanoseconds | `1D00:00:01.000000005`                 | same as string |
+| minute    | `90`                              | `01:30`                                | same as string |
+| second    | `3661`                            | `01:01:01`                             | same as string |
+| time      | `3661001`                         | `01:01:01.001`                         | same as string |
 
 ## Lists
 
@@ -226,16 +295,16 @@ As with atoms, the real and float list functions take an additional `precision`.
 
 Items are separated by a single space in the string form. The literal form uses type-specific Q-style display conventions, without guaranteeing a parseable list expression:
 
-| Type    | Items                | String                    | Literal                   |
-| ------- | -------------------- | ------------------------- | ------------------------- |
-| long    | `1 2 3`              | `1 2 3`                   | `1 2 3`                   |
-| boolean | `1 0 1`              | `1 0 1`                   | `101b`                    |
-| byte    | `0x01 0xff`          | `01 ff`                   | `0x01ff`                  |
-| int     | `1 -2 3`             | `1 -2 3`                  | `1 -2 3i`                 |
-| real    | `1.5 2.25` (precision 2) | `1.50 2.25`           | `1.50 2.25e`              |
-| char    | `'a' 'b'`            | `a b`                     | `"ab"`                    |
-| symbol  | `"a" "b"`            | `a b`                     | `` `a`b ``                |
-| date    | `0 1`                | `2000.01.01 2000.01.02`   | same as string            |
+| Type    | Items                    | String                  | Literal        |
+| ------- | ------------------------ | ----------------------- | -------------- |
+| long    | `1 2 3`                  | `1 2 3`                 | `1 2 3`        |
+| boolean | `1 0 1`                  | `1 0 1`                 | `101b`         |
+| byte    | `0x01 0xff`              | `01 ff`                 | `0x01ff`       |
+| int     | `1 -2 3`                 | `1 -2 3`                | `1 -2 3i`      |
+| real    | `1.5 2.25` (precision 2) | `1.50 2.25`             | `1.50 2.25e`   |
+| char    | `'a' 'b'`                | `a b`                   | `"ab"`         |
+| symbol  | `"a" "b"`                | `a b`                   | `` `a`b ``     |
+| date    | `0 1`                    | `2000.01.01 2000.01.02` | same as string |
 
 An empty list returns `0` and leaves the buffer unchanged: not even a terminating null character is written. Initialise the buffer (e.g. `buffer[0] = '\0'`) if the list may be empty.
 
@@ -268,15 +337,104 @@ Only the primitive types (`Q_TYPE_BOOLEAN` to `Q_TYPE_TIME`) are supported; any 
 
 ## Limitations
 
-The following behaviors are part of the current display-oriented contract. The functions format underlying values with the documented rounding and range checks; they do not encode values for parsing back into Q:
+The following are known differences from Q's `string` and `.Q.s1`, not intended
+compatibility guarantees. They were checked against the locally installed KDB-X 5.0
+(build 2026.07.23), using its default `\P 7` unless otherwise stated and a wide console
+for complete output. Extreme-value results may be specific to that build. No implementation changes are implied by
+this comparison.
 
-- **Nulls and infinities are not recognised.** They are written as ordinary values: a long null as `-9223372036854775808` rather than `0N`, a float null as `nan` rather than `0n`, and a float infinity as `inf` rather than `0w`. Temporal special values are not formatted as Q nulls or infinities: non-finite datetimes return `Q_FMT_ERROR_RANGE`, and other temporal types format their underlying value where supported. Check for [special values](/doc/c/type.md#special-values) before formatting.
-- **Timespans use the full signed 64-bit raw value range.** For example, `INT64_MIN` (the timespan null sentinel) is formatted as `-106751D23:47:16.854775808`, not as a Q null.
-- **Char literals are not escaped.** A `"` is written as `"""` rather than `"\""`, and backslashes and control characters (such as a newline) are written as they are.
-- **Symbols are not quoted.** A symbol containing a space, such as `a b`, is written as `` `a b ``, which Q parses as two tokens.
-- **Numeric output is display-dependent.** Requested fractional precision can round away information, and `printf` uses the current numeric locale. Examples in this document assume the C numeric locale. Neither output form guarantees recovery of the exact floating-point value.
-- **A float literal can lose its type.** With a precision of `0`, the float `1.0` is written as `1`, which Q parses as a long.
-- **List shape is not preserved for round trips.** A one-item long list is written as `1` (Q would write `,1`), a one-item char list as `"a"` (Q: `,"a"`), and an empty list as nothing at all (Q: `` `long$() ``, or `""` for an empty char list).
+### Real and float display
+
+The current `precision` argument specifies fixed fractional digits. Q's `\P`
+controls significant-digit display precision, suppresses trailing zeros, and permits
+scientific notation. The two precision settings are not equivalent:
+
+| Value        | Current output with precision 7 | Q `string` with `\P 7` |
+| ------------ | ------------------------------- | ---------------------- |
+| `1.5`        | `1.5000000`                     | `1.5`                  |
+| `1.23456789` | `1.2345679`                     | `1.234568`             |
+| `12345678.9` | `12345678.9000000`              | `1.234568e+07`         |
+| `1e-20`      | `0.0000000`                     | `1e-20`                |
+
+Q's `\P 0` requests full display precision; our precision zero omits the fractional
+part. The existing precision range and meaning remain unchanged pending a decision
+on how this argument should map to Q's setting. Current numeric output also follows
+the C numeric locale; examples here assume the C locale.
+
+Float literals lack Q's conditional `f` marker. Q formats an integral float atom as
+`1f`, and an all-integral float list as `1 2f`, but a list containing a displayed
+fractional value as `1 1.5`. Special values can also identify the list's type, as in
+`0n 1`. The current implementation never adds that conditional marker; at precision
+zero, a float literal can look like a long.
+
+### Character escaping and symbol text
+
+Character literals currently embed raw bytes between quotes. Q's `.Q.s1` escapes
+quotes, backslashes, control characters, and non-ASCII bytes. For example, a newline
+becomes `"\n"`, a zero byte becomes `"\000"`, and byte 255 becomes `"\377"`.
+This applies to both character atoms and character lists. `ToStr` correctly retains
+raw character bytes, including embedded zero bytes.
+
+Symbols containing spaces or punctuation are not quoted or escaped by the current
+formatters, which matches `.Q.s1` in the tested cases. For example, the symbol
+containing `a b` displays as `` `a b ``. This is a limitation of parsing display text
+back into Q, not a formatting compatibility defect.
+
+### Empty and singleton lists
+
+All empty lists currently return zero without writing output. Literal singleton
+lists omit the leading comma. Q's `.Q.s1` preserves these list forms:
+
+| Value           | Current literal output | Q `.Q.s1` output |
+| --------------- | ---------------------- | ---------------- |
+| empty long list | no output              | `` `long$() ``   |
+| empty char list | no output              | `""`             |
+| one long        | `42`                   | `,42`            |
+| one char        | `"a"`                  | `,"a"`           |
+| one byte        | `0xab`                 | `,0xab`          |
+
+Other primitive empty vectors use their corresponding type name; all singleton
+vectors need the comma. Empty-list string output has no element text, but the
+current no-write behavior also means it does not initialize a C string terminator.
+
+List `ToStr` returns joined text rather than Q's list of strings, as described under
+[String and Literal Forms](#string-and-literal-forms). Returning separate strings
+would require a different API.
+
+### Console-width truncation
+
+Q's `.Q.s1` can truncate long output according to its console width (`\c`). These
+C functions have no console-width setting: they produce the complete text or return
+`Q_FMT_ERROR_SIZE` when the buffer is too small. Q comparisons use a sufficiently
+wide console to check the complete formatting rather than the truncated display.
+
+### Temporal rounding and display ranges
+
+Datetime formatting currently rounds to the nearest millisecond. Q discards the
+sub-millisecond time within the day in the tested cases:
+
+| Datetime value (days since epoch) | Current output            | Q output in both modes    |
+| --------------------------------- | ------------------------- | ------------------------- |
+| `0.000000006`                     | `2000.01.01T00:00:00.001` | `2000.01.01T00:00:00.000` |
+| `0.999999999`                     | `2000.01.02T00:00:00.000` | `2000.01.01T23:59:59.999` |
+| `-0.000000001`                    | `2000.01.01T00:00:00.000` | `1999.12.31T23:59:59.999` |
+
+Large temporal fields currently expand to fit their numeric values. The installed Q
+sometimes uses placeholders instead:
+
+| Value                             | Current string output | Q `string` output |
+| --------------------------------- | --------------------- | ----------------- |
+| minute count 6000                 | `100:00`              | `**:00`           |
+| second count 360000               | `100:00:00`           | `**:00:00`        |
+| time count 360000000 milliseconds | `100:00:00.000`       | `**:00:00.000`    |
+| month representing January 10000  | `10000.01`            | `**00.01`         |
+| date representing January 1 10000 | `10000.01.01`         | `0000.00.00`      |
+
+Out-of-range datetime dates similarly use `0000.00.00` in Q. Extreme month values
+also produced unusual punctuation in this build, while our formatter produces an
+expanded year and month. Matching documented display conventions versus reproducing
+build-specific extreme-value behavior remains a separate compatibility decision.
+The current calendar range checks and expanded-width behavior remain in place.
 
 ## Examples
 
@@ -323,7 +481,7 @@ symbol list literal: `abc`xyz
 date: 2000.02.01
 ```
 
-Handling errors, and checking for a null before formatting:
+Handling errors and formatting a null as a literal:
 
 ```c
 #include <stdio.h>
@@ -337,9 +495,7 @@ int main() {
 
     char buffer[32];
     QLong value = Q_LONG_NULL;
-    if (value == Q_LONG_NULL)
-        printf("value: 0N\n");
-    else if (qLongToStr(buffer, sizeof(buffer), value) >= 0)
+    if (qLongToLiteral(buffer, sizeof(buffer), value) >= 0)
         printf("value: %s\n", buffer);
 
     QLong atom = 7;

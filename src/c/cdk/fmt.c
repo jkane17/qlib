@@ -70,6 +70,101 @@
     month += 1;                               \
     WRITE_DYNAMIC(buffer, size, fmt, year, month)
 
+typedef enum {
+    FMT_FINITE,
+    FMT_NULL,
+    FMT_POSITIVE_INFINITY,
+    FMT_NEGATIVE_INFINITY,
+} FmtSpecial;
+
+static FmtSpecial integerSpecial(int64_t value, int64_t nullValue, int64_t infinity) {
+    if (value == nullValue)
+        return FMT_NULL;
+    if (value == infinity)
+        return FMT_POSITIVE_INFINITY;
+    if (value == -infinity)
+        return FMT_NEGATIVE_INFINITY;
+    return FMT_FINITE;
+}
+
+static FmtSpecial floatingSpecial(double value) {
+    if (isnan(value))
+        return FMT_NULL;
+    if (isinf(value))
+        return signbit(value) ? FMT_NEGATIVE_INFINITY : FMT_POSITIVE_INFINITY;
+    return FMT_FINITE;
+}
+
+// Called only with valid, aligned storage for the declared primitive type.
+static FmtSpecial specialValue(const void *value, QTypeCode type) {
+    switch (type) {
+        case Q_TYPE_SHORT:
+            return integerSpecial(*(const QShort *)value, Q_SHORT_NULL, Q_SHORT_INF);
+        case Q_TYPE_INT:
+        case Q_TYPE_MONTH:
+        case Q_TYPE_DATE:
+        case Q_TYPE_MINUTE:
+        case Q_TYPE_SECOND:
+        case Q_TYPE_TIME:
+            return integerSpecial(*(const QInt *)value, Q_INT_NULL, Q_INT_INF);
+        case Q_TYPE_LONG:
+        case Q_TYPE_TIMESTAMP:
+        case Q_TYPE_TIMESPAN:
+            return integerSpecial(*(const QLong *)value, Q_LONG_NULL, Q_LONG_INF);
+        case Q_TYPE_REAL:
+            return floatingSpecial(*(const QReal *)value);
+        case Q_TYPE_FLOAT:
+        case Q_TYPE_DATETIME:
+            return floatingSpecial(*(const QFloat *)value);
+        default:
+            return FMT_FINITE;
+    }
+}
+
+static const char *specialSuffix(QTypeCode type) {
+    switch (type) {
+        case Q_TYPE_SHORT:
+            return "h";
+        case Q_TYPE_INT:
+            return "i";
+        case Q_TYPE_REAL:
+            return "e";
+        case Q_TYPE_TIMESTAMP:
+            return "p";
+        case Q_TYPE_MONTH:
+            return "m";
+        case Q_TYPE_DATE:
+            return "d";
+        case Q_TYPE_DATETIME:
+            return "z";
+        case Q_TYPE_TIMESPAN:
+            return "n";
+        case Q_TYPE_MINUTE:
+            return "u";
+        case Q_TYPE_SECOND:
+            return "v";
+        case Q_TYPE_TIME:
+            return "t";
+        default:
+            return "";
+    }
+}
+
+// An empty string is still a successful write requiring one byte for its terminator.
+static int writeSpecial(
+    char *buffer, QSize size, FmtSpecial value, QTypeCode type, bool literal, const char *suffix
+) {
+    const char *text;
+    if (value == FMT_NULL) {
+        text = literal ? (type == Q_TYPE_FLOAT ? "0n" : "0N") : "";
+    } else {
+        bool floating = type == Q_TYPE_REAL || type == Q_TYPE_FLOAT || type == Q_TYPE_DATETIME;
+        text =
+            value == FMT_NEGATIVE_INFINITY ? (floating ? "-0w" : "-0W") : (floating ? "0w" : "0W");
+    }
+    WRITE_DYNAMIC(buffer, size, "%s%s", text, suffix);
+}
+
 // Reject a narrowing or unsigned time_t conversion before using the calendar result.
 static bool tryConvertSecondsToUtcCalendar(int64_t seconds, struct tm *calendar) {
     time_t t = (time_t)seconds;
@@ -157,48 +252,90 @@ int qByteToLiteral(char *buffer, QSize size, QByte byte) {
 }
 
 int qShortToStr(char *buffer, QSize size, QShort short_) {
+    FmtSpecial special = specialValue(&short_, Q_TYPE_SHORT);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_SHORT, false, "");
+
     WRITE_DYNAMIC(buffer, size, "%d", short_);
 }
 
 int qShortToLiteral(char *buffer, QSize size, QShort short_) {
+    FmtSpecial special = specialValue(&short_, Q_TYPE_SHORT);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_SHORT, true, specialSuffix(Q_TYPE_SHORT));
+
     WRITE_DYNAMIC(buffer, size, "%dh", short_);
 }
 
 int qIntToStr(char *buffer, QSize size, QInt int_) {
+    FmtSpecial special = specialValue(&int_, Q_TYPE_INT);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_INT, false, "");
+
     WRITE_DYNAMIC(buffer, size, "%d", int_);
 }
 
 int qIntToLiteral(char *buffer, QSize size, QInt int_) {
+    FmtSpecial special = specialValue(&int_, Q_TYPE_INT);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_INT, true, specialSuffix(Q_TYPE_INT));
+
     WRITE_DYNAMIC(buffer, size, "%di", int_);
 }
 
 int qLongToStr(char *buffer, QSize size, QLong long_) {
+    FmtSpecial special = specialValue(&long_, Q_TYPE_LONG);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_LONG, false, "");
+
     WRITE_DYNAMIC(buffer, size, "%" PRId64, long_);
 }
 
 int qLongToLiteral(char *buffer, QSize size, QLong long_) {
+    FmtSpecial special = specialValue(&long_, Q_TYPE_LONG);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_LONG, true, specialSuffix(Q_TYPE_LONG));
+
     return qLongToStr(buffer, size, long_);
 }
 
 int qRealToStr(char *buffer, QSize size, QReal real, int precision) {
     if (precision < 0 || precision > Q_FMT_MAX_PRECISION)
         return Q_FMT_ERROR_RANGE;
+    FmtSpecial special = specialValue(&real, Q_TYPE_REAL);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_REAL, false, "");
+
     WRITE_DYNAMIC(buffer, size, "%.*f", precision, (QFloat)real);
 }
 
 int qRealToLiteral(char *buffer, QSize size, QReal real, int precision) {
     if (precision < 0 || precision > Q_FMT_MAX_PRECISION)
         return Q_FMT_ERROR_RANGE;
+    FmtSpecial special = specialValue(&real, Q_TYPE_REAL);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_REAL, true, specialSuffix(Q_TYPE_REAL));
+
     WRITE_DYNAMIC(buffer, size, "%.*fe", precision, (QFloat)real);
 }
 
 int qFloatToStr(char *buffer, QSize size, QFloat float_, int precision) {
     if (precision < 0 || precision > Q_FMT_MAX_PRECISION)
         return Q_FMT_ERROR_RANGE;
+    FmtSpecial special = specialValue(&float_, Q_TYPE_FLOAT);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_FLOAT, false, "");
+
     WRITE_DYNAMIC(buffer, size, "%.*f", precision, float_);
 }
 
 int qFloatToLiteral(char *buffer, QSize size, QFloat float_, int precision) {
+    if (precision < 0 || precision > Q_FMT_MAX_PRECISION)
+        return Q_FMT_ERROR_RANGE;
+    FmtSpecial special = specialValue(&float_, Q_TYPE_FLOAT);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_FLOAT, true, specialSuffix(Q_TYPE_FLOAT));
+
     return qFloatToStr(buffer, size, float_, precision);
 }
 
@@ -223,6 +360,10 @@ int qSymbolToLiteral(char *buffer, QSize size, QSymbol symbol) {
 }
 
 int qTimestampToStr(char *buffer, QSize size, QTimestamp timestamp) {
+    FmtSpecial special = specialValue(&timestamp, Q_TYPE_TIMESTAMP);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_TIMESTAMP, false, "");
+
     int64_t sec = timestamp / NS_PER_SEC;
     int64_t ns = timestamp % NS_PER_SEC;
 
@@ -251,18 +392,36 @@ int qTimestampToStr(char *buffer, QSize size, QTimestamp timestamp) {
 }
 
 int qTimestampToLiteral(char *buffer, QSize size, QTimestamp timestamp) {
+    FmtSpecial special = specialValue(&timestamp, Q_TYPE_TIMESTAMP);
+    if (special != FMT_FINITE)
+        return writeSpecial(
+            buffer, size, special, Q_TYPE_TIMESTAMP, true, specialSuffix(Q_TYPE_TIMESTAMP)
+        );
+
     return qTimestampToStr(buffer, size, timestamp);
 }
 
 int qMonthToStr(char *buffer, QSize size, QMonth month) {
+    FmtSpecial special = specialValue(&month, Q_TYPE_MONTH);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_MONTH, false, "");
+
     WRITE_MONTH(buffer, size, month, "%04d.%02d");
 }
 
 int qMonthToLiteral(char *buffer, QSize size, QMonth month) {
+    FmtSpecial special = specialValue(&month, Q_TYPE_MONTH);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_MONTH, true, specialSuffix(Q_TYPE_MONTH));
+
     WRITE_MONTH(buffer, size, month, "%04d.%02dm");
 }
 
 int qDateToStr(char *buffer, QSize size, QDate date) {
+    FmtSpecial special = specialValue(&date, Q_TYPE_DATE);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_DATE, false, "");
+
     int64_t seconds = (int64_t)date * SECS_PER_DAY + EPOCH_DIFF;
     struct tm tm;
     if (!tryConvertSecondsToUtcCalendar(seconds, &tm))
@@ -272,6 +431,10 @@ int qDateToStr(char *buffer, QSize size, QDate date) {
 }
 
 int qDateToLiteral(char *buffer, QSize size, QDate date) {
+    FmtSpecial special = specialValue(&date, Q_TYPE_DATE);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_DATE, true, specialSuffix(Q_TYPE_DATE));
+
     return qDateToStr(buffer, size, date);
 }
 
@@ -305,6 +468,10 @@ static void splitGregorianDays(int64_t days, int32_t *year, int32_t *month, int3
 }
 
 int qDatetimeToStr(char *buffer, QSize size, QDatetime datetime) {
+    FmtSpecial special = specialValue(&datetime, Q_TYPE_DATETIME);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_DATETIME, false, "");
+
     // Days since 2000-01-01 spanning years INT32_MIN through INT32_MAX.
     const int64_t firstDay = -784353026790LL; // INT32_MIN-01-01
     const int64_t endDay = 784351565820LL;    // (INT32_MAX + 1)-01-01, exclusive
@@ -342,10 +509,20 @@ int qDatetimeToStr(char *buffer, QSize size, QDatetime datetime) {
 }
 
 int qDatetimeToLiteral(char *buffer, QSize size, QDatetime datetime) {
+    FmtSpecial special = specialValue(&datetime, Q_TYPE_DATETIME);
+    if (special != FMT_FINITE)
+        return writeSpecial(
+            buffer, size, special, Q_TYPE_DATETIME, true, specialSuffix(Q_TYPE_DATETIME)
+        );
+
     return qDatetimeToStr(buffer, size, datetime);
 }
 
 int qTimespanToStr(char *buffer, QSize size, QTimespan timespan) {
+    FmtSpecial special = specialValue(&timespan, Q_TYPE_TIMESPAN);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_TIMESPAN, false, "");
+
     bool neg = timespan < 0;
     // Unsigned subtraction also represents the magnitude of INT64_MIN without overflow.
     uint64_t total = neg ? UINT64_C(0) - (uint64_t)timespan : (uint64_t)timespan;
@@ -368,10 +545,20 @@ int qTimespanToStr(char *buffer, QSize size, QTimespan timespan) {
 }
 
 int qTimespanToLiteral(char *buffer, QSize size, QTimespan timespan) {
+    FmtSpecial special = specialValue(&timespan, Q_TYPE_TIMESPAN);
+    if (special != FMT_FINITE)
+        return writeSpecial(
+            buffer, size, special, Q_TYPE_TIMESPAN, true, specialSuffix(Q_TYPE_TIMESPAN)
+        );
+
     return qTimespanToStr(buffer, size, timespan);
 }
 
 int qMinuteToStr(char *buffer, QSize size, QMinute minute) {
+    FmtSpecial special = specialValue(&minute, Q_TYPE_MINUTE);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_MINUTE, false, "");
+
     bool neg = minute < 0;
 
     int64_t total = minute;
@@ -384,10 +571,20 @@ int qMinuteToStr(char *buffer, QSize size, QMinute minute) {
 }
 
 int qMinuteToLiteral(char *buffer, QSize size, QMinute minute) {
+    FmtSpecial special = specialValue(&minute, Q_TYPE_MINUTE);
+    if (special != FMT_FINITE)
+        return writeSpecial(
+            buffer, size, special, Q_TYPE_MINUTE, true, specialSuffix(Q_TYPE_MINUTE)
+        );
+
     return qMinuteToStr(buffer, size, minute);
 }
 
 int qSecondToStr(char *buffer, QSize size, QSecond second) {
+    FmtSpecial special = specialValue(&second, Q_TYPE_SECOND);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_SECOND, false, "");
+
     bool neg = second < 0;
 
     int64_t total = second;
@@ -402,10 +599,20 @@ int qSecondToStr(char *buffer, QSize size, QSecond second) {
 }
 
 int qSecondToLiteral(char *buffer, QSize size, QSecond second) {
+    FmtSpecial special = specialValue(&second, Q_TYPE_SECOND);
+    if (special != FMT_FINITE)
+        return writeSpecial(
+            buffer, size, special, Q_TYPE_SECOND, true, specialSuffix(Q_TYPE_SECOND)
+        );
+
     return qSecondToStr(buffer, size, second);
 }
 
 int qTimeToStr(char *buffer, QSize size, QTime time) {
+    FmtSpecial special = specialValue(&time, Q_TYPE_TIME);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_TIME, false, "");
+
     bool neg = time < 0;
 
     int64_t total = time;
@@ -427,6 +634,10 @@ int qTimeToStr(char *buffer, QSize size, QTime time) {
 }
 
 int qTimeToLiteral(char *buffer, QSize size, QTime time) {
+    FmtSpecial special = specialValue(&time, Q_TYPE_TIME);
+    if (special != FMT_FINITE)
+        return writeSpecial(buffer, size, special, Q_TYPE_TIME, true, specialSuffix(Q_TYPE_TIME));
+
     return qTimeToStr(buffer, size, time);
 }
 
@@ -596,7 +807,7 @@ DEFINE_ITEM_FORMATTER(
 
 #undef DEFINE_ITEM_FORMATTER
 
-static int formatList(
+static int formatListWithType(
     char *buffer,
     QSize size,
     const void *list,
@@ -606,7 +817,8 @@ static int formatList(
     int precision,
     const char *prefix,
     bool spaced,
-    const char *suffix
+    const char *suffix,
+    QTypeCode literalType
 ) {
     if (length == 0)
         return 0;
@@ -615,6 +827,11 @@ static int formatList(
     if (buffer == nullptr)
         return Q_FMT_ERROR_SIZE;
 
+    if ((literalType == Q_TYPE_REAL || literalType == Q_TYPE_FLOAT) &&
+        (precision < 0 || precision > Q_FMT_MAX_PRECISION))
+        return Q_FMT_ERROR_RANGE;
+
+    bool allSpecial = literalType != 0;
     FmtWriter writer = {buffer, size, 0};
     int status = appendText(&writer, prefix);
     if (status < 0)
@@ -627,7 +844,12 @@ static int formatList(
             if (status < 0)
                 return status;
         }
-        int bytes = formatItem(writer.position, writer.remaining, item, precision);
+        FmtSpecial special = literalType ? specialValue(item, literalType) : FMT_FINITE;
+        allSpecial = allSpecial && special != FMT_FINITE;
+        int bytes =
+            special != FMT_FINITE
+                ? writeSpecial(writer.position, writer.remaining, special, literalType, true, "")
+                : formatItem(writer.position, writer.remaining, item, precision);
         if (bytes < 0)
             return bytes;
         status = advanceWriter(&writer, (QSize)bytes);
@@ -637,8 +859,29 @@ static int formatList(
             item += itemSize;
     }
 
+    // A finite temporal item identifies the vector's type. An all-special vector
+    // needs the suffix on its last token (month already has a fixed list suffix).
+    if (allSpecial && literalType >= Q_TYPE_TIMESTAMP && suffix[0] == '\0')
+        suffix = specialSuffix(literalType);
     status = appendText(&writer, suffix);
     return status < 0 ? status : (int)writer.count;
+}
+
+static int formatList(
+    char *buffer,
+    QSize size,
+    const void *list,
+    QSize length,
+    QSize itemSize,
+    ItemFormatter formatItem,
+    int precision,
+    const char *prefix,
+    bool spaced,
+    const char *suffix
+) {
+    return formatListWithType(
+        buffer, size, list, length, itemSize, formatItem, precision, prefix, spaced, suffix, 0
+    );
 }
 
 int qBooleanListToStr(char *buffer, QSize size, const QBoolean *booleans, QSize length) {
@@ -678,8 +921,18 @@ int qShortListToStr(char *buffer, QSize size, const QShort *shorts, QSize length
 }
 
 int qShortListToLiteral(char *buffer, QSize size, const QShort *shorts, QSize length) {
-    return formatList(
-        buffer, size, shorts, length, sizeof(*shorts), formatShortItem, 0, "", true, "h"
+    return formatListWithType(
+        buffer,
+        size,
+        shorts,
+        length,
+        sizeof(*shorts),
+        formatShortItem,
+        0,
+        "",
+        true,
+        "h",
+        Q_TYPE_SHORT
     );
 }
 
@@ -688,7 +941,9 @@ int qIntListToStr(char *buffer, QSize size, const QInt *ints, QSize length) {
 }
 
 int qIntListToLiteral(char *buffer, QSize size, const QInt *ints, QSize length) {
-    return formatList(buffer, size, ints, length, sizeof(*ints), formatIntItem, 0, "", true, "i");
+    return formatListWithType(
+        buffer, size, ints, length, sizeof(*ints), formatIntItem, 0, "", true, "i", Q_TYPE_INT
+    );
 }
 
 int qLongListToStr(char *buffer, QSize size, const QLong *longs, QSize length) {
@@ -696,7 +951,9 @@ int qLongListToStr(char *buffer, QSize size, const QLong *longs, QSize length) {
 }
 
 int qLongListToLiteral(char *buffer, QSize size, const QLong *longs, QSize length) {
-    return formatList(buffer, size, longs, length, sizeof(*longs), formatLongItem, 0, "", true, "");
+    return formatListWithType(
+        buffer, size, longs, length, sizeof(*longs), formatLongItem, 0, "", true, "", Q_TYPE_LONG
+    );
 }
 
 int qRealListToStr(char *buffer, QSize size, const QReal *reals, QSize length, int precision) {
@@ -706,8 +963,18 @@ int qRealListToStr(char *buffer, QSize size, const QReal *reals, QSize length, i
 }
 
 int qRealListToLiteral(char *buffer, QSize size, const QReal *reals, QSize length, int precision) {
-    return formatList(
-        buffer, size, reals, length, sizeof(*reals), formatRealItem, precision, "", true, "e"
+    return formatListWithType(
+        buffer,
+        size,
+        reals,
+        length,
+        sizeof(*reals),
+        formatRealItem,
+        precision,
+        "",
+        true,
+        "e",
+        Q_TYPE_REAL
     );
 }
 
@@ -720,8 +987,18 @@ int qFloatListToStr(char *buffer, QSize size, const QFloat *floats, QSize length
 int qFloatListToLiteral(
     char *buffer, QSize size, const QFloat *floats, QSize length, int precision
 ) {
-    return formatList(
-        buffer, size, floats, length, sizeof(*floats), formatFloatItem, precision, "", true, ""
+    return formatListWithType(
+        buffer,
+        size,
+        floats,
+        length,
+        sizeof(*floats),
+        formatFloatItem,
+        precision,
+        "",
+        true,
+        "",
+        Q_TYPE_FLOAT
     );
 }
 
@@ -754,8 +1031,18 @@ int qTimestampListToStr(char *buffer, QSize size, const QTimestamp *timestamps, 
 }
 
 int qTimestampListToLiteral(char *buffer, QSize size, const QTimestamp *timestamps, QSize length) {
-    return formatList(
-        buffer, size, timestamps, length, sizeof(*timestamps), formatTimestampItem, 0, "", true, ""
+    return formatListWithType(
+        buffer,
+        size,
+        timestamps,
+        length,
+        sizeof(*timestamps),
+        formatTimestampItem,
+        0,
+        "",
+        true,
+        "",
+        Q_TYPE_TIMESTAMP
     );
 }
 
@@ -766,8 +1053,18 @@ int qMonthListToStr(char *buffer, QSize size, const QMonth *months, QSize length
 }
 
 int qMonthListToLiteral(char *buffer, QSize size, const QMonth *months, QSize length) {
-    return formatList(
-        buffer, size, months, length, sizeof(*months), formatMonthItem, 0, "", true, "m"
+    return formatListWithType(
+        buffer,
+        size,
+        months,
+        length,
+        sizeof(*months),
+        formatMonthItem,
+        0,
+        "",
+        true,
+        "m",
+        Q_TYPE_MONTH
     );
 }
 
@@ -776,7 +1073,9 @@ int qDateListToStr(char *buffer, QSize size, const QDate *dates, QSize length) {
 }
 
 int qDateListToLiteral(char *buffer, QSize size, const QDate *dates, QSize length) {
-    return formatList(buffer, size, dates, length, sizeof(*dates), formatDateItem, 0, "", true, "");
+    return formatListWithType(
+        buffer, size, dates, length, sizeof(*dates), formatDateItem, 0, "", true, "", Q_TYPE_DATE
+    );
 }
 
 int qDatetimeListToStr(char *buffer, QSize size, const QDatetime *datetimes, QSize length) {
@@ -786,8 +1085,18 @@ int qDatetimeListToStr(char *buffer, QSize size, const QDatetime *datetimes, QSi
 }
 
 int qDatetimeListToLiteral(char *buffer, QSize size, const QDatetime *datetimes, QSize length) {
-    return formatList(
-        buffer, size, datetimes, length, sizeof(*datetimes), formatDatetimeItem, 0, "", true, ""
+    return formatListWithType(
+        buffer,
+        size,
+        datetimes,
+        length,
+        sizeof(*datetimes),
+        formatDatetimeItem,
+        0,
+        "",
+        true,
+        "",
+        Q_TYPE_DATETIME
     );
 }
 
@@ -798,8 +1107,18 @@ int qTimespanListToStr(char *buffer, QSize size, const QTimespan *timespans, QSi
 }
 
 int qTimespanListToLiteral(char *buffer, QSize size, const QTimespan *timespans, QSize length) {
-    return formatList(
-        buffer, size, timespans, length, sizeof(*timespans), formatTimespanItem, 0, "", true, ""
+    return formatListWithType(
+        buffer,
+        size,
+        timespans,
+        length,
+        sizeof(*timespans),
+        formatTimespanItem,
+        0,
+        "",
+        true,
+        "",
+        Q_TYPE_TIMESPAN
     );
 }
 
@@ -810,8 +1129,18 @@ int qMinuteListToStr(char *buffer, QSize size, const QMinute *minutes, QSize len
 }
 
 int qMinuteListToLiteral(char *buffer, QSize size, const QMinute *minutes, QSize length) {
-    return formatList(
-        buffer, size, minutes, length, sizeof(*minutes), formatMinuteItem, 0, "", true, ""
+    return formatListWithType(
+        buffer,
+        size,
+        minutes,
+        length,
+        sizeof(*minutes),
+        formatMinuteItem,
+        0,
+        "",
+        true,
+        "",
+        Q_TYPE_MINUTE
     );
 }
 
@@ -822,8 +1151,18 @@ int qSecondListToStr(char *buffer, QSize size, const QSecond *seconds, QSize len
 }
 
 int qSecondListToLiteral(char *buffer, QSize size, const QSecond *seconds, QSize length) {
-    return formatList(
-        buffer, size, seconds, length, sizeof(*seconds), formatSecondItem, 0, "", true, ""
+    return formatListWithType(
+        buffer,
+        size,
+        seconds,
+        length,
+        sizeof(*seconds),
+        formatSecondItem,
+        0,
+        "",
+        true,
+        "",
+        Q_TYPE_SECOND
     );
 }
 
@@ -832,7 +1171,9 @@ int qTimeListToStr(char *buffer, QSize size, const QTime *time, QSize length) {
 }
 
 int qTimeListToLiteral(char *buffer, QSize size, const QTime *time, QSize length) {
-    return formatList(buffer, size, time, length, sizeof(*time), formatTimeItem, 0, "", true, "");
+    return formatListWithType(
+        buffer, size, time, length, sizeof(*time), formatTimeItem, 0, "", true, "", Q_TYPE_TIME
+    );
 }
 
 int qListToStr(

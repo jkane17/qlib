@@ -6,15 +6,24 @@
  * ToStr produces plain display text; ToLiteral produces Q-style display text with
  * type markers and delimiters where implemented. Neither is a serialization API.
  * ToLiteral does not guarantee a parseable Q expression or preservation of the
- * original type, value, list shape, or special-value semantics. Characters and
+ * original type, value, or list shape. Characters and
  * symbols are not escaped. Fractional precision can round away information, and
  * numeric output follows the current locale. See doc/c/formatting.md for examples.
+ *
+ * Numeric and temporal special values follow Q's string (ToStr) and .Q.s1
+ * (ToLiteral): null strings are empty, infinities use 0W/-0W or 0w/-0w, and
+ * literals carry the appropriate type markers. Any floating NaN is treated as
+ * null. List strings join element strings with spaces, retaining empty null
+ * fields; literal lists use shared type markers. See the documentation for the
+ * full token table and remaining differences from Q, including list shape.
+ * Special values are handled before calendar conversion or arithmetic.
  *
  * Buffer sizes are byte capacities, including room for the final null terminator.
  * Successful output counts exclude that terminator and cannot exceed INT_MAX.
  * Successful atoms and nonempty lists write a final terminator; empty lists write
- * nothing. An empty symbol string returns zero but does write a terminator. Embedded
- * null character data counts toward the result, which can therefore exceed strlen.
+ * nothing. Empty symbols and numeric/temporal nulls formatted with ToStr return zero
+ * but do write a terminator. Embedded null character data counts toward the result,
+ * which can therefore exceed strlen.
  *
  * Insufficient capacity returns Q_FMT_ERROR_SIZE, never successful truncation. There
  * is no sizing-query mode. After an error, output may be partial and need not be
@@ -373,7 +382,8 @@ int qDateToLiteral(char *buffer, QSize size, QDate date);
  *
  * @note Uses the proleptic Gregorian calendar with years INT32_MIN through INT32_MAX.
  * Rounds to the nearest millisecond; halfway values round toward the later time.
- * Non-finite or out-of-range values return Q_FMT_ERROR_RANGE without writing output.
+ * Finite out-of-range values return Q_FMT_ERROR_RANGE without writing output.
+ * Nulls and infinities use Q special-value text instead of calendar conversion.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
@@ -388,7 +398,8 @@ int qDatetimeToStr(char *buffer, QSize size, QDatetime datetime);
  *
  * @note Uses the proleptic Gregorian calendar with years INT32_MIN through INT32_MAX.
  * Rounds to the nearest millisecond; halfway values round toward the later time.
- * Non-finite or out-of-range values return Q_FMT_ERROR_RANGE without writing output.
+ * Finite out-of-range values return Q_FMT_ERROR_RANGE without writing output.
+ * Nulls and infinities use Q special-value text instead of calendar conversion.
  * 
  * @param buffer Buffer to write the formatted value into.
  * @param size Size of buffer (number of bytes).
