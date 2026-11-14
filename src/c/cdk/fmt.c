@@ -877,6 +877,31 @@ static int formatCharLiteralItem(char *buffer, QSize size, const void *item, int
 
 #undef DEFINE_ITEM_FORMATTER
 
+// Only supported primitive types reach this helper through the typed list APIs.
+static int writeEmptyListLiteral(char *buffer, QSize size, QTypeCode type) {
+    static const char *const literals[] = {
+        [Q_TYPE_BOOLEAN] = "`boolean$()",
+        [Q_TYPE_GUID] = "`guid$()",
+        [Q_TYPE_BYTE] = "`byte$()",
+        [Q_TYPE_SHORT] = "`short$()",
+        [Q_TYPE_INT] = "`int$()",
+        [Q_TYPE_LONG] = "`long$()",
+        [Q_TYPE_REAL] = "`real$()",
+        [Q_TYPE_FLOAT] = "`float$()",
+        [Q_TYPE_CHAR] = "\"\"",
+        [Q_TYPE_SYMBOL] = "`symbol$()",
+        [Q_TYPE_TIMESTAMP] = "`timestamp$()",
+        [Q_TYPE_MONTH] = "`month$()",
+        [Q_TYPE_DATE] = "`date$()",
+        [Q_TYPE_DATETIME] = "`datetime$()",
+        [Q_TYPE_TIMESPAN] = "`timespan$()",
+        [Q_TYPE_MINUTE] = "`minute$()",
+        [Q_TYPE_SECOND] = "`second$()",
+        [Q_TYPE_TIME] = "`time$()",
+    };
+    WRITE_DYNAMIC(buffer, size, "%s", literals[type]);
+}
+
 static int formatListWithType(
     char *buffer,
     QSize size,
@@ -891,7 +916,7 @@ static int formatListWithType(
     QTypeCode literalType
 ) {
     if (length == 0)
-        return 0;
+        return literalType ? writeEmptyListLiteral(buffer, size, literalType) : 0;
     if (list == nullptr)
         return Q_FMT_ERROR_ARGUMENT;
     if (buffer == nullptr)
@@ -904,7 +929,13 @@ static int formatListWithType(
     bool allSpecial = literalType != 0;
     bool needsFloatSuffix = literalType == Q_TYPE_FLOAT;
     FmtWriter writer = {buffer, size, 0};
-    int status = appendText(&writer, prefix);
+    int status = 0;
+    if (literalType && length == 1) {
+        status = appendText(&writer, ",");
+        if (status < 0)
+            return status;
+    }
+    status = appendText(&writer, prefix);
     if (status < 0)
         return status;
 
@@ -966,8 +997,18 @@ int qBooleanListToStr(char *buffer, QSize size, const QBoolean *booleans, QSize 
 }
 
 int qBooleanListToLiteral(char *buffer, QSize size, const QBoolean *booleans, QSize length) {
-    return formatList(
-        buffer, size, booleans, length, sizeof(*booleans), formatBooleanItem, 0, "", false, "b"
+    return formatListWithType(
+        buffer,
+        size,
+        booleans,
+        length,
+        sizeof(*booleans),
+        formatBooleanItem,
+        0,
+        "",
+        false,
+        "b",
+        Q_TYPE_BOOLEAN
     );
 }
 
@@ -976,7 +1017,9 @@ int qGuidListToStr(char *buffer, QSize size, const QGuid *guids, QSize length) {
 }
 
 int qGuidListToLiteral(char *buffer, QSize size, const QGuid *guids, QSize length) {
-    return formatList(buffer, size, guids, length, sizeof(*guids), formatGuidItem, 0, "", true, "");
+    return formatListWithType(
+        buffer, size, guids, length, sizeof(*guids), formatGuidItem, 0, "", true, "", Q_TYPE_GUID
+    );
 }
 
 int qByteListToStr(char *buffer, QSize size, const QByte *bytes, QSize length) {
@@ -984,8 +1027,8 @@ int qByteListToStr(char *buffer, QSize size, const QByte *bytes, QSize length) {
 }
 
 int qByteListToLiteral(char *buffer, QSize size, const QByte *bytes, QSize length) {
-    return formatList(
-        buffer, size, bytes, length, sizeof(*bytes), formatByteItem, 0, "0x", false, ""
+    return formatListWithType(
+        buffer, size, bytes, length, sizeof(*bytes), formatByteItem, 0, "0x", false, "", Q_TYPE_BYTE
     );
 }
 
@@ -1082,8 +1125,18 @@ int qCharListToStr(char *buffer, QSize size, const QChar *chars, QSize length) {
 }
 
 int qCharListToLiteral(char *buffer, QSize size, const QChar *chars, QSize length) {
-    return formatList(
-        buffer, size, chars, length, sizeof(*chars), formatCharLiteralItem, 0, "\"", false, "\""
+    return formatListWithType(
+        buffer,
+        size,
+        chars,
+        length,
+        sizeof(*chars),
+        formatCharLiteralItem,
+        0,
+        "\"",
+        false,
+        "\"",
+        Q_TYPE_CHAR
     );
 }
 
@@ -1094,8 +1147,18 @@ int qSymbolListToStr(char *buffer, QSize size, const QSymbol *symbols, QSize len
 }
 
 int qSymbolListToLiteral(char *buffer, QSize size, const QSymbol *symbols, QSize length) {
-    return formatList(
-        buffer, size, symbols, length, sizeof(*symbols), formatSymbolLiteralItem, 0, "", false, ""
+    return formatListWithType(
+        buffer,
+        size,
+        symbols,
+        length,
+        sizeof(*symbols),
+        formatSymbolLiteralItem,
+        0,
+        "",
+        false,
+        "",
+        Q_TYPE_SYMBOL
     );
 }
 

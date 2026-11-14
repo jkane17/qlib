@@ -14,11 +14,11 @@ This document describes the formatting functions from [`fmt.h`](/src/c/cdk/fmt.h
     - [Pointer Requirements](#pointer-requirements)
   - [Atoms](#atoms)
   - [Lists](#lists)
+    - [Empty and singleton lists](#empty-and-singleton-lists)
   - [Generic Functions](#generic-functions)
   - [Limitations](#limitations)
     - [Real and float display](#real-and-float-display)
     - [Symbol text](#symbol-text)
-    - [Empty and singleton lists](#empty-and-singleton-lists)
     - [Console-width truncation](#console-width-truncation)
     - [Temporal rounding and display ranges](#temporal-rounding-and-display-ranges)
   - [Examples](#examples)
@@ -104,15 +104,17 @@ list and a type marker where necessary. The following outputs are implemented:
 
 For list string output, joining Q's element strings retains blank fields for nulls.
 For example, an int null followed by 42 produces `" 42"`, including the leading
-separator. An all-null list of two items produces one space. Empty and singleton
-list syntax still has the differences described under [Limitations](#limitations).
+separator. An all-null list of two items produces one space. Literal list shape is
+preserved as described under [Empty and singleton lists](#empty-and-singleton-lists).
 
 ### Return Values
 
 On success, a function returns the number of bytes written, excluding the final null
-terminator. Atom functions and nonempty list functions write that terminator on
-success. An empty list instead returns `0` and leaves the buffer unchanged (see
-[Lists](#lists)). Formatting an empty symbol or a numeric/temporal null as a string also returns `0`, but writes
+terminator. Atom functions, nonempty list functions, and all literal list functions
+write that terminator on success. An empty list formatted with `ToStr` returns `0`
+and leaves the buffer unchanged; an empty literal list writes its Q representation
+(see [Lists](#lists)). Formatting an empty symbol or a numeric/temporal null as a
+string also returns `0`, but writes
 `buffer[0] = '\0'`. A null GUID pointer is an argument error, not a successful no-op.
 
 Character data can contain embedded null bytes. Those bytes count toward the return
@@ -157,8 +159,8 @@ a final null terminator. Do not use the buffer as a string after an error. Indiv
 functions may document stronger guarantees for particular errors.
 
 There is no sizing-query mode: a null output buffer is an error for otherwise valid
-atom or nonempty-list inputs. The empty-list no-op is the exception, not a sizing
-query. When the size is hard to predict, retry with a larger buffer after
+atoms and literal lists, and for nonempty string lists. The empty string-list no-op
+is the exception, not a sizing query. When the size is hard to predict, retry with a larger buffer after
 `Q_FMT_ERROR_SIZE`.
 
 The following widths exclude the final terminator. **Add one byte** when allocating
@@ -193,13 +195,15 @@ the value. For example, `100:00` needs seven bytes including the terminator, and
 
 For a nonempty list's string form, add the actual string widths of the items,
 `length - 1` separating spaces, and one final terminator. Literal forms have their
-own rules: a byte list needs `2 + 2 * length + 1` bytes (`0x`, hexadecimal digits,
+own rules: a byte list of at least two items needs `2 + 2 * length + 1` bytes (`0x`, hexadecimal digits,
 terminator). A character-list literal needs the sum of the escaped byte widths
 (1, 2, or 4 per input byte), plus two quotes and a terminator: at most
-`4 * length + 3` bytes. Do not generally sum atom-literal widths:
+`4 * length + 3` bytes, plus one byte for the leading comma when `length == 1`.
+All singleton literals need this extra comma (a one-byte list needs 6 bytes including
+its terminator). Do not generally sum atom-literal widths:
 list suffixes may appear only once. Check sizing arithmetic for overflow and respect
-the `INT_MAX` output-count limit. Empty lists need no output storage because they
-write nothing.
+the `INT_MAX` output-count limit. Empty string lists need no output storage; empty
+literal lists need enough space for their Q representation and its terminator.
 
 ### Pointer Requirements
 
@@ -208,9 +212,11 @@ or nonempty list pointer returns `Q_FMT_ERROR_ARGUMENT`. A null string inside a
 symbol list also returns this error when reached; earlier items may already have
 been written. An empty symbol (`""`) is valid and distinct from a null pointer.
 
-An empty list returns `0` and writes nothing, even when its input and output pointers
-are null. For nonempty output with valid inputs, a null output buffer continues to
-return `Q_FMT_ERROR_SIZE`. Generic functions check the type first: unsupported type
+An empty list accepts a null input pointer. Its `ToStr` form returns `0` and writes
+nothing, even with a null output pointer. Its `ToLiteral` form requires a non-null
+output buffer with space for the literal and terminator. For otherwise valid inputs,
+a null output buffer returns `Q_FMT_ERROR_SIZE` except for empty string lists.
+Generic functions check the type first: unsupported type
 codes return `Q_FMT_ERROR_TYPE`, including for null inputs or empty lists.
 
 Callers must provide live, correctly aligned input storage matching the declared
@@ -259,8 +265,9 @@ effective precision. For example, with precision 7:
 
 Values outside `0..17` return `Q_FMT_ERROR_RANGE` before formatting. This also applies
 to nulls and infinities, whose text is otherwise independent of valid precision.
-Empty lists remain no-ops regardless of precision; generic functions ignore precision
-for other types. The default constant is a convenience for callers, not an implicit
+Empty lists ignore precision: string lists remain no-ops, while literal lists write
+their typed empty representation. Generic functions ignore precision for other types.
+The default constant is a convenience for callers, not an implicit
 fallback for invalid arguments.
 
 **Compatibility change:** precision previously meant fixed fractional digits, with
@@ -287,8 +294,7 @@ precision 1 becomes `1f`, whereas precision 2 produces `1.2`. Signed zero become
 
 Float literal lists append one `f` at the end only when every displayed item looks
 like an integer. A decimal, exponent, null, or infinity token anywhere in the list
-already identifies its type. This matches `.Q.s1` apart from the separately documented
-empty/singleton list syntax:
+already identifies its type, matching `.Q.s1`:
 
 | Values | Precision | Literal output |
 | ------ | --------- | -------------- |
@@ -309,8 +315,8 @@ byte-based and independent of locale, including for UTF-8 input.
 The escapes are enclosed in double quotes. For example, a newline atom produces
 `"\n"`, and the three bytes `a`, zero, `b` produce `"a\000b"`. Character `ToStr`
 functions continue to emit raw bytes, including embedded zero bytes; list strings
-retain their separating spaces. Empty/singleton list syntax remains a separate
-known difference from Q.
+retain their separating spaces. A singleton literal includes a leading comma before
+the opening quote; an empty character-list literal is `""`.
 
 The guid functions take a `const QGuid *`.
 
@@ -359,7 +365,37 @@ Items are separated by a single space in the string form. The literal form uses 
 | symbol  | `"a" "b"`                | `a b`                   | `` `a`b ``     |
 | date    | `0 1`                    | `2000.01.01 2000.01.02` | same as string |
 
-An empty list returns `0` and leaves the buffer unchanged: not even a terminating null character is written. Initialise the buffer (e.g. `buffer[0] = '\0'`) if the list may be empty.
+### Empty and singleton lists
+
+`ToLiteral` preserves primitive list shape using Q's `.Q.s1` conventions:
+
+| Value | Literal output |
+| ----- | -------------- |
+| empty long list | `` `long$() `` |
+| empty char list | `""` |
+| one long | `,42` |
+| one float | `,1f` |
+| one char | `,"a"` |
+| one byte | `,0xab` |
+| one null date | `,0Nd` |
+
+Every singleton literal starts with a comma, before any opening quote, backtick, or
+`0x` prefix. Empty character lists use `""`; other empty primitive lists use
+`` `type$() ``, where `type` is `boolean`, `guid`, `byte`, `short`, `int`, `long`,
+`real`, `float`, `symbol`, `timestamp`, `month`, `date`, `datetime`, `timespan`,
+`minute`, `second`, or `time`.
+
+**Compatibility change:** empty literal lists now write output and a terminator.
+They accept a null input pointer, but require a non-null output buffer with sufficient
+capacity. Otherwise they return `Q_FMT_ERROR_SIZE`. Singleton literals require one
+additional byte for the comma. Empty lists ignore real/float precision because there
+are no elements to format; unsupported generic type codes still return `Q_FMT_ERROR_TYPE`.
+
+List `ToStr` retains the existing joined-element convention. An empty string list
+returns `0` and leaves the buffer unchanged, including when input/output pointers
+are null. Initialize the buffer (e.g. `buffer[0] = '\0'`) if an empty string list
+should be represented as a C string. A singleton string list has no comma or added
+literal syntax; a null element can produce an empty string with a terminator.
 
 ## Generic Functions
 
@@ -409,27 +445,6 @@ Symbols containing spaces or punctuation are not quoted or escaped by the curren
 formatters, which matches `.Q.s1` in the tested cases. For example, the symbol
 containing `a b` displays as `` `a b ``. This is a limitation of parsing display text
 back into Q, not a formatting compatibility defect.
-
-### Empty and singleton lists
-
-All empty lists currently return zero without writing output. Literal singleton
-lists omit the leading comma. Q's `.Q.s1` preserves these list forms:
-
-| Value           | Current literal output | Q `.Q.s1` output |
-| --------------- | ---------------------- | ---------------- |
-| empty long list | no output              | `` `long$() ``   |
-| empty char list | no output              | `""`             |
-| one long        | `42`                   | `,42`            |
-| one char        | `"a"`                  | `,"a"`           |
-| one byte        | `0xab`                 | `,0xab`          |
-
-Other primitive empty vectors use their corresponding type name; all singleton
-vectors need the comma. Empty-list string output has no element text, but the
-current no-write behavior also means it does not initialize a C string terminator.
-
-List `ToStr` returns joined text rather than Q's list of strings, as described under
-[String and Literal Forms](#string-and-literal-forms). Returning separate strings
-would require a different API.
 
 ### Console-width truncation
 

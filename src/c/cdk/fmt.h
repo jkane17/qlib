@@ -15,14 +15,14 @@
  * literals carry the appropriate type markers. Any floating NaN is treated as
  * null. List strings join element strings with spaces, retaining empty null
  * fields; literal lists use shared type markers. See the documentation for the
- * full token table and remaining differences from Q, including list shape.
+ * full token table and remaining differences from Q.
  * Special values are handled before calendar conversion or arithmetic.
  *
  * Buffer sizes are byte capacities, including room for the final null terminator.
  * Successful output counts exclude that terminator and cannot exceed INT_MAX.
- * Successful atoms and nonempty lists write a final terminator; empty lists write
- * nothing. Empty symbols and numeric/temporal nulls formatted with ToStr return zero
- * but do write a terminator. Embedded null character data counts toward the result,
+ * Successful atoms and all literal lists write a final terminator. String lists
+ * write a terminator unless empty, in which case they write nothing. Empty symbols
+ * and numeric/temporal nulls formatted with ToStr return zero but write a terminator. Embedded null character data counts toward the result,
  * which can therefore exceed strlen.
  *
  * Insufficient capacity returns Q_FMT_ERROR_SIZE, never successful truncation. There
@@ -36,7 +36,7 @@
  * notation is used for small/large values. Real subnormals display as signed zero;
  * float subnormals retain their value. Precision is explicit: these functions
  * do not query a Q runtime. Invalid precision returns Q_FMT_ERROR_RANGE before
- * formatting; empty lists still return zero without inspecting precision.
+ * formatting; empty lists ignore precision in both output forms.
  *
  * Float literals append f when the rounded display text otherwise looks integral.
  * Float literal lists append one f only if every displayed item looks integral;
@@ -46,7 +46,8 @@
  * does: named escapes for tab/newline/carriage return, three-digit octal otherwise.
  * Escaping is byte-based and independent of locale. A character atom literal needs
  * up to 7 bytes including its terminator; a nonempty character-list literal needs
- * at most 4 * length + 3 bytes (check sizing arithmetic for overflow).
+ * at most 4 * length + 3 bytes, plus one for a singleton comma. Check sizing
+ * arithmetic for overflow.
  * Character ToStr functions retain raw bytes, including embedded zero bytes.
  *
  * Temporal widths can grow with the year, day count, hour count, or sign. Allow one
@@ -55,7 +56,10 @@
  *
  * Required null input pointers return Q_FMT_ERROR_ARGUMENT. Nonempty lists require
  * a non-null list pointer; symbol elements must be non-null, terminated strings.
- * Empty lists return zero without writing, even with null input/output pointers.
+ * Empty lists accept null input pointers. Empty string lists return zero without
+ * writing, even with a null output pointer. Empty literal lists write Q's typed
+ * empty representation (or two quotes for chars) and require output capacity.
+ * Singleton literal lists start with a comma before any type prefix or quote.
  * A null output buffer otherwise returns Q_FMT_ERROR_SIZE for valid inputs.
  * Callers must supply valid, correctly aligned input storage of the declared type
  * and length, and writable output storage of at least size bytes. Input and output

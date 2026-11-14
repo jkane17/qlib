@@ -49,20 +49,9 @@ static void assertOutputBounds(
         }                                                                                 \
     }                                                                                     \
     memset(buffer, 0xA5, SIZE);                                                           \
-    result = func(buffer, SIZE, list, 0);                                                 \
-    TEST_ASSERT_EQUAL_INT(0, result);                                                     \
-    TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, buffer, SIZE);                                      \
     result = func(buffer, SIZE, nullptr, length);                                         \
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, result);                                  \
     TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, buffer, SIZE);                                      \
-    result = func(buffer, SIZE, nullptr, 0);                                              \
-    TEST_ASSERT_EQUAL_INT(0, result);                                                     \
-    TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, buffer, SIZE);                                      \
-    result = func(buffer, 0, list, 0);                                                    \
-    TEST_ASSERT_EQUAL_INT(0, result);                                                     \
-    TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, buffer, SIZE);                                      \
-    result = func(nullptr, 0, nullptr, 0);                                                \
-    TEST_ASSERT_EQUAL_INT(0, result);                                                     \
     result = func(nullptr, SIZE, list, length);                                           \
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);                                      \
     result = func(buffer, 0, list, length);                                               \
@@ -86,20 +75,9 @@ static void assertOutputBounds(
         }                                                                           \
     }                                                                               \
     memset(buffer, 0xA5, SIZE);                                                     \
-    result = func(buffer, SIZE, list, 0, precision);                                \
-    TEST_ASSERT_EQUAL_INT(0, result);                                               \
-    TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, buffer, SIZE);                                \
     result = func(buffer, SIZE, nullptr, length, precision);                        \
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_ARGUMENT, result);                            \
     TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, buffer, SIZE);                                \
-    result = func(buffer, SIZE, nullptr, 0, precision);                             \
-    TEST_ASSERT_EQUAL_INT(0, result);                                               \
-    TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, buffer, SIZE);                                \
-    result = func(buffer, 0, list, 0, precision);                                   \
-    TEST_ASSERT_EQUAL_INT(0, result);                                               \
-    TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, buffer, SIZE);                                \
-    result = func(nullptr, 0, nullptr, 0, precision);                               \
-    TEST_ASSERT_EQUAL_INT(0, result);                                               \
     result = func(nullptr, SIZE, list, length, precision);                          \
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);                                \
     result = func(buffer, 0, list, length, precision);                              \
@@ -162,6 +140,7 @@ static const QGuid guids[] = {
     }},
 };
 
+static const char guidSingletonLiteral[] = ",12345678-9abc-def0-1122-334455667788";
 static const char guidString[] = "12345678-9abc-def0-1122-334455667788";
 static const char guidPairString[] =
     "12345678-9abc-def0-1122-334455667788 00112233-4455-6677-8899-aabbccddeeff";
@@ -1127,7 +1106,7 @@ void testBooleanListToStr() {
 
 void testBooleanListToLiteral() {
     QBoolean booleans[] = {1, 0, 1};
-    ASSERT_LIST(qBooleanListToLiteral, booleans, 3, "101b", "1b");
+    ASSERT_LIST(qBooleanListToLiteral, booleans, 3, "101b", ",1b");
 }
 
 void testGuidListToStr() {
@@ -1141,13 +1120,7 @@ void testGuidListToStr() {
 }
 
 void testGuidListToLiteral() {
-    ASSERT_LIST(
-        qGuidListToLiteral,
-        guids,
-        3,
-        guidListString,
-        guidString
-    );
+    ASSERT_LIST(qGuidListToLiteral, guids, 3, guidListString, guidSingletonLiteral);
 }
 
 void testByteListToStr() {
@@ -1157,12 +1130,12 @@ void testByteListToStr() {
 
 void testByteListToLiteral() {
     QByte bytes[] = {1, 123, 255};
-    ASSERT_LIST(qByteListToLiteral, bytes, 3, "0x017bff", "0x01");
+    ASSERT_LIST(qByteListToLiteral, bytes, 3, "0x017bff", ",0x01");
 }
 
 void testByteListToLiteralBufferBounds() {
     const QByte bytes[] = {1, 123, 255};
-    const char *expected[] = {"0x01", "0x017b", "0x017bff"};
+    const char *expected[] = {",0x01", "0x017b", "0x017bff"};
 
     for (QSize length = 1; length <= 3; length++) {
         QSize required = strlen(expected[length - 1]) + 1;
@@ -1195,7 +1168,7 @@ void testShortListToStr() {
 
 void testShortListToLiteral() {
     QShort shorts[] = {1, -234, 567};
-    ASSERT_LIST(qShortListToLiteral, shorts, 3, "1 -234 567h", "1h");
+    ASSERT_LIST(qShortListToLiteral, shorts, 3, "1 -234 567h", ",1h");
 }
 
 void testIntListToStr() {
@@ -1205,7 +1178,7 @@ void testIntListToStr() {
 
 void testIntListToLiteral() {
     QInt ints[] = {1, -234, 567};
-    ASSERT_LIST(qIntListToLiteral, ints, 3, "1 -234 567i", "1i");
+    ASSERT_LIST(qIntListToLiteral, ints, 3, "1 -234 567i", ",1i");
 }
 
 void testLongListToStr() {
@@ -1215,7 +1188,7 @@ void testLongListToStr() {
 
 void testLongListToLiteral() {
     QLong longs[] = {1, -234, 567};
-    ASSERT_LIST(qLongListToLiteral, longs, 3, "1 -234 567", "1");
+    ASSERT_LIST(qLongListToLiteral, longs, 3, "1 -234 567", ",1");
 }
 
 void testRealListToStr() {
@@ -1225,7 +1198,7 @@ void testRealListToStr() {
 
 void testRealListToLiteral() {
     QReal reals[] = {3.14, -3.14, 0.159};
-    ASSERT_PRECISION_LIST(qRealListToLiteral, reals, 3, 2, "3.1 -3.1 0.16e", "3.1e");
+    ASSERT_PRECISION_LIST(qRealListToLiteral, reals, 3, 2, "3.1 -3.1 0.16e", ",3.1e");
 }
 
 void testFloatListToStr() {
@@ -1235,7 +1208,7 @@ void testFloatListToStr() {
 
 void testFloatListToLiteral() {
     QFloat floats[] = {3.14, -3.14, 0.159};
-    ASSERT_PRECISION_LIST(qFloatListToLiteral, floats, 3, 2, "3.1 -3.1 0.16", "3.1");
+    ASSERT_PRECISION_LIST(qFloatListToLiteral, floats, 3, 2, "3.1 -3.1 0.16", ",3.1");
 }
 
 void testCharListToStr() {
@@ -1245,12 +1218,12 @@ void testCharListToStr() {
 
 void testCharListToLiteral() {
     QChar chars[] = {'a', 'b', 'c'};
-    ASSERT_LIST(qCharListToLiteral, chars, 3, "\"abc\"", "\"a\"");
+    ASSERT_LIST(qCharListToLiteral, chars, 3, "\"abc\"", ",\"a\"");
 }
 
 void testCharListToLiteralBufferBounds() {
     const QChar chars[] = {'a', 'b', 'c'};
-    const char *expected[] = {"\"a\"", "\"ab\"", "\"abc\""};
+    const char *expected[] = {",\"a\"", "\"ab\"", "\"abc\""};
 
     for (QSize length = 1; length <= 3; length++) {
         QSize required = strlen(expected[length - 1]) + 1;
@@ -1283,7 +1256,7 @@ void testSymbolListToStr() {
 
 void testSymbolListToLiteral() {
     QSymbol symbols[] = {"abc", "def", "ghi"};
-    ASSERT_LIST(qSymbolListToLiteral, symbols, 3, "`abc`def`ghi", "`abc");
+    ASSERT_LIST(qSymbolListToLiteral, symbols, 3, "`abc`def`ghi", ",`abc");
 }
 
 void testTimestampListToStr() {
@@ -1304,7 +1277,7 @@ void testTimestampListToLiteral() {
         timestamps,
         3,
         "2026.01.17D15:10:17.123456789 2000.01.01D00:00:00.000000000 1996.01.17D15:10:17.123456789",
-        "2026.01.17D15:10:17.123456789"
+        ",2026.01.17D15:10:17.123456789"
     );
 }
 
@@ -1315,7 +1288,7 @@ void testMonthListToStr() {
 
 void testMonthListToLiteral() {
     QMonth months[] = {312, 0, -48};
-    ASSERT_LIST(qMonthListToLiteral, months, 3, "2026.01 2000.01 1996.01m", "2026.01m");
+    ASSERT_LIST(qMonthListToLiteral, months, 3, "2026.01 2000.01 1996.01m", ",2026.01m");
 }
 
 void testDateListToStr() {
@@ -1325,7 +1298,7 @@ void testDateListToStr() {
 
 void testDateListToLiteral() {
     QDate dates[] = {9513, 0, -1445};
-    ASSERT_LIST(qDateListToLiteral, dates, 3, "2026.01.17 2000.01.01 1996.01.17", "2026.01.17");
+    ASSERT_LIST(qDateListToLiteral, dates, 3, "2026.01.17 2000.01.01 1996.01.17", ",2026.01.17");
 }
 
 void testDatetimeListToStr() {
@@ -1346,7 +1319,7 @@ void testDatetimeListToLiteral() {
         datetimes,
         3,
         "2026.01.17T15:10:17.123 2000.01.01T00:00:00.000 1996.01.17T15:10:17.123",
-        "2026.01.17T15:10:17.123"
+        ",2026.01.17T15:10:17.123"
     );
 }
 
@@ -1368,7 +1341,7 @@ void testTimespanListToLiteral() {
         timespans,
         3,
         "17D01:19:36.123456789 0D00:00:00.000000000 -17D01:19:36.123456789",
-        "17D01:19:36.123456789"
+        ",17D01:19:36.123456789"
     );
 }
 
@@ -1391,7 +1364,7 @@ void testMinuteListToStr() {
 
 void testMinuteListToLiteral() {
     QMinute minutes[] = {980, 0, -980};
-    ASSERT_LIST(qMinuteListToLiteral, minutes, 3, "16:20 00:00 -16:20", "16:20");
+    ASSERT_LIST(qMinuteListToLiteral, minutes, 3, "16:20 00:00 -16:20", ",16:20");
 }
 
 void testSecondListToStr() {
@@ -1401,7 +1374,7 @@ void testSecondListToStr() {
 
 void testSecondListToLiteral() {
     QSecond seconds[] = {58817, 0, -58817};
-    ASSERT_LIST(qSecondListToLiteral, seconds, 3, "16:20:17 00:00:00 -16:20:17", "16:20:17");
+    ASSERT_LIST(qSecondListToLiteral, seconds, 3, "16:20:17 00:00:00 -16:20:17", ",16:20:17");
 }
 
 void testTimeListToStr() {
@@ -1414,7 +1387,7 @@ void testTimeListToStr() {
 void testTimeListToLiteral() {
     QTime times[] = {58817123, 0, -58817123};
     ASSERT_LIST(
-        qTimeListToLiteral, times, 3, "16:20:17.123 00:00:00.000 -16:20:17.123", "16:20:17.123"
+        qTimeListToLiteral, times, 3, "16:20:17.123 00:00:00.000 -16:20:17.123", ",16:20:17.123"
     );
 }
 
@@ -1745,10 +1718,11 @@ void testGenericNullInputs() {
             Q_FMT_ERROR_ARGUMENT, qListToLiteral(buffer, SIZE, nullptr, 1, types[i], 2)
         );
         TEST_ASSERT_EQUAL_INT(0, qListToStr(buffer, SIZE, nullptr, 0, types[i], 2));
-        TEST_ASSERT_EQUAL_INT(0, qListToLiteral(buffer, SIZE, nullptr, 0, types[i], 2));
         TEST_ASSERT_EQUAL_STRING("unchanged", buffer);
         TEST_ASSERT_EQUAL_INT(0, qListToStr(nullptr, 0, nullptr, 0, types[i], 2));
-        TEST_ASSERT_EQUAL_INT(0, qListToLiteral(nullptr, 0, nullptr, 0, types[i], 2));
+        TEST_ASSERT_EQUAL_INT(
+            Q_FMT_ERROR_SIZE, qListToLiteral(nullptr, 0, nullptr, 0, types[i], 2)
+        );
     }
 
     const QTypeCode unsupported[] = {Q_TYPE_MIXED, 3, 20, -Q_TYPE_LONG, Q_TYPE_TABLE};
@@ -1827,7 +1801,9 @@ void testPrecisionRange() {
                 Q_FMT_ERROR_RANGE, qListToLiteral(buffer, SIZE, value, 1, type, precision)
             );
             TEST_ASSERT_EQUAL_INT(0, qListToStr(nullptr, 0, nullptr, 0, type, precision));
-            TEST_ASSERT_EQUAL_INT(0, qListToLiteral(nullptr, 0, nullptr, 0, type, precision));
+            TEST_ASSERT_EQUAL_INT(
+                Q_FMT_ERROR_SIZE, qListToLiteral(nullptr, 0, nullptr, 0, type, precision)
+            );
         }
         TEST_ASSERT_EQUAL_STRING("unchanged", buffer);
         QInt integer = 42;
@@ -1902,12 +1878,15 @@ void testMaximumPrecision() {
                              : qAtomToStr)(buffer, width + 1, value, type, precision)
                 );
                 TEST_ASSERT_EQUAL_STRING(expected, buffer);
+                char listExpected[40];
+                snprintf(listExpected, sizeof(listExpected), "%s%s", literal ? "," : "", expected);
+                QSize listWidth = strlen(listExpected);
                 TEST_ASSERT_EQUAL_INT(
-                    width,
+                    listWidth,
                     (literal ? qListToLiteral
-                             : qListToStr)(buffer, width + 1, value, 1, type, precision)
+                             : qListToStr)(buffer, listWidth + 1, value, 1, type, precision)
                 );
-                TEST_ASSERT_EQUAL_STRING(expected, buffer);
+                TEST_ASSERT_EQUAL_STRING(listExpected, buffer);
                 TEST_ASSERT_EQUAL_INT(
                     Q_FMT_ERROR_SIZE,
                     (literal ? qAtomToLiteral : qAtomToStr)(buffer, width, value, type, precision)
@@ -1968,7 +1947,7 @@ void testPrecisionRounding() {
 void testDisplayPrecisionLists() {
     const QReal subnormals[] = {-FLT_TRUE_MIN, FLT_MIN, FLT_TRUE_MIN};
     {
-        ASSERT_PRECISION_LIST(qRealListToLiteral, subnormals, 3, 0, "-0 1.1754944e-38 0e", "-0e");
+        ASSERT_PRECISION_LIST(qRealListToLiteral, subnormals, 3, 0, "-0 1.1754944e-38 0e", ",-0e");
     }
 
     const QReal reals[] = {1.25f, 1e20f, -0.0f, NAN};
@@ -1977,25 +1956,25 @@ void testDisplayPrecisionLists() {
         ASSERT_PRECISION_LIST(qRealListToStr, reals, 4, 2, "1.2 1e+20 -0 ", "1.2");
     }
     {
-        ASSERT_PRECISION_LIST(qRealListToLiteral, reals, 4, 2, "1.2 1e+20 -0 0Ne", "1.2e");
+        ASSERT_PRECISION_LIST(qRealListToLiteral, reals, 4, 2, "1.2 1e+20 -0 0Ne", ",1.2e");
     }
     {
         ASSERT_PRECISION_LIST(qFloatListToStr, floats, 4, 2, "1.2 1e+20 -0 ", "1.2");
     }
     {
-        ASSERT_PRECISION_LIST(qFloatListToLiteral, floats, 4, 2, "1.2 1e+20 -0 0n", "1.2");
+        ASSERT_PRECISION_LIST(qFloatListToLiteral, floats, 4, 2, "1.2 1e+20 -0 0n", ",1.2");
     }
     {
-        ASSERT_PRECISION_LIST(qRealListToLiteral, reals, 4, 0, "1.25 1e+20 -0 0Ne", "1.25e");
+        ASSERT_PRECISION_LIST(qRealListToLiteral, reals, 4, 0, "1.25 1e+20 -0 0Ne", ",1.25e");
     }
     {
         ASSERT_PRECISION_LIST(
-            qRealListToLiteral, reals, 4, 17, "1.25 1.0000000200408773e+20 -0 0Ne", "1.25e"
+            qRealListToLiteral, reals, 4, 17, "1.25 1.0000000200408773e+20 -0 0Ne", ",1.25e"
         );
     }
     {
         ASSERT_PRECISION_LIST(
-            qFloatListToLiteral, floats, 4, Q_FMT_DEFAULT_PRECISION, "1.25 1e+20 -0 0n", "1.25"
+            qFloatListToLiteral, floats, 4, Q_FMT_DEFAULT_PRECISION, "1.25 1e+20 -0 0n", ",1.25"
         );
     }
 }
@@ -2153,20 +2132,20 @@ void testFloatListLiteralSuffix() {
         const char *expected;
         const char *singleton;
     } cases[] = {
-        {{1, 2}, 2, 7, "1 2f", "1f"},
-        {{-0.0, 0}, 2, 7, "-0 0f", "-0f"},
-        {{1.25, 2.25}, 2, 1, "1 2f", "1f"},
-        {{1.25, 2.25}, 2, 3, "1.25 2.25", "1.25"},
-        {{1, 1.5}, 2, 7, "1 1.5", "1f"},
-        {{1.5, 1}, 2, 7, "1.5 1", "1.5"},
-        {{1, 1e7}, 2, 7, "1 1e+07", "1f"},
-        {{1e7, 1}, 2, 7, "1e+07 1", "1e+07"},
-        {{1, NAN}, 2, 7, "1 0n", "1f"},
-        {{NAN, 1}, 2, 7, "0n 1", "0n"},
-        {{1, INFINITY}, 2, 7, "1 0w", "1f"},
-        {{-INFINITY, 1}, 2, 7, "-0w 1", "-0w"},
-        {{NAN, INFINITY, -INFINITY}, 3, 7, "0n 0w -0w", "0n"},
-        {{1, 1.5, 2}, 3, 7, "1 1.5 2", "1f"},
+        {{1, 2}, 2, 7, "1 2f", ",1f"},
+        {{-0.0, 0}, 2, 7, "-0 0f", ",-0f"},
+        {{1.25, 2.25}, 2, 1, "1 2f", ",1f"},
+        {{1.25, 2.25}, 2, 3, "1.25 2.25", ",1.25"},
+        {{1, 1.5}, 2, 7, "1 1.5", ",1f"},
+        {{1.5, 1}, 2, 7, "1.5 1", ",1.5"},
+        {{1, 1e7}, 2, 7, "1 1e+07", ",1f"},
+        {{1e7, 1}, 2, 7, "1e+07 1", ",1e+07"},
+        {{1, NAN}, 2, 7, "1 0n", ",1f"},
+        {{NAN, 1}, 2, 7, "0n 1", ",0n"},
+        {{1, INFINITY}, 2, 7, "1 0w", ",1f"},
+        {{-INFINITY, 1}, 2, 7, "-0w 1", ",-0w"},
+        {{NAN, INFINITY, -INFINITY}, 3, 7, "0n 0w -0w", ",0n"},
+        {{1, 1.5, 2}, 3, 7, "1 1.5 2", ",1f"},
     };
     for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
         ASSERT_PRECISION_LIST(
@@ -2193,7 +2172,7 @@ void testEmptySymbolListItems() {
         ASSERT_LIST(qSymbolListToStr, symbols, 2, " abc", "");
     }
     {
-        ASSERT_LIST(qSymbolListToLiteral, symbols, 2, "``abc", "`");
+        ASSERT_LIST(qSymbolListToLiteral, symbols, 2, "``abc", ",`");
     }
 }
 
@@ -2439,7 +2418,7 @@ void testSpecialLists() {
                 strcpy(literalExpected, specialCases[c].reversedMixedLiteral);
             } else {
                 strcpy(stringExpected, "");
-                strcpy(literalExpected, specialCases[c].literals[0]);
+                snprintf(literalExpected, SIZE, ",%s", specialCases[c].literals[0]);
             }
             for (int literal = 0; literal <= 1; literal++) {
                 const char *expected = literal ? literalExpected : stringExpected;
@@ -2633,12 +2612,69 @@ void testCharListLiteralEscapes() {
     // Three octal digits keep the following numeric characters unambiguous.
     const QChar chars[] = {'\0', '0', '7', '\t', '\n', '\r', '"', '\\', (QChar)255};
     ASSERT_LIST(
-        qCharListToLiteral, chars, sizeof(chars), "\"\\00007\\t\\n\\r\\\"\\\\\\377\"", "\"\\000\""
+        qCharListToLiteral, chars, sizeof(chars), "\"\\00007\\t\\n\\r\\\"\\\\\\377\"", ",\"\\000\""
     );
 }
 
+// Precision is deliberately invalid for real/float: an empty list has no values
+// to format, so precision is ignored while literal output still needs a buffer.
+#define ASSERT_EMPTY_LISTS(type, stringFunc, literalFunc, expected, ...)                       \
+    do {                                                                                       \
+        for (QSize capacity = 0; capacity <= strlen(expected) + 1; capacity++) {               \
+            unsigned char guarded[SIZE + 2];                                                   \
+            memset(guarded, 0xA5, sizeof(guarded));                                            \
+            int result = stringFunc((char *)guarded + 1, capacity, nullptr, 0, ##__VA_ARGS__); \
+            TEST_ASSERT_EQUAL_INT(0, result);                                                  \
+            TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, guarded, sizeof(guarded));                       \
+            result = literalFunc((char *)guarded + 1, capacity, nullptr, 0, ##__VA_ARGS__);    \
+            assertOutputBounds(guarded, capacity, result, expected);                           \
+            if (result < 0)                                                                    \
+                TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, guarded, sizeof(guarded));                   \
+            memset(guarded, 0xA5, sizeof(guarded));                                            \
+            result = qListToLiteral((char *)guarded + 1, capacity, nullptr, 0, type, INT_MIN); \
+            assertOutputBounds(guarded, capacity, result, expected);                           \
+        }                                                                                      \
+        TEST_ASSERT_EQUAL_INT(0, stringFunc(nullptr, 0, nullptr, 0, ##__VA_ARGS__));           \
+        TEST_ASSERT_EQUAL_INT(                                                                 \
+            Q_FMT_ERROR_SIZE, literalFunc(nullptr, SIZE, nullptr, 0, ##__VA_ARGS__)            \
+        );                                                                                     \
+        TEST_ASSERT_EQUAL_INT(                                                                 \
+            Q_FMT_ERROR_SIZE, literalFunc(nullptr, 0, nullptr, 0, ##__VA_ARGS__)               \
+        );                                                                                     \
+        TEST_ASSERT_EQUAL_INT(                                                                 \
+            strlen(expected), qListToLiteral(buffer, SIZE, &guids[0], 0, type, INT_MIN)        \
+        );                                                                                     \
+        TEST_ASSERT_EQUAL_STRING(expected, buffer);                                            \
+    } while (0)
+
+void testEmptyLists() {
+    ASSERT_EMPTY_LISTS(Q_TYPE_BOOLEAN, qBooleanListToStr, qBooleanListToLiteral, "`boolean$()");
+    ASSERT_EMPTY_LISTS(Q_TYPE_GUID, qGuidListToStr, qGuidListToLiteral, "`guid$()");
+    ASSERT_EMPTY_LISTS(Q_TYPE_BYTE, qByteListToStr, qByteListToLiteral, "`byte$()");
+    ASSERT_EMPTY_LISTS(Q_TYPE_SHORT, qShortListToStr, qShortListToLiteral, "`short$()");
+    ASSERT_EMPTY_LISTS(Q_TYPE_INT, qIntListToStr, qIntListToLiteral, "`int$()");
+    ASSERT_EMPTY_LISTS(Q_TYPE_LONG, qLongListToStr, qLongListToLiteral, "`long$()");
+    ASSERT_EMPTY_LISTS(Q_TYPE_REAL, qRealListToStr, qRealListToLiteral, "`real$()", INT_MIN);
+    ASSERT_EMPTY_LISTS(Q_TYPE_FLOAT, qFloatListToStr, qFloatListToLiteral, "`float$()", INT_MIN);
+    ASSERT_EMPTY_LISTS(Q_TYPE_CHAR, qCharListToStr, qCharListToLiteral, "\"\"");
+    ASSERT_EMPTY_LISTS(Q_TYPE_SYMBOL, qSymbolListToStr, qSymbolListToLiteral, "`symbol$()");
+    ASSERT_EMPTY_LISTS(
+        Q_TYPE_TIMESTAMP, qTimestampListToStr, qTimestampListToLiteral, "`timestamp$()"
+    );
+    ASSERT_EMPTY_LISTS(Q_TYPE_MONTH, qMonthListToStr, qMonthListToLiteral, "`month$()");
+    ASSERT_EMPTY_LISTS(Q_TYPE_DATE, qDateListToStr, qDateListToLiteral, "`date$()");
+    ASSERT_EMPTY_LISTS(Q_TYPE_DATETIME, qDatetimeListToStr, qDatetimeListToLiteral, "`datetime$()");
+    ASSERT_EMPTY_LISTS(Q_TYPE_TIMESPAN, qTimespanListToStr, qTimespanListToLiteral, "`timespan$()");
+    ASSERT_EMPTY_LISTS(Q_TYPE_MINUTE, qMinuteListToStr, qMinuteListToLiteral, "`minute$()");
+    ASSERT_EMPTY_LISTS(Q_TYPE_SECOND, qSecondListToStr, qSecondListToLiteral, "`second$()");
+    ASSERT_EMPTY_LISTS(Q_TYPE_TIME, qTimeListToStr, qTimeListToLiteral, "`time$()");
+}
+
+#undef ASSERT_EMPTY_LISTS
+
 int main() {
     UNITY_BEGIN();
+    RUN_TEST(testEmptyLists);
     RUN_TEST(testSpecialAtoms);
     RUN_TEST(testSpecialLists);
     RUN_TEST(testSpecialPrecisionAndNaNs);
