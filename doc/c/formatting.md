@@ -17,7 +17,7 @@ This document describes the formatting functions from [`fmt.h`](/src/c/cdk/fmt.h
   - [Generic Functions](#generic-functions)
   - [Limitations](#limitations)
     - [Real and float display](#real-and-float-display)
-    - [Character escaping and symbol text](#character-escaping-and-symbol-text)
+    - [Symbol text](#symbol-text)
     - [Empty and singleton lists](#empty-and-singleton-lists)
     - [Console-width truncation](#console-width-truncation)
     - [Temporal rounding and display ranges](#temporal-rounding-and-display-ranges)
@@ -174,7 +174,7 @@ supported year range still apply.
 | short        | Decimal digits, optional sign; literal adds `h`                                  | 6 / 7                          |
 | int          | Decimal digits, optional sign; literal adds `i`                                  | 11 / 12                        |
 | long         | Decimal digits and optional sign; no literal suffix                              | 20 / 20                        |
-| char         | One raw byte; literal adds two quotes                                            | 1 / 3                          |
+| char         | One raw byte; literal adds quotes and escapes                                            | 1 / 6                          |
 | month        | 7 / 8 with a four-digit nonnegative year; larger or negative years may need more | 13 / 14                        |
 | date         | 10 with a four-digit nonnegative year; larger or negative years may need more    | 14 / 14                        |
 | datetime     | 23 with a four-digit nonnegative year; larger or negative years may need more    | 30 / 30                        |
@@ -194,8 +194,9 @@ the value. For example, `100:00` needs seven bytes including the terminator, and
 For a nonempty list's string form, add the actual string widths of the items,
 `length - 1` separating spaces, and one final terminator. Literal forms have their
 own rules: a byte list needs `2 + 2 * length + 1` bytes (`0x`, hexadecimal digits,
-terminator), while an unescaped character-list literal needs `length + 2 + 1`
-bytes (characters, quotes, terminator). Do not generally sum atom-literal widths:
+terminator). A character-list literal needs the sum of the escaped byte widths
+(1, 2, or 4 per input byte), plus two quotes and a terminator: at most
+`4 * length + 3` bytes. Do not generally sum atom-literal widths:
 list suffixes may appear only once. Check sizing arithmetic for overflow and respect
 the `INT_MAX` output-count limit. Empty lists need no output storage because they
 write nothing.
@@ -298,6 +299,19 @@ empty/singleton list syntax:
 | `1 0n` | 7 | `1 0n` |
 | `0w 1` | 7 | `0w 1` |
 
+Character literals follow Q's `.Q.s1` escaping, for both atoms and lists. Printable
+ASCII bytes (32 through 126) are emitted directly except for quotes and backslashes.
+Tab, newline, and carriage return use `\t`, `\n`, and `\r`; a quote uses `\"` and a
+backslash uses `\\`. All other bytes use exactly three octal digits: for example,
+a zero byte is `\000`, backspace is `\010`, and byte 255 is `\377`. Escaping is
+byte-based and independent of locale, including for UTF-8 input.
+
+The escapes are enclosed in double quotes. For example, a newline atom produces
+`"\n"`, and the three bytes `a`, zero, `b` produce `"a\000b"`. Character `ToStr`
+functions continue to emit raw bytes, including embedded zero bytes; list strings
+retain their separating spaces. Empty/singleton list syntax remains a separate
+known difference from Q.
+
 The guid functions take a `const QGuid *`.
 
 | Type      | Value                             | String                                 | Literal        |
@@ -389,13 +403,7 @@ follow Q's display rules. Numeric output still follows the current C numeric loc
 and floating-point rounding mode; matching the examples assumes the C locale and
 default round-to-nearest mode.
 
-### Character escaping and symbol text
-
-Character literals currently embed raw bytes between quotes. Q's `.Q.s1` escapes
-quotes, backslashes, control characters, and non-ASCII bytes. For example, a newline
-becomes `"\n"`, a zero byte becomes `"\000"`, and byte 255 becomes `"\377"`.
-This applies to both character atoms and character lists. `ToStr` correctly retains
-raw character bytes, including embedded zero bytes.
+### Symbol text
 
 Symbols containing spaces or punctuation are not quoted or escaped by the current
 formatters, which matches `.Q.s1` in the tested cases. For example, the symbol

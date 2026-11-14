@@ -522,8 +522,8 @@ void testCharToLiteral() {
 
     char_ = '\n';
     result = qCharToLiteral(buffer, SIZE, char_);
-    TEST_ASSERT_EQUAL_INT(3, result);
-    TEST_ASSERT_EQUAL_STRING("\"\n\"", buffer);
+    TEST_ASSERT_EQUAL_INT(4, result);
+    TEST_ASSERT_EQUAL_STRING("\"\\n\"", buffer);
 
     result = qCharToLiteral(nullptr, SIZE, char_);
     TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
@@ -2003,17 +2003,16 @@ void testDisplayPrecisionLists() {
 void testCharListEmbeddedNull() {
     const QChar chars[] = {'a', '\0', 'b'};
     const char expectedString[] = {'a', ' ', '\0', ' ', 'b', '\0'};
-    const char expectedLiteral[] = {'"', 'a', '\0', 'b', '"', '\0'};
-    char output[7];
+    char output[10];
     memset(output, 0x5A, sizeof(output));
     int result = qCharListToStr(output, 6, chars, 3);
     TEST_ASSERT_EQUAL_INT(5, result);
     TEST_ASSERT_EQUAL_MEMORY(expectedString, output, 6);
     TEST_ASSERT_EQUAL_HEX8(0x5A, output[6]);
-    result = qCharListToLiteral(output, 6, chars, 3);
-    TEST_ASSERT_EQUAL_INT(5, result);
-    TEST_ASSERT_EQUAL_MEMORY(expectedLiteral, output, 6);
-    TEST_ASSERT_EQUAL_HEX8(0x5A, output[6]);
+    result = qCharListToLiteral(output, 9, chars, 3);
+    TEST_ASSERT_EQUAL_INT(8, result);
+    TEST_ASSERT_EQUAL_STRING("\"a\\000b\"", output);
+    TEST_ASSERT_EQUAL_HEX8(0x5A, output[9]);
 }
 
 static void assertDynamicAtomBounds(
@@ -2541,6 +2540,103 @@ void testFiniteIntegerBoundaries() {
     }
 }
 
+// Expected text captured from .Q.s1 in Q, including octal escapes for backspace,
+// vertical tab, form feed, DEL, and all high bytes (not C's \b, \v, or \f).
+void testCharLiteralEscapes() {
+    const struct {
+        unsigned char value;
+        const char *expected;
+    } cases[] = {
+        {0, "\"\\000\""},
+        {7, "\"\\007\""},
+        {8, "\"\\010\""},
+        {9, "\"\\t\""},
+        {10, "\"\\n\""},
+        {11, "\"\\013\""},
+        {12, "\"\\014\""},
+        {13, "\"\\r\""},
+        {31, "\"\\037\""},
+        {32, "\" \""},
+        {34, "\"\\\"\""},
+        {48, "\"0\""},
+        {92, "\"\\\\\""},
+        {126, "\"~\""},
+        {127, "\"\\177\""},
+        {128, "\"\\200\""},
+        {255, "\"\\377\""},
+    };
+    for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        QChar value = (QChar)cases[i].value;
+        for (QSize capacity = 0; capacity <= strlen(cases[i].expected) + 1; capacity++) {
+            unsigned char guarded[SIZE + 2];
+            memset(guarded, 0xA5, sizeof(guarded));
+            int result = qCharToLiteral((char *)guarded + 1, capacity, value);
+            assertOutputBounds(guarded, capacity, result, cases[i].expected);
+            if (result < 0)
+                TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, guarded, sizeof(guarded));
+        }
+        TEST_ASSERT_EQUAL_INT(
+            strlen(cases[i].expected), qAtomToLiteral(buffer, SIZE, &value, Q_TYPE_CHAR, 0)
+        );
+        TEST_ASSERT_EQUAL_STRING(cases[i].expected, buffer);
+        // String formatting continues to emit the original byte, even for zero.
+        TEST_ASSERT_EQUAL_INT(1, qCharToStr(buffer, SIZE, value));
+        TEST_ASSERT_EQUAL_HEX8(cases[i].value, (unsigned char)buffer[0]);
+        TEST_ASSERT_EQUAL_HEX8(0, buffer[1]);
+    }
+}
+
+void testCharListLiteralAllBytes() {
+    const char expected[] =
+        "\"\\000\\001\\002\\003\\004\\005\\006\\007\\010\\t\\n\\013\\014\\r\\016\\017"
+        "\\020\\021\\022\\023\\024\\025\\026\\027\\030\\031\\032\\033\\034\\035\\036\\037"
+        " !\\\"#$%&'()*+,-./"
+        "0123456789:;<=>?"
+        "@ABCDEFGHIJKLMNO"
+        "PQRSTUVWXYZ[\\\\]^_"
+        "`abcdefghijklmno"
+        "pqrstuvwxyz{|}~\\177"
+        "\\200\\201\\202\\203\\204\\205\\206\\207\\210\\211\\212\\213\\214\\215\\216\\217"
+        "\\220\\221\\222\\223\\224\\225\\226\\227\\230\\231\\232\\233\\234\\235\\236\\237"
+        "\\240\\241\\242\\243\\244\\245\\246\\247\\250\\251\\252\\253\\254\\255\\256\\257"
+        "\\260\\261\\262\\263\\264\\265\\266\\267\\270\\271\\272\\273\\274\\275\\276\\277"
+        "\\300\\301\\302\\303\\304\\305\\306\\307\\310\\311\\312\\313\\314\\315\\316\\317"
+        "\\320\\321\\322\\323\\324\\325\\326\\327\\330\\331\\332\\333\\334\\335\\336\\337"
+        "\\340\\341\\342\\343\\344\\345\\346\\347\\350\\351\\352\\353\\354\\355\\356\\357"
+        "\\360\\361\\362\\363\\364\\365\\366\\367\\370\\371\\372\\373\\374\\375\\376\\377\"";
+    QChar chars[256];
+    for (unsigned i = 0; i < 256; i++)
+        chars[i] = (QChar)i;
+    // Test every capacity, including failures in a four-byte escape and the closing quote.
+    for (QSize capacity = 0; capacity <= sizeof(expected); capacity++) {
+        unsigned char guarded[sizeof(expected) + 2];
+        memset(guarded, 0xA5, sizeof(guarded));
+        int result = qCharListToLiteral((char *)guarded + 1, capacity, chars, 256);
+        TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[0]);
+        for (QSize i = capacity + 1; i < sizeof(guarded); i++)
+            TEST_ASSERT_EQUAL_HEX8(0xA5, guarded[i]);
+        if (capacity < sizeof(expected)) {
+            TEST_ASSERT_EQUAL_INT(Q_FMT_ERROR_SIZE, result);
+        } else {
+            TEST_ASSERT_EQUAL_INT(sizeof(expected) - 1, result);
+            TEST_ASSERT_EQUAL_STRING(expected, (char *)guarded + 1);
+        }
+    }
+    char output[sizeof(expected)];
+    TEST_ASSERT_EQUAL_INT(
+        sizeof(expected) - 1, qListToLiteral(output, sizeof(output), chars, 256, Q_TYPE_CHAR, 0)
+    );
+    TEST_ASSERT_EQUAL_STRING(expected, output);
+}
+
+void testCharListLiteralEscapes() {
+    // Three octal digits keep the following numeric characters unambiguous.
+    const QChar chars[] = {'\0', '0', '7', '\t', '\n', '\r', '"', '\\', (QChar)255};
+    ASSERT_LIST(
+        qCharListToLiteral, chars, sizeof(chars), "\"\\00007\\t\\n\\r\\\"\\\\\\377\"", "\"\\000\""
+    );
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(testSpecialAtoms);
@@ -2579,6 +2675,9 @@ int main() {
     RUN_TEST(testFloatToLiteral);
     RUN_TEST(testCharToStr);
     RUN_TEST(testCharToLiteral);
+    RUN_TEST(testCharLiteralEscapes);
+    RUN_TEST(testCharListLiteralAllBytes);
+    RUN_TEST(testCharListLiteralEscapes);
     RUN_TEST(testSymbolToStr);
     RUN_TEST(testSymbolToLiteral);
     RUN_TEST(testTimestampToStr);

@@ -375,8 +375,40 @@ int qCharToStr(char *buffer, QSize size, QChar char_) {
     WRITE_FIXED(buffer, size, CHAR_TEXT_WIDTH, "%c", char_);
 }
 
+// Q uses named escapes only for tab, newline, and carriage return. Other
+// non-printable bytes use exactly three octal digits, independent of locale.
+static const char *escapedCharText(QChar value, char text[5]) {
+    switch (value) {
+        case '\t':
+            return "\\t";
+        case '\n':
+            return "\\n";
+        case '\r':
+            return "\\r";
+        case '"':
+            return "\\\"";
+        case '\\':
+            return "\\\\";
+        default:
+            break;
+    }
+    unsigned char byte = (unsigned char)value;
+    if (byte >= 32 && byte <= 126) {
+        text[0] = (char)byte;
+        text[1] = '\0';
+    } else {
+        text[0] = '\\';
+        text[1] = (char)('0' + (byte >> 6));
+        text[2] = (char)('0' + ((byte >> 3) & 7));
+        text[3] = (char)('0' + (byte & 7));
+        text[4] = '\0';
+    }
+    return text;
+}
+
 int qCharToLiteral(char *buffer, QSize size, QChar char_) {
-    WRITE_FIXED(buffer, size, CHAR_TEXT_WIDTH + 2, "\"%c\"", char_);
+    char escaped[5];
+    WRITE_DYNAMIC(buffer, size, "\"%s\"", escapedCharText(char_, escaped));
 }
 
 int qSymbolToStr(char *buffer, QSize size, QSymbol symbol) {
@@ -837,6 +869,12 @@ DEFINE_ITEM_FORMATTER(
     formatSymbolLiteralItem, qSymbolToLiteral(buffer, size, *(const QSymbol *)item)
 )
 
+static int formatCharLiteralItem(char *buffer, QSize size, const void *item, int precision) {
+    (void)precision;
+    char escaped[5];
+    WRITE_DYNAMIC(buffer, size, "%s", escapedCharText(*(const QChar *)item, escaped));
+}
+
 #undef DEFINE_ITEM_FORMATTER
 
 static int formatListWithType(
@@ -1045,7 +1083,7 @@ int qCharListToStr(char *buffer, QSize size, const QChar *chars, QSize length) {
 
 int qCharListToLiteral(char *buffer, QSize size, const QChar *chars, QSize length) {
     return formatList(
-        buffer, size, chars, length, sizeof(*chars), formatCharItem, 0, "\"", false, "\""
+        buffer, size, chars, length, sizeof(*chars), formatCharLiteralItem, 0, "\"", false, "\""
     );
 }
 

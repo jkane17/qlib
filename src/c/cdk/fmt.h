@@ -6,8 +6,8 @@
  * ToStr produces plain display text; ToLiteral produces Q-style display text with
  * type markers and delimiters where implemented. Neither is a serialization API.
  * ToLiteral does not guarantee a parseable Q expression or preservation of the
- * original type, value, or list shape. Characters and
- * symbols are not escaped. Display precision can round away information, and
+ * original type, value, or list shape. Symbols are not escaped.
+ * Display precision can round away information, and
  * numeric output follows the current locale. See doc/c/formatting.md for examples.
  *
  * Numeric and temporal special values follow Q's string (ToStr) and .Q.s1
@@ -41,6 +41,13 @@
  * Float literals append f when the rounded display text otherwise looks integral.
  * Float literal lists append one f only if every displayed item looks integral;
  * decimal, exponent, null, and infinity tokens identify the type without a suffix.
+ *
+ * Character literals escape quotes, backslashes, and non-printable bytes as Q
+ * does: named escapes for tab/newline/carriage return, three-digit octal otherwise.
+ * Escaping is byte-based and independent of locale. A character atom literal needs
+ * up to 7 bytes including its terminator; a nonempty character-list literal needs
+ * at most 4 * length + 3 bytes (check sizing arithmetic for overflow).
+ * Character ToStr functions retain raw bytes, including embedded zero bytes.
  *
  * Temporal widths can grow with the year, day count, hour count, or sign. Allow one
  * additional byte beyond the formatted width for the terminator; see the width
