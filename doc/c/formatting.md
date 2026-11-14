@@ -8,6 +8,7 @@ This document describes the formatting functions from [`fmt.h`](/src/c/cdk/fmt.h
   - [Table of Contents](#table-of-contents)
   - [Conventions](#conventions)
     - [String and Literal Forms](#string-and-literal-forms)
+    - [Expanded temporal fields](#expanded-temporal-fields)
     - [Nulls and infinities](#nulls-and-infinities)
     - [Return Values](#return-values)
     - [Buffer Size](#buffer-size)
@@ -20,29 +21,32 @@ This document describes the formatting functions from [`fmt.h`](/src/c/cdk/fmt.h
     - [Real and float display](#real-and-float-display)
     - [Symbol text](#symbol-text)
     - [Console-width truncation](#console-width-truncation)
-    - [Temporal rounding and display ranges](#temporal-rounding-and-display-ranges)
+    - [Temporal rounding](#temporal-rounding)
   - [Examples](#examples)
 
 ## Conventions
 
 ### String and Literal Forms
 
-For supported primitive atoms and lists, the intended formatting behaviour is:
+The library produces a single printable string, matching Q's own display output in
+most cases. For supported primitive atoms and lists, the intended formatting behaviour is:
 
 - `q<Type>ToStr` follows Q's `string`.
 - `q<Type>ToLiteral` follows Q's `.Q.s1`.
 
-These rules also apply to generic atom/list dispatch. The current implementation
-has the differences recorded in [Limitations](#limitations); the examples and API
-rules below describe the implementation as it exists today, not behavior that has
-already been changed to match Q.
+These rules also apply to generic atom/list dispatch, with the deliberate choices
+described below for joined list strings and expanded temporal fields. Other current
+differences are recorded in [Limitations](#limitations).
 
 For example, the int `42` is `42` as a string and `42i` as a literal, while the long
 `42` is `42` in both forms.
 
 Q's `string` applied to a list returns a list of strings. Our list `ToStr` functions
-return one buffer containing those element strings separated by spaces: the intended
-text corresponds to `" " sv string values`, subject to the current differences below.
+deliberately join those element strings with a single space to produce one printable
+string, corresponding to `" " sv string values` subject to the element-formatting
+rules below. This is the intended API contract, not a compatibility defect or a
+planned change to return separate strings. Empty element strings retain their
+separators, so null elements can produce leading, trailing, or repeated spaces.
 `ToLiteral` targets `.Q.s1` of the whole list, including its list-level syntax, rather
 than joining the literal forms of individual atoms.
 
@@ -55,6 +59,31 @@ contain unquoted spaces or punctuation, and floating-point display precision can
 lose information. The `Literal` name therefore does not promise a round trip through
 Q's parser. Applications needing serialization require a separate encoder with
 explicit round-trip rules.
+
+### Expanded temporal fields
+
+Temporal fields deliberately expand to show their full numeric values rather than
+hiding information behind Q's fixed-width placeholders. This applies to both
+`ToStr` and `ToLiteral`, for atoms and list elements. It is an intentional difference
+from Q, not a compatibility issue to fix:
+
+
+| Value                             | Current string output | Q `string` output |
+| --------------------------------- | --------------------- | ----------------- |
+| minute count 6000                 | `100:00`              | `**:00`           |
+| second count 360000               | `100:00:00`           | `**:00:00`        |
+| time count 360000000 milliseconds | `100:00:00.000`       | `**:00:00.000`    |
+| month representing January 10000  | `10000.01`            | `**00.01`         |
+| date representing January 1 10000 | `10000.01.01`         | `0000.00.00`      |
+
+Out-of-range datetime dates similarly use `0000.00.00` in Q. Extreme month values
+also produced unusual punctuation in this build, while our formatter produces an
+expanded year and month. The library will retain its informative output rather than
+reproduce those placeholders or build-specific artifacts. Existing supported calendar
+ranges and conversion errors still apply: expansion does not make every underlying
+value convertible. Nulls and infinities continue to use their Q special-value tokens.
+This decision concerns display width and ranges, not datetime sub-millisecond rounding.
+
 
 ### Nulls and infinities
 
@@ -453,7 +482,7 @@ C functions have no console-width setting: they produce the complete text or ret
 `Q_FMT_ERROR_SIZE` when the buffer is too small. Q comparisons use a sufficiently
 wide console to check the complete formatting rather than the truncated display.
 
-### Temporal rounding and display ranges
+### Temporal rounding
 
 Datetime formatting currently rounds to the nearest millisecond. Q discards the
 sub-millisecond time within the day in the tested cases:
@@ -464,22 +493,6 @@ sub-millisecond time within the day in the tested cases:
 | `0.999999999`                     | `2000.01.02T00:00:00.000` | `2000.01.01T23:59:59.999` |
 | `-0.000000001`                    | `2000.01.01T00:00:00.000` | `1999.12.31T23:59:59.999` |
 
-Large temporal fields currently expand to fit their numeric values. The installed Q
-sometimes uses placeholders instead:
-
-| Value                             | Current string output | Q `string` output |
-| --------------------------------- | --------------------- | ----------------- |
-| minute count 6000                 | `100:00`              | `**:00`           |
-| second count 360000               | `100:00:00`           | `**:00:00`        |
-| time count 360000000 milliseconds | `100:00:00.000`       | `**:00:00.000`    |
-| month representing January 10000  | `10000.01`            | `**00.01`         |
-| date representing January 1 10000 | `10000.01.01`         | `0000.00.00`      |
-
-Out-of-range datetime dates similarly use `0000.00.00` in Q. Extreme month values
-also produced unusual punctuation in this build, while our formatter produces an
-expanded year and month. Matching documented display conventions versus reproducing
-build-specific extreme-value behavior remains a separate compatibility decision.
-The current calendar range checks and expanded-width behavior remain in place.
 
 ## Examples
 
