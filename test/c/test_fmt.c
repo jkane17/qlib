@@ -1893,7 +1893,7 @@ void testMaximumPrecision() {
                     sizeof(expected),
                     "%s%s",
                     isReal ? realExpected[precision] : floatExpected[precision],
-                    literal && isReal ? "e" : ""
+                    literal ? (isReal ? "e" : (precision == 1 ? "f" : "")) : ""
                 );
                 QSize width = strlen(expected);
                 TEST_ASSERT_EQUAL_INT(
@@ -1922,21 +1922,36 @@ void testPrecisionRounding() {
         QFloat value;
         int precision;
         const char *expected;
+        const char *floatLiteral;
     } cases[] = {
-        {1.49, 1, "1"},         {1.51, 1, "2"},        {-1.51, 1, "-2"},
-        {1.1249, 3, "1.12"},    {1.1251, 3, "1.13"},   {-1.1249, 3, "-1.12"},
-        {-1.1251, 3, "-1.13"},  {9.9996, 4, "10"},     {2.5, 1, "2"},
-        {3.5, 1, "4"},          {-2.5, 1, "-2"},       {1.25, 2, "1.2"},
-        {1.75, 2, "1.8"},       {0.0, 7, "0"},         {-0.0, 7, "-0"},
-        {0.00001, 7, "1e-05"},  {0.0001, 7, "0.0001"}, {1000000, 7, "1000000"},
-        {10000000, 7, "1e+07"}, {999.5, 3, "1e+03"},   {999.5, 4, "999.5"},
+        {1.49, 1, "1", "1f"},
+        {1.51, 1, "2", "2f"},
+        {-1.51, 1, "-2", "-2f"},
+        {1.1249, 3, "1.12", "1.12"},
+        {1.1251, 3, "1.13", "1.13"},
+        {-1.1249, 3, "-1.12", "-1.12"},
+        {-1.1251, 3, "-1.13", "-1.13"},
+        {9.9996, 4, "10", "10f"},
+        {2.5, 1, "2", "2f"},
+        {3.5, 1, "4", "4f"},
+        {-2.5, 1, "-2", "-2f"},
+        {1.25, 2, "1.2", "1.2"},
+        {1.75, 2, "1.8", "1.8"},
+        {0.0, 7, "0", "0f"},
+        {-0.0, 7, "-0", "-0f"},
+        {0.00001, 7, "1e-05", "1e-05"},
+        {0.0001, 7, "0.0001", "0.0001"},
+        {1000000, 7, "1000000", "1000000f"},
+        {10000000, 7, "1e+07", "1e+07"},
+        {999.5, 3, "1e+03", "1e+03"},
+        {999.5, 4, "999.5", "999.5"},
     };
     for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
         QReal real = (QReal)cases[i].value;
         for (int literal = 0; literal <= 1; literal++) {
             for (int isReal = 0; isReal <= 1; isReal++) {
                 char expected[32];
-                strcpy(expected, cases[i].expected);
+                strcpy(expected, literal && !isReal ? cases[i].floatLiteral : cases[i].expected);
                 if (literal && isReal)
                     strcat(expected, "e");
                 const void *value = isReal ? (const void *)&real : (const void *)&cases[i].value;
@@ -2065,7 +2080,11 @@ void testDynamicFloatBufferSizes() {
     for (QSize i = 0; i < sizeof(floats) / sizeof(floats[0]); i++) {
         for (int literal = 0; literal <= 1; literal++)
             assertDynamicAtomBounds(
-                &floats[i].value, Q_TYPE_FLOAT, floats[i].precision, literal, floats[i].expected
+                &floats[i].value,
+                Q_TYPE_FLOAT,
+                floats[i].precision,
+                literal,
+                literal && floats[i].value == 0 ? "-0f" : floats[i].expected
             );
     }
     const struct {
@@ -2090,6 +2109,82 @@ void testDynamicFloatBufferSizes() {
         char expected[32];
         snprintf(expected, sizeof(expected), "%se", reals[i].expected);
         assertDynamicAtomBounds(&reals[i].value, Q_TYPE_REAL, reals[i].precision, true, expected);
+    }
+}
+
+void testFloatLiteralSuffix() {
+    // Golden .Q.s1 output: the suffix follows displayed text, not the raw value.
+    const struct {
+        QFloat value;
+        int precision;
+        const char *expected;
+    } cases[] = {
+        {1, 7, "1f"},
+        {-1, 7, "-1f"},
+        {0, 0, "0f"},
+        {-0.0, 17, "-0f"},
+        {1.25, 1, "1f"},
+        {1.25, 2, "1.2"},
+        {1.00000001, 7, "1f"},
+        {1.00000001, 0, "1.0000000099999999"},
+        {1000000, 7, "1000000f"},
+        {10000000, 7, "1e+07"},
+        {9.5, 1, "1e+01"},
+        {NAN, 7, "0n"},
+        {INFINITY, 7, "0w"},
+        {-INFINITY, 7, "-0w"},
+    };
+    for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        TEST_ASSERT_EQUAL_INT(
+            strlen(cases[i].expected),
+            qFloatToLiteral(buffer, SIZE, cases[i].value, cases[i].precision)
+        );
+        TEST_ASSERT_EQUAL_STRING(cases[i].expected, buffer);
+        assertDynamicAtomBounds(
+            &cases[i].value, Q_TYPE_FLOAT, cases[i].precision, true, cases[i].expected
+        );
+    }
+}
+
+void testFloatListLiteralSuffix() {
+    const struct {
+        QFloat values[3];
+        QSize length;
+        int precision;
+        const char *expected;
+        const char *singleton;
+    } cases[] = {
+        {{1, 2}, 2, 7, "1 2f", "1f"},
+        {{-0.0, 0}, 2, 7, "-0 0f", "-0f"},
+        {{1.25, 2.25}, 2, 1, "1 2f", "1f"},
+        {{1.25, 2.25}, 2, 3, "1.25 2.25", "1.25"},
+        {{1, 1.5}, 2, 7, "1 1.5", "1f"},
+        {{1.5, 1}, 2, 7, "1.5 1", "1.5"},
+        {{1, 1e7}, 2, 7, "1 1e+07", "1f"},
+        {{1e7, 1}, 2, 7, "1e+07 1", "1e+07"},
+        {{1, NAN}, 2, 7, "1 0n", "1f"},
+        {{NAN, 1}, 2, 7, "0n 1", "0n"},
+        {{1, INFINITY}, 2, 7, "1 0w", "1f"},
+        {{-INFINITY, 1}, 2, 7, "-0w 1", "-0w"},
+        {{NAN, INFINITY, -INFINITY}, 3, 7, "0n 0w -0w", "0n"},
+        {{1, 1.5, 2}, 3, 7, "1 1.5 2", "1f"},
+    };
+    for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        ASSERT_PRECISION_LIST(
+            qFloatListToLiteral,
+            cases[i].values,
+            cases[i].length,
+            cases[i].precision,
+            cases[i].expected,
+            cases[i].singleton
+        );
+        TEST_ASSERT_EQUAL_INT(
+            strlen(cases[i].expected),
+            qListToLiteral(
+                buffer, SIZE, cases[i].values, cases[i].length, Q_TYPE_FLOAT, cases[i].precision
+            )
+        );
+        TEST_ASSERT_EQUAL_STRING(cases[i].expected, buffer);
     }
 }
 
@@ -2455,6 +2550,8 @@ int main() {
     RUN_TEST(testEmptySymbolListItems);
     RUN_TEST(testDynamicSymbolBufferSizes);
     RUN_TEST(testDynamicFloatBufferSizes);
+    RUN_TEST(testFloatLiteralSuffix);
+    RUN_TEST(testFloatListLiteralSuffix);
     RUN_TEST(testCharListEmbeddedNull);
     RUN_TEST(testPrecisionRange);
     RUN_TEST(testMaximumPrecision);

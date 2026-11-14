@@ -38,6 +38,10 @@
  * do not query a Q runtime. Invalid precision returns Q_FMT_ERROR_RANGE before
  * formatting; empty lists still return zero without inspecting precision.
  *
+ * Float literals append f when the rounded display text otherwise looks integral.
+ * Float literal lists append one f only if every displayed item looks integral;
+ * decimal, exponent, null, and infinity tokens identify the type without a suffix.
+ *
  * Temporal widths can grow with the year, day count, hour count, or sign. Allow one
  * additional byte beyond the formatted width for the terminator; see the width
  * table in doc/c/formatting.md for maximum atom widths.

@@ -279,8 +279,24 @@ another session's current precision.
 
 Formatting uses `printf` general-format rounding and the current numeric locale.
 Examples here assume the C numeric locale and the default round-to-nearest mode.
-Real literals append `e`; the conditional `f` marker for float literals remains a
-known difference from Q (see [Limitations](#limitations)).
+Real literals append `e`. Float literals append `f` only when the displayed text
+would otherwise look like an integer. This decision follows rounding: `1.25` with
+precision 1 becomes `1f`, whereas precision 2 produces `1.2`. Signed zero becomes
+`0f` or `-0f`; scientific notation and special values need no extra marker.
+
+Float literal lists append one `f` at the end only when every displayed item looks
+like an integer. A decimal, exponent, null, or infinity token anywhere in the list
+already identifies its type. This matches `.Q.s1` apart from the separately documented
+empty/singleton list syntax:
+
+| Values | Precision | Literal output |
+| ------ | --------- | -------------- |
+| `1 2f` | 7 | `1 2f` |
+| `1.25 2.25` | 1 | `1 2f` |
+| `1 1.5` | 7 | `1 1.5` |
+| `1 1e7` | 7 | `1 1e+07` |
+| `1 0n` | 7 | `1 0n` |
+| `0w 1` | 7 | `0w 1` |
 
 The guid functions take a `const QGuid *`.
 
@@ -372,12 +388,6 @@ Significant-digit precision, trailing-zero suppression, and scientific notation 
 follow Q's display rules. Numeric output still follows the current C numeric locale
 and floating-point rounding mode; matching the examples assumes the C locale and
 default round-to-nearest mode.
-
-Float literals lack Q's conditional `f` marker. Q formats an integral float atom as
-`1f`, and an all-integral float list as `1 2f`, but a list containing a displayed
-fractional value as `1 1.5`. Special values can also identify the list's type, as in
-`0n 1`. The current implementation never adds that conditional marker, so an integral
-float literal can look like a long at any precision.
 
 ### Character escaping and symbol text
 

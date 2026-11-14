@@ -338,6 +338,16 @@ int qFloatToStr(char *buffer, QSize size, QFloat float_, int precision) {
     WRITE_DYNAMIC(buffer, size, "%.*g", precision == 0 ? 17 : precision, float_);
 }
 
+// Inspect the displayed text: rounding can make a fractional value look integral.
+// A decimal separator, exponent, or special-value token already identifies a float.
+static bool floatTextNeedsSuffix(const char *text) {
+    if (*text == '-')
+        text++;
+    while (*text >= '0' && *text <= '9')
+        text++;
+    return *text == '\0';
+}
+
 int qFloatToLiteral(char *buffer, QSize size, QFloat float_, int precision) {
     if (precision < 0 || precision > Q_FMT_MAX_PRECISION)
         return Q_FMT_ERROR_RANGE;
@@ -345,7 +355,20 @@ int qFloatToLiteral(char *buffer, QSize size, QFloat float_, int precision) {
     if (special != FMT_FINITE)
         return writeSpecial(buffer, size, special, Q_TYPE_FLOAT, true, specialSuffix(Q_TYPE_FLOAT));
 
-    return qFloatToStr(buffer, size, float_, precision);
+    // Stage the text so insufficient suffix capacity leaves the atom buffer untouched.
+    char text[128];
+    int bytes = qFloatToStr(text, sizeof(text), float_, precision);
+    if (bytes < 0)
+        return bytes;
+    bool suffix = floatTextNeedsSuffix(text);
+    QSize width = (QSize)bytes + suffix;
+    if (buffer == nullptr || size <= width)
+        return Q_FMT_ERROR_SIZE;
+    memcpy(buffer, text, (QSize)bytes);
+    if (suffix)
+        buffer[bytes] = 'f';
+    buffer[width] = '\0';
+    return (int)width;
 }
 
 int qCharToStr(char *buffer, QSize size, QChar char_) {
@@ -841,6 +864,7 @@ static int formatListWithType(
         return Q_FMT_ERROR_RANGE;
 
     bool allSpecial = literalType != 0;
+    bool needsFloatSuffix = literalType == Q_TYPE_FLOAT;
     FmtWriter writer = {buffer, size, 0};
     int status = appendText(&writer, prefix);
     if (status < 0)
@@ -861,6 +885,8 @@ static int formatListWithType(
                 : formatItem(writer.position, writer.remaining, item, precision);
         if (bytes < 0)
             return bytes;
+        // A single non-integral token identifies the entire float vector's type.
+        needsFloatSuffix = needsFloatSuffix && floatTextNeedsSuffix(writer.position);
         status = advanceWriter(&writer, (QSize)bytes);
         if (status < 0)
             return status;
@@ -872,6 +898,8 @@ static int formatListWithType(
     // needs the suffix on its last token (month already has a fixed list suffix).
     if (allSpecial && literalType >= Q_TYPE_TIMESTAMP && suffix[0] == '\0')
         suffix = specialSuffix(literalType);
+    if (needsFloatSuffix)
+        suffix = "f";
     status = appendText(&writer, suffix);
     return status < 0 ? status : (int)writer.count;
 }
