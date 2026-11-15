@@ -3,12 +3,14 @@
  * @file fmt.h
  * @brief Display formatting of Q values.
  *
- * ToStr produces plain display text; ToLiteral produces Q-style display text with
- * type markers and delimiters where implemented. Neither is a serialization API.
- * ToLiteral does not guarantee a parseable Q expression or preservation of the
- * original type, value, or list shape. Symbols are not escaped.
- * Display precision can round away information, and
- * numeric output follows the current locale. See doc/c/formatting.md for examples.
+ * For supported primitive atoms and lists, ToStr follows Q string and ToLiteral
+ * follows .Q.s1, with the documented exceptions. List strings deliberately join
+ * element strings with spaces; temporal fields expand rather than use Q placeholders.
+ * Literal lists retain empty/singleton shape. Dictionaries and tables are unsupported.
+ * Neither form is a serialization API: symbols are not escaped, display precision
+ * can round away information, and output need not be a parseable Q expression.
+ * Numeric output follows the current locale and floating-point rounding mode.
+ * See doc/c/formatting.md for examples and compatibility checks.
  *
  * Numeric and temporal special values follow Q's string (ToStr) and .Q.s1
  * (ToLiteral): null strings are empty, infinities use 0W/-0W or 0w/-0w, and
@@ -22,7 +24,8 @@
  * Successful output counts exclude that terminator and cannot exceed INT_MAX.
  * Successful atoms and all literal lists write a final terminator. String lists
  * write a terminator unless empty, in which case they write nothing. Empty symbols
- * and numeric/temporal nulls formatted with ToStr return zero but write a terminator. Embedded null character data counts toward the result,
+ * and numeric/temporal nulls formatted with ToStr return zero but write a terminator.
+ * Embedded null character data counts toward the result,
  * which can therefore exceed strlen.
  *
  * Insufficient capacity returns Q_FMT_ERROR_SIZE, never successful truncation. There
@@ -78,7 +81,7 @@
 
 typedef enum : signed int {
     Q_FMT_ERROR_ARGUMENT = -5, // Required input pointer is null
-    Q_FMT_ERROR_RANGE = -4, // Value outside the supported range, or calendar conversion failed
+    Q_FMT_ERROR_RANGE = -4, // Value, precision, or output count out of range; calendar conversion failed
     Q_FMT_ERROR_TYPE = -3,   // Invalid/unsupported type
     Q_FMT_ERROR_SIZE = -2,   // Buffer not large enough
     Q_FMT_ERROR_PRINTF = -1, // printf (family) function had an error

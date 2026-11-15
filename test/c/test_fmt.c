@@ -2,6 +2,11 @@
 /**
  * @file test_fmt.c
  * @brief Unit tests for fmt.h and fmt.c.
+ *
+ * Q compatibility expectations use string for atoms, space-joined string for
+ * lists, and .Q.s1 for literals. Expanded temporal fields are deliberate exceptions.
+ * See doc/c/formatting.md (Compatibility checks) for the reference runtime and
+ * comparison settings. These tests do not require Q at runtime.
  */
 
 #include <float.h>

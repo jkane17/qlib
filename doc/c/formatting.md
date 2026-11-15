@@ -22,6 +22,7 @@ This document describes the formatting functions from [`fmt.h`](/src/c/cdk/fmt.h
     - [Real and float display](#real-and-float-display)
     - [Symbol text](#symbol-text)
     - [Console-width truncation](#console-width-truncation)
+  - [Compatibility checks](#compatibility-checks)
   - [Examples](#examples)
 
 ## Conventions
@@ -194,7 +195,7 @@ On failure, it returns one of the negative `QFmtError` values:
 | `Q_FMT_ERROR_PRINTF`   |  `-1` | The underlying `printf`-family function failed                                                    |
 | `Q_FMT_ERROR_SIZE`     |  `-2` | `buffer` is `NULL`, or `size` is too small for the whole result                                   |
 | `Q_FMT_ERROR_TYPE`     |  `-3` | The type code is not supported (generic functions only)                                           |
-| `Q_FMT_ERROR_RANGE`    |  `-4` | Value or accumulated list output length exceeds the supported range, or calendar conversion fails |
+| `Q_FMT_ERROR_RANGE`    |  `-4` | Value, precision, or accumulated list output length exceeds the supported range, or calendar conversion fails |
 | `Q_FMT_ERROR_ARGUMENT` |  `-5` | A required input pointer is null                                                                  |
 
 Date and timestamp formatting uses UTC. The supported range depends on the platform's
@@ -225,7 +226,8 @@ is the exception, not a sizing query. When the size is hard to predict, retry wi
 `Q_FMT_ERROR_SIZE`.
 
 The following widths exclude the final terminator. **Add one byte** when allocating
-an atom buffer. These upper bounds cover finite values and special-value text
+an atom buffer. The width rules describe finite values; null and infinity tokens can be shorter.
+These upper bounds cover finite values and special-value text
 where conversion succeeds; date/timestamp platform limits and datetime's
 supported year range still apply.
 
@@ -487,15 +489,14 @@ Only the primitive types (`Q_TYPE_BOOLEAN` to `Q_TYPE_TIME`) are supported; any 
 
 ## Limitations
 
-The following are known differences from Q's `string` and `.Q.s1`, not intended
-compatibility guarantees. They were checked against the locally installed KDB-X 5.0
-(build 2026.07.23), using its default `\P 7` unless otherwise stated and a wide console
-for complete output. Extreme-value results may be specific to that build. No implementation changes are implied by
-this comparison.
+The following describe environment-dependent output, display text that cannot be
+parsed back into Q, and the deliberate absence of console truncation. The joined
+list strings and expanded temporal fields described above are also deliberate API
+choices. These limitations do not change the atom/list formatting contract.
 
 ### Real and float display
 
-Significant-digit precision, trailing-zero suppression, and scientific notation now
+Significant-digit precision, trailing-zero suppression, and scientific notation
 follow Q's display rules. Numeric output still follows the current C numeric locale
 and floating-point rounding mode; matching the examples assumes the C locale and
 default round-to-nearest mode.
@@ -513,6 +514,38 @@ Q's `.Q.s1` can truncate long output according to its console width (`\c`). Thes
 C functions have no console-width setting: they produce the complete text or return
 `Q_FMT_ERROR_SIZE` when the buffer is too small. Q comparisons use a sufficiently
 wide console to check the complete formatting rather than the truncated display.
+
+## Compatibility checks
+
+The compatibility expectations were checked against the locally installed KDB-X 5.0
+(build 2026.07.23). Use the C numeric locale and default round-to-nearest mode when
+comparing numeric output. Set Q's `\P` to the precision passed to the C function,
+and give Q a sufficiently wide console to avoid `.Q.s1` truncation. For example:
+
+```q
+\P 7
+\c 100 2000
+string 0Ni                  / atom ToStr: empty text
+.Q.s1 0Ni                   / atom ToLiteral: 0Ni
+" " sv string 0N 42i         / list ToStr: leading space, then 42
+.Q.s1 0N 42i                / list ToLiteral: 0N 42i
+.Q.s1 enlist 42i            / singleton literal: ,42i
+.Q.s1 `int$()               / empty literal: `int$()
+```
+
+Compare the returned character data, not the quotes/escapes added when Q displays
+that data interactively. For character lists, compare ToStr against the joined
+per-character strings; ToLiteral compares against `.Q.s1` of the entire vector.
+An empty ToStr list is an API no-op, so its buffer behavior must be tested in C.
+
+Regression expectations live in [`test_fmt.c`](/test/c/test_fmt.c) and run without
+requiring Q. Coverage includes special atoms and mixed special/finite lists, every
+supported precision, rounded float suffixes, all 256 character bytes, typed empty
+and singleton lists, and datetime microsecond/day boundaries. Capacity checks also
+verify terminators, exact-fit buffers, errors, and writes outside the supplied buffer.
+Expanded temporal outputs are intentional library expectations rather than Q golden
+outputs. When updating expectations, check the relevant Q expression and retain
+these documented exceptions; do not derive expected text from the C formatter itself.
 
 ## Examples
 
