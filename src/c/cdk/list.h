@@ -9,11 +9,13 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "is.h"
 #include "obj.h"
 #include "sym.h"
 #include "type.h"
+#include "util.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,13 +30,24 @@ extern "C" {
  * in place if the list is reallocated.
  * @param value A pointer to the raw value to append. It must point to a value of the list's element
  * type (for example, a `QLong` for a long list). For a symbol list it must point to an interned
- * symbol: prefer `qAppendSymbol`, which interns for you.
+ * symbol: prefer `qAppendSymbol`, which interns for you. The value may be an element of this list.
  * @return A pointer to the (possibly reallocated) updated Q object, the same as the new `*list`.
  */
 static inline QObj *qAppendValue(QObj **list, void *value) {
     extern QObj *ja(QObj **, void *);
     assert(list && qIsSimpleList(*list) && value);
-    return ja(list, value);
+
+    // ja can free the old list during reallocation before reading value. Copy exactly one
+    // element first so a source inside the list stays valid; the union provides alignment
+    // for every primitive type and enough space for a GUID (the largest element).
+    union {
+        QGuid guid;
+        QLong long_;
+        QFloat float_;
+        QSymbol symbol;
+    } copy;
+    memcpy(&copy, value, qTypeSize((QTypeCode)(*list)->type));
+    return ja(list, &copy);
 }
 
 /**

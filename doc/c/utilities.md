@@ -2,6 +2,22 @@
 
 This document describes the general-purpose helpers from [`util.h`](/src/c/cdk/util.h).
 
+## `qTypeSize`
+
+```c
+QSize qTypeSize(QTypeCode type);
+```
+
+Return the storage size in bytes of one primitive value, excluding the Q object
+header. Pass a **positive** primitive type code, such as `Q_TYPE_LONG`, for either
+an atom's value or a list element. The result is the size of the corresponding C
+type: for example, `sizeof(QLong)` for longs and `sizeof(QGuid)` for GUIDs.
+For symbols, it returns `sizeof(QSymbol)` (the pointer size), not the string length.
+
+Unsupported codes return `0`, including negative atom codes, mixed lists,
+enumerations, tables, and dictionaries. Check for `0` before using the result in
+size calculations; also check multiplication for overflow when sizing a whole list.
+
 ## `saturatedSub`
 
 ```c

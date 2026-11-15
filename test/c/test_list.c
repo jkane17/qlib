@@ -233,6 +233,30 @@ void testAppendValueMany() {
     qDecRef(list);
 }
 
+void testAppendValueFromSameListWithReallocation() {
+    // Fill a 16 MiB allocation (including the object header) so appending forces growth.
+    // At this size the old allocation can be unmapped: passing its element directly to ja
+    // used to read freed memory, whereas small allocations could hide the bug in cached memory.
+    const QSize count = (((QSize)1 << 24) - sizeof(QObj)) / sizeof(QLong);
+    QObj *list = qNewList(Q_TYPE_LONG, count);
+    TEST_ASSERT_NOT_NULL(list);
+    QLong *values = (QLong *)list->list;
+    memset(values, 0, count * sizeof(*values));
+    values[0] = 123456789;
+    values[count - 1] = -987654321;
+    uintptr_t originalAddress = (uintptr_t)list;
+
+    QObj *result = qAppendValue(&list, &values[0]);
+
+    TEST_ASSERT_TRUE((uintptr_t)list != originalAddress);
+    TEST_ASSERT_EQUAL_PTR(list, result);
+    TEST_ASSERT_EQUAL_UINT64(count + 1, list->length);
+    TEST_ASSERT_EQUAL_INT64(123456789, qGetLongAtIndex(list, 0));
+    TEST_ASSERT_EQUAL_INT64(-987654321, qGetLongAtIndex(list, count - 1));
+    TEST_ASSERT_EQUAL_INT64(123456789, qGetLongAtIndex(list, count));
+    qDecRef(list);
+}
+
 void testAppendValueManyChars() {
     // Single-byte elements, to check that the length and storage stay in step as the list grows
     const char *text = "the quick brown fox jumps over the lazy dog";
@@ -1045,6 +1069,7 @@ int main() {
     RUN_TEST(testAppendValueInternedSymbol);
     RUN_TEST(testAppendValueCopiesValue);
     RUN_TEST(testAppendValueMany);
+    RUN_TEST(testAppendValueFromSameListWithReallocation);
     RUN_TEST(testAppendValueManyChars);
 
     RUN_TEST(testAppendObject);
