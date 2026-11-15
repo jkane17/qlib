@@ -398,7 +398,9 @@ int qDateToLiteral(char *buffer, QSize size, QDate date);
  * @brief Format a datetime value into string form.
  *
  * @note Uses the proleptic Gregorian calendar with years INT32_MIN through INT32_MAX.
- * Rounds to the nearest millisecond; halfway values round toward the later time.
+ * Matches Q by rounding epoch-relative microseconds (ties away from the epoch),
+ * then discarding sub-millisecond time within the resulting day. Extended dates
+ * outside the int64 microsecond range split the day first to avoid overflow.
  * Finite out-of-range values return Q_FMT_ERROR_RANGE without writing output.
  * Nulls and infinities use Q special-value text instead of calendar conversion.
  * 
@@ -414,7 +416,9 @@ int qDatetimeToStr(char *buffer, QSize size, QDatetime datetime);
  * @brief Format a datetime value into Q-style text for display.
  *
  * @note Uses the proleptic Gregorian calendar with years INT32_MIN through INT32_MAX.
- * Rounds to the nearest millisecond; halfway values round toward the later time.
+ * Matches Q by rounding epoch-relative microseconds (ties away from the epoch),
+ * then discarding sub-millisecond time within the resulting day. Extended dates
+ * outside the int64 microsecond range split the day first to avoid overflow.
  * Finite out-of-range values return Q_FMT_ERROR_RANGE without writing output.
  * Nulls and infinities use Q special-value text instead of calendar conversion.
  * 

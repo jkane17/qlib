@@ -700,7 +700,7 @@ void testDatetimeInvalidRange() {
     }
 }
 
-void testDatetimeCalendarAndRounding() {
+void testDatetimeCalendarAndDisplay() {
     const double msPerDay = 86400000.0;
     const struct {
         QDatetime value;
@@ -709,20 +709,22 @@ void testDatetimeCalendarAndRounding() {
         {-784353026790.0, "-2147483648.01.01T00:00:00.000"},
         {784351565819.0, "2147483647.12.31T00:00:00.000"},
         {-784353026790.0 + 0.5, "-2147483648.01.01T12:00:00.000"},
+        {nextafter(-784353026790.0, INFINITY), "-2147483648.01.01T00:00:10.546"},
+        {nextafter(784351565820.0, -INFINITY), "2147483647.12.31T23:59:49.453"},
         {0.0, "2000.01.01T00:00:00.000"},
         {-0.0, "2000.01.01T00:00:00.000"},
         {0.0004 / 86400.0, "2000.01.01T00:00:00.000"},
-        {0.0006 / 86400.0, "2000.01.01T00:00:00.001"},
-        {-0.0004 / 86400.0, "2000.01.01T00:00:00.000"},
+        {0.0006 / 86400.0, "2000.01.01T00:00:00.000"},
+        {-0.0004 / 86400.0, "1999.12.31T23:59:59.999"},
         {-0.0006 / 86400.0, "1999.12.31T23:59:59.999"},
-        {0.5 / msPerDay, "2000.01.01T00:00:00.001"},
-        {59999.6 / msPerDay, "2000.01.01T00:01:00.000"},
-        {3599999.6 / msPerDay, "2000.01.01T01:00:00.000"},
-        {1.0 - 0.4 / msPerDay, "2000.01.02T00:00:00.000"},
-        {31.0 - 0.4 / msPerDay, "2000.02.01T00:00:00.000"},
-        {59.0 - 0.4 / msPerDay, "2000.02.29T00:00:00.000"},
-        {60.0 - 0.4 / msPerDay, "2000.03.01T00:00:00.000"},
-        {366.0 - 0.4 / msPerDay, "2001.01.01T00:00:00.000"},
+        {0.5 / msPerDay, "2000.01.01T00:00:00.000"},
+        {59999.6 / msPerDay, "2000.01.01T00:00:59.999"},
+        {3599999.6 / msPerDay, "2000.01.01T00:59:59.999"},
+        {1.0 - 0.4 / msPerDay, "2000.01.01T23:59:59.999"},
+        {31.0 - 0.4 / msPerDay, "2000.01.31T23:59:59.999"},
+        {59.0 - 0.4 / msPerDay, "2000.02.28T23:59:59.999"},
+        {60.0 - 0.4 / msPerDay, "2000.02.29T23:59:59.999"},
+        {366.0 - 0.4 / msPerDay, "2000.12.31T23:59:59.999"},
         {-36466.0, "1900.02.28T00:00:00.000"},
         {-36465.0, "1900.03.01T00:00:00.000"},
         {36583.0, "2100.02.28T00:00:00.000"},
@@ -740,6 +742,79 @@ void testDatetimeCalendarAndRounding() {
         TEST_ASSERT_EQUAL_INT(
             Q_FMT_ERROR_SIZE, qDatetimeToStr(buffer, required - 1, cases[i].value)
         );
+    }
+}
+
+void testDatetimeMicrosecondBoundaries() {
+    const double msPerDay = 86400000.0;
+    const double microsPerDay = 86400000000.0;
+    // Golden outputs from Q. Include both sides of microsecond ties, epoch and
+    // calendar boundaries, and values where splitting the day first loses fidelity.
+    const struct {
+        QDatetime value;
+        const char *expected;
+    } cases[] = {
+        {0.0004 / msPerDay, "2000.01.01T00:00:00.000"},
+        {0.0005 / msPerDay, "2000.01.01T00:00:00.000"},
+        {0.0006 / msPerDay, "2000.01.01T00:00:00.000"},
+        {-0.0004 / msPerDay, "2000.01.01T00:00:00.000"},
+        {-0.0005 / msPerDay, "1999.12.31T23:59:59.999"},
+        {-0.0006 / msPerDay, "1999.12.31T23:59:59.999"},
+        {0.9994 / msPerDay, "2000.01.01T00:00:00.000"},
+        {0.9995 / msPerDay, "2000.01.01T00:00:00.001"},
+        {0.9996 / msPerDay, "2000.01.01T00:00:00.001"},
+        {-0.9994 / msPerDay, "1999.12.31T23:59:59.999"},
+        {-0.9995 / msPerDay, "1999.12.31T23:59:59.999"},
+        {-0.9996 / msPerDay, "1999.12.31T23:59:59.999"},
+        {1.0004 / msPerDay, "2000.01.01T00:00:00.001"},
+        {1.0005 / msPerDay, "2000.01.01T00:00:00.001"},
+        {1.0006 / msPerDay, "2000.01.01T00:00:00.001"},
+        {-1.0004 / msPerDay, "1999.12.31T23:59:59.999"},
+        {-1.0005 / msPerDay, "1999.12.31T23:59:59.998"},
+        {-1.0006 / msPerDay, "1999.12.31T23:59:59.998"},
+        {1.0 - 0.4 / microsPerDay, "2000.01.02T00:00:00.000"},
+        {1.0 - 0.6 / microsPerDay, "2000.01.01T23:59:59.999"},
+        {31.0 - 0.4 / microsPerDay, "2000.02.01T00:00:00.000"},
+        {31.0 - 0.6 / microsPerDay, "2000.01.31T23:59:59.999"},
+        {59.0 - 0.4 / microsPerDay, "2000.02.29T00:00:00.000"},
+        {59.0 - 0.6 / microsPerDay, "2000.02.28T23:59:59.999"},
+        {60.0 - 0.4 / microsPerDay, "2000.03.01T00:00:00.000"},
+        {60.0 - 0.6 / microsPerDay, "2000.02.29T23:59:59.999"},
+        {366.0 - 0.4 / microsPerDay, "2001.01.01T00:00:00.000"},
+        {366.0 - 0.6 / microsPerDay, "2000.12.31T23:59:59.999"},
+        {-1.0 - 0.4 / microsPerDay, "1999.12.31T00:00:00.000"},
+        {-1.0 - 0.6 / microsPerDay, "1999.12.30T23:59:59.999"},
+        {nextafter(1.0 / msPerDay, -INFINITY), "2000.01.01T00:00:00.001"},
+        {nextafter(-1.0, -INFINITY), "1999.12.31T00:00:00.000"},
+        {9814.041666666664, "2026.11.14T01:00:00.000"},
+        {2084645.8630976505, "7707.07.26T20:42:51.636"},
+        {DBL_TRUE_MIN, "2000.01.01T00:00:00.000"},
+        {-DBL_TRUE_MIN, "2000.01.01T00:00:00.000"},
+    };
+    for (QSize i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        for (int literal = 0; literal <= 1; literal++) {
+            for (QSize capacity = 0; capacity <= strlen(cases[i].expected) + 1; capacity++) {
+                unsigned char guarded[SIZE + 2];
+                memset(guarded, 0xA5, sizeof(guarded));
+                int result = (literal ? qAtomToLiteral : qAtomToStr)(
+                    (char *)guarded + 1, capacity, &cases[i].value, Q_TYPE_DATETIME, 0
+                );
+                assertOutputBounds(guarded, capacity, result, cases[i].expected);
+                if (result < 0)
+                    TEST_ASSERT_EACH_EQUAL_HEX8(0xA5, guarded, sizeof(guarded));
+            }
+        }
+        QDatetime values[] = {cases[i].value, 0};
+        char fullText[SIZE];
+        snprintf(fullText, sizeof(fullText), "%s 2000.01.01T00:00:00.000", cases[i].expected);
+        {
+            ASSERT_LIST(qDatetimeListToStr, values, 2, fullText, cases[i].expected);
+        }
+        char singleton[32];
+        snprintf(singleton, sizeof(singleton), ",%s", cases[i].expected);
+        {
+            ASSERT_LIST(qDatetimeListToLiteral, values, 2, fullText, singleton);
+        }
     }
 }
 
@@ -2725,7 +2800,8 @@ int main() {
     RUN_TEST(testDatetimeToStr);
     RUN_TEST(testDatetimeToLiteral);
     RUN_TEST(testDatetimeInvalidRange);
-    RUN_TEST(testDatetimeCalendarAndRounding);
+    RUN_TEST(testDatetimeCalendarAndDisplay);
+    RUN_TEST(testDatetimeMicrosecondBoundaries);
     RUN_TEST(testYearFormattingBufferBounds);
     RUN_TEST(testDateArithmeticBoundaries);
     RUN_TEST(testTimestampRangeAndNegativeFraction);

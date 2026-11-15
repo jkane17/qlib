@@ -9,6 +9,7 @@ This document describes the formatting functions from [`fmt.h`](/src/c/cdk/fmt.h
   - [Conventions](#conventions)
     - [String and Literal Forms](#string-and-literal-forms)
     - [Expanded temporal fields](#expanded-temporal-fields)
+    - [Datetime sub-millisecond display](#datetime-sub-millisecond-display)
     - [Nulls and infinities](#nulls-and-infinities)
     - [Return Values](#return-values)
     - [Buffer Size](#buffer-size)
@@ -21,7 +22,6 @@ This document describes the formatting functions from [`fmt.h`](/src/c/cdk/fmt.h
     - [Real and float display](#real-and-float-display)
     - [Symbol text](#symbol-text)
     - [Console-width truncation](#console-width-truncation)
-    - [Temporal rounding](#temporal-rounding)
   - [Examples](#examples)
 
 ## Conventions
@@ -82,8 +82,40 @@ expanded year and month. The library will retain its informative output rather t
 reproduce those placeholders or build-specific artifacts. Existing supported calendar
 ranges and conversion errors still apply: expansion does not make every underlying
 value convertible. Nulls and infinities continue to use their Q special-value tokens.
-This decision concerns display width and ranges, not datetime sub-millisecond rounding.
+Datetime sub-millisecond handling follows the separate rules below.
 
+
+### Datetime sub-millisecond display
+
+Datetime output follows Q's microsecond conversion before displaying milliseconds:
+
+1. Multiply the epoch-relative day count by 86,400,000,000 and round to the nearest
+   whole microsecond, with halfway values rounding away from the epoch.
+2. Split the result into calendar days and a nonnegative time within the day.
+3. Discard the remaining microseconds below a whole millisecond.
+
+This applies to both `ToStr` and `ToLiteral`, for atoms and list elements. It differs
+from rounding directly to the nearest millisecond, and from simply truncating the
+original day fraction. Microsecond rounding also prevents representational errors
+just below a millisecond boundary from displaying the previous millisecond.
+
+| Value | Output in both modes |
+| ----- | -------------------- |
+| 0.6 milliseconds after the epoch | `2000.01.01T00:00:00.000` |
+| 0.9995 milliseconds after the epoch | `2000.01.01T00:00:00.001` |
+| 0.4 milliseconds before the epoch | `1999.12.31T23:59:59.999` |
+| 0.4 microseconds before the epoch | `2000.01.01T00:00:00.000` |
+| 0.5 microseconds before the epoch | `1999.12.31T23:59:59.999` |
+| 0.4 milliseconds before the next midnight | Same day, `23:59:59.999` |
+
+Microsecond rounding can cross midnight; ordinary sub-millisecond fractions are
+otherwise discarded. The result depends on the stored binary floating-point value.
+This matches the tested Q runtime's conversion order, including near boundaries.
+
+For the library's extended calendar range, dates whose total microsecond count
+cannot fit in a signed 64-bit integer are split into days before rounding the
+within-day microseconds. This avoids overflow and preserves expanded-year output.
+At those magnitudes the stored datetime has much coarser than microsecond precision.
 
 ### Nulls and infinities
 
@@ -171,11 +203,11 @@ writing to the buffer. List functions propagate this error but may already have 
 
 Datetime formatting uses the proleptic Gregorian calendar, independently of `time_t`,
 with years from `INT32_MIN` through `INT32_MAX` (inclusive). Finite values
-outside that range return `Q_FMT_ERROR_RANGE` without writing output. The fractional
-day is rounded to the nearest millisecond, with halfway values rounding toward the
-later time; rounding across midnight advances the date. A rounded result outside the
-supported year range also returns `Q_FMT_ERROR_RANGE`. Floating-point precision limits
-the available time-of-day resolution for dates far from the epoch.
+outside that range return `Q_FMT_ERROR_RANGE` without writing output.
+[Datetime sub-millisecond display](#datetime-sub-millisecond-display) describes Q's
+microsecond rounding followed by millisecond truncation, including midnight carries.
+A rounded result outside the supported year range also returns `Q_FMT_ERROR_RANGE`.
+Floating-point precision limits the available time-of-day resolution far from the epoch.
 
 ### Buffer Size
 
@@ -481,18 +513,6 @@ Q's `.Q.s1` can truncate long output according to its console width (`\c`). Thes
 C functions have no console-width setting: they produce the complete text or return
 `Q_FMT_ERROR_SIZE` when the buffer is too small. Q comparisons use a sufficiently
 wide console to check the complete formatting rather than the truncated display.
-
-### Temporal rounding
-
-Datetime formatting currently rounds to the nearest millisecond. Q discards the
-sub-millisecond time within the day in the tested cases:
-
-| Datetime value (days since epoch) | Current output            | Q output in both modes    |
-| --------------------------------- | ------------------------- | ------------------------- |
-| `0.000000006`                     | `2000.01.01T00:00:00.001` | `2000.01.01T00:00:00.000` |
-| `0.999999999`                     | `2000.01.02T00:00:00.000` | `2000.01.01T23:59:59.999` |
-| `-0.000000001`                    | `2000.01.01T00:00:00.000` | `1999.12.31T23:59:59.999` |
-
 
 ## Examples
 

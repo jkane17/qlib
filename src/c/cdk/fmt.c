@@ -539,19 +539,36 @@ int qDatetimeToStr(char *buffer, QSize size, QDatetime datetime) {
     // Days since 2000-01-01 spanning years INT32_MIN through INT32_MAX.
     const int64_t firstDay = -784353026790LL; // INT32_MIN-01-01
     const int64_t endDay = 784351565820LL;    // (INT32_MAX + 1)-01-01, exclusive
-    const int64_t msPerDay = (int64_t)SECS_PER_DAY * MS_PER_SEC;
+    const int64_t microsPerDay = (int64_t)SECS_PER_DAY * 1000000;
     if (!isfinite(datetime) || datetime < firstDay || datetime >= endDay)
         return Q_FMT_ERROR_RANGE;
 
-    double wholeDays = floor(datetime);
-    int64_t days = (int64_t)wholeDays;
-    int64_t millis = (int64_t)round((datetime - wholeDays) * msPerDay);
-    if (millis == msPerDay) {
-        millis = 0;
-        days++;
-        if (days == endDay)
-            return Q_FMT_ERROR_RANGE;
+    // Q rounds the total epoch-relative microseconds first (ties away from zero),
+    // then discards the sub-millisecond portion within the resulting calendar day.
+    double totalMicros = round(datetime * (double)microsPerDay);
+    int64_t days, micros;
+    if (totalMicros >= -0x1p63 && totalMicros < 0x1p63) {
+        int64_t total = (int64_t)totalMicros;
+        days = total / microsPerDay;
+        micros = total % microsPerDay;
+        if (micros < 0) {
+            micros += microsPerDay;
+            days--;
+        }
+    } else {
+        // Preserve our extended year range without overflowing an int64_t count
+        // of microseconds. At this scale the datetime has much coarser precision.
+        double wholeDays = floor(datetime);
+        days = (int64_t)wholeDays;
+        micros = (int64_t)round((datetime - wholeDays) * microsPerDay);
+        if (micros == microsPerDay) {
+            micros = 0;
+            days++;
+        }
     }
+    if (days < firstDay || days >= endDay)
+        return Q_FMT_ERROR_RANGE;
+    int64_t millis = micros / 1000;
 
     int32_t year, month, day;
     splitGregorianDays(days, &year, &month, &day);
